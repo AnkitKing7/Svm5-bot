@@ -29,11 +29,11 @@ import traceback
 #  ⚙️  CONFIGURATION - EDIT THESE BEFORE RUNNING
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-BOT_TOKEN           = "YOUR_BOT_TOKEN_HERE"          # Discord Bot Token
+BOT_TOKEN           = ""          # Discord Bot Token
 BOT_PREFIX          = "."                             # Command prefix
 BOT_NAME            = "SVM5-BOT"                      # Bot name
 BOT_AUTHOR          = "Ankit-Dev"                      # Your name
-MAIN_ADMIN_IDS      = [123456789012345678]            # Your Discord ID(s)
+MAIN_ADMIN_IDS      = [1405866008127864852]            # Your Discord ID(s)
 VPS_USER_ROLE_ID    = ""                               # Auto-created if empty
 DEFAULT_STORAGE_POOL = "default"                       # LXC storage pool
 
