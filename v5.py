@@ -61,7 +61,7 @@ OS_OPTIONS = [
 ]
 
 # AI Configuration
-AI_API_KEY          = "YOUR_GROQ_API_KEY"            # Get from console.groq.com
+AI_API_KEY          = "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"            # Get from console.groq.com
 AI_MODEL            = "llama3-70b-8192"               # Groq model
 
 # Thumbnail URL
@@ -1995,8 +1995,8 @@ async def ports_remove(ctx, forward_id: int):
 #  🌐  IPv4 MANAGEMENT (with UPI payment)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-UPI_ID = "your-upi@paytm"  # Change this
-IPV4_PRICE_INR = 50
+UPI_ID = "9892642904@ybl"  # Change this
+IPV4_PRICE_INR = 200
 
 @bot.command(name="buy-ipv4")
 @commands.cooldown(1, 30, commands.BucketType.user)
