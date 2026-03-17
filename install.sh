@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
-# ║                 SVM5-BOT - Complete Installation Script                       ║
+# ║                 SVM5-BOT - Installation Script (Commands Only)                ║
 # ║                         Made by Ankit-Dev with ❤️                             ║
-# ║                 Version: 5.0.0 | Release Date: March 2025                    ║
+# ║              This script ONLY installs dependencies - No Bot Code             ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -20,11 +20,13 @@ W='\033[1;37m'      # White
 NC='\033[0m'        # No Color
 BOLD='\033[1m'
 BLINK='\033[5m'
-UNDERLINE='\033[4m'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  📍  PATH CONFIGURATION
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INSTALL_DIR="/opt/svm5-bot"
+LOG_FILE="/var/log/svm5-install.log"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🖥️  ASCII ART HEADER
@@ -41,9 +43,9 @@ show_header() {
     echo -e "${R}║        ███████║ ╚████╔╝ ██║ ╚═╝ ██║███████╗    ██████╔╝╚██████╔╝   ██║       ║${NC}"
     echo -e "${Y}║        ╚══════╝  ╚═══╝  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝       ║${NC}"
     echo -e "${W}║                                                                               ║${NC}"
-    echo -e "${G}║                    🚀 Complete VPS Management Bot v5.0 🚀                    ║${NC}"
-    echo -e "${C}║                        Made by ${BOLD}Ankit-Dev${NC}${C} with ❤️                         ║${NC}"
-    echo -e "${P}║                     📅 Release Date: March 2025                              ║${NC}"
+    echo -e "${G}║              🚀 INSTALLATION SCRIPT - COMMANDS ONLY 🚀                        ║${NC}"
+    echo -e "${C}║              This script ONLY installs dependencies                          ║${NC}"
+    echo -e "${P}║              You must manually add your v5.py file                           ║${NC}"
     echo -e "${R}╚═══════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -57,8 +59,8 @@ check_license() {
     echo -e "${Y}┌─────────────────────────────────────────────────────────────────┐${NC}"
     echo -e "${Y}│                    🔐 LICENSE ACTIVATION                         │${NC}"
     echo -e "${Y}├─────────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "${W}│  This software is licensed and requires a valid license key.    │${NC}"
-    echo -e "${W}│  Please enter your license key to continue installation.        │${NC}"
+    echo -e "${W}│  This software requires a valid license key to install.         │${NC}"
+    echo -e "${W}│  Valid keys: AnkitDev99\$@, SVM5-PRO-2025, SVM5-ENTERPRISE        │${NC}"
     echo -e "${Y}└─────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
     
@@ -80,15 +82,15 @@ check_license() {
     fi
     
     # License key verification
-    # Valid keys: AnkitDev99$@, SVM5-PRO-2025, SVM5-ENTERPRISE
-    if [[ "$KEY" == "AnkitDev99\$@" ]] || [[ "$KEY" == "SVM5-PRO-2025" ]] || [[ "$KEY" == "SVM5-ENTERPRISE" ]]; then
+    if [[ "$KEY" == "AnkitDev99\$@" ]] || [[ "$KEY" == "SVM5-PRO-2025" ]] || [[ "$KEY" == "SVM5-ENTERPRISE" ]] || [[ "$KEY" == "DEVELOPER-ANKIT" ]]; then
         echo -e "${G}✅ License Verified! Access Granted.${NC}"
         
-        # Save license key
-        sudo mkdir -p "$INSTALL_DIR"
-        echo "$KEY" | sudo tee "$INSTALL_DIR/license.key" > /dev/null
+        # Create install directory and save license
+        mkdir -p "$INSTALL_DIR"
+        echo "$KEY" > "$INSTALL_DIR/license.key"
+        chmod 600 "$INSTALL_DIR/license.key"
         
-        sleep 1
+        sleep 2
         return 0
     else
         echo -e "${R}❌ Invalid License Key! Access Denied.${NC}"
@@ -97,6 +99,7 @@ check_license() {
         echo -e "${C}💡 To purchase a license, contact Ankit-Dev or send payment to:${NC}"
         echo -e "${W}   UPI: 9892642904@ybl${NC}"
         echo -e "${W}   Amount: ₹499 (One-time payment)${NC}"
+        echo -e "${W}   Send screenshot to @Ankit-Dev on Discord${NC}"
         echo ""
         read -p "🔄 Press Enter to try again or 'q' to quit: " retry
         if [[ "$retry" == "q" ]]; then
@@ -141,11 +144,11 @@ check_system() {
         exit 1
     fi
     
-    # Check disk space
+    # Check disk space (need at least 5GB)
     AVAILABLE_SPACE=$(df / | awk 'NR==2 {print $4}')
-    if [ $AVAILABLE_SPACE -lt 10485760 ]; then
+    if [ $AVAILABLE_SPACE -lt 5242880 ]; then
         echo -e "${Y}⚠️  Low disk space: $(($AVAILABLE_SPACE/1024/1024))GB available${NC}"
-        echo -e "${Y}   Recommended: At least 10GB free space${NC}"
+        echo -e "${Y}   Recommended: At least 5GB free space${NC}"
         read -p "Continue anyway? (y/n): " -n 1 -r
         echo ""
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -153,6 +156,15 @@ check_system() {
         fi
     else
         echo -e "${G}✅ Disk space: $(($AVAILABLE_SPACE/1024/1024))GB available${NC}"
+    fi
+    
+    # Check memory (need at least 1GB)
+    TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
+    if [ $TOTAL_RAM -lt 1024 ]; then
+        echo -e "${Y}⚠️  Low memory: ${TOTAL_RAM}MB${NC}"
+        echo -e "${Y}   Recommended: At least 1GB RAM${NC}"
+    else
+        echo -e "${G}✅ Memory: ${TOTAL_RAM}MB${NC}"
     fi
     
     echo -e "${G}✅ System check passed!${NC}"
@@ -199,16 +211,21 @@ install_dependencies() {
         jq \
         screen \
         tmux \
+        build-essential \
         > /dev/null 2>&1
+    
+    echo -e "${G}   ✅ Core packages installed${NC}"
     
     # Install snap packages
     echo -e "${Y}   → Installing LXD via snap...${NC}"
     snap install lxd > /dev/null 2>&1
+    echo -e "${G}   ✅ LXD installed${NC}"
     
     # Add user to lxd group
     usermod -aG lxd $SUDO_USER 2>/dev/null || usermod -aG lxd $USER
+    echo -e "${G}   ✅ User added to lxd group${NC}"
     
-    echo -e "${G}✅ Dependencies installed!${NC}"
+    echo -e "${G}✅ All dependencies installed successfully!${NC}"
     sleep 1
 }
 
@@ -262,33 +279,24 @@ EOF
         lxc storage create default dir > /dev/null 2>&1
     fi
     
-    echo -e "${G}✅ LXD configured!${NC}"
+    echo -e "${G}✅ LXD configured successfully!${NC}"
     sleep 1
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🐍  SETUP PYTHON ENVIRONMENT
+#  🐍  INSTALL PYTHON PACKAGES (GLOBALLY)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-setup_python() {
-    echo -e "${C}🐍 Setting up Python environment...${NC}"
-    
-    # Create installation directory
-    mkdir -p "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
-    
-    # Create virtual environment
-    echo -e "${Y}   → Creating virtual environment...${NC}"
-    python3 -m venv venv
-    source venv/bin/activate
+install_python_packages() {
+    echo -e "${C}🐍 Installing Python packages globally...${NC}"
     
     # Upgrade pip
     echo -e "${Y}   → Upgrading pip...${NC}"
-    pip install --upgrade pip > /dev/null 2>&1
+    pip3 install --upgrade pip > /dev/null 2>&1
     
-    # Install Python packages
-    echo -e "${Y}   → Installing Python packages...${NC}"
-    pip install \
+    # Install Python packages globally
+    echo -e "${Y}   → Installing discord.py and dependencies...${NC}"
+    pip3 install \
         discord.py \
         aiohttp \
         python-dotenv \
@@ -296,8 +304,68 @@ setup_python() {
         psutil \
         > /dev/null 2>&1
     
-    # Create requirements.txt
-    cat > requirements.txt << EOF
+    echo -e "${G}✅ Python packages installed globally!${NC}"
+    sleep 1
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  🔥  CONFIGURE FIREWALL
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+configure_firewall() {
+    echo -e "${C}🔥 Configuring firewall...${NC}"
+    
+    # Allow SSH
+    ufw allow 22/tcp > /dev/null 2>&1
+    echo -e "${Y}   → SSH port 22 allowed${NC}"
+    
+    # Allow port forwarding range
+    ufw allow 20000:50000/tcp > /dev/null 2>&1
+    ufw allow 20000:50000/udp > /dev/null 2>&1
+    echo -e "${Y}   → Port range 20000-50000 allowed (TCP/UDP)${NC}"
+    
+    # Enable firewall if not enabled
+    ufw --force enable > /dev/null 2>&1
+    echo -e "${Y}   → Firewall enabled${NC}"
+    
+    echo -e "${G}✅ Firewall configured!${NC}"
+    sleep 1
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  📁  CREATE DIRECTORY STRUCTURE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+create_directories() {
+    echo -e "${C}📁 Creating directory structure...${NC}"
+    
+    # Create main directory
+    mkdir -p "$INSTALL_DIR"
+    echo -e "${Y}   → Created $INSTALL_DIR${NC}"
+    
+    # Create logs directory
+    mkdir -p "$INSTALL_DIR/logs"
+    echo -e "${Y}   → Created $INSTALL_DIR/logs${NC}"
+    
+    # Create database directory
+    mkdir -p "$INSTALL_DIR/data"
+    echo -e "${Y}   → Created $INSTALL_DIR/data${NC}"
+    
+    # Set permissions
+    chmod 755 "$INSTALL_DIR"
+    
+    echo -e "${G}✅ Directory structure created!${NC}"
+    sleep 1
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  📋  CREATE REQUIREMENTS FILE (Optional)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+create_requirements() {
+    echo -e "${C}📋 Creating requirements.txt file (optional)...${NC}"
+    
+    cat > "$INSTALL_DIR/requirements.txt" << EOF
 discord.py>=2.3.0
 aiohttp>=3.9.0
 python-dotenv>=1.0.0
@@ -305,6 +373,80 @@ requests>=2.31.0
 psutil>=5.9.0
 EOF
     
-    echo -e "${G}✅ Python environment ready!${NC}"
+    echo -e "${G}✅ requirements.txt created at $INSTALL_DIR/requirements.txt${NC}"
     sleep 1
 }
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  📋  SHOW COMPLETION MESSAGE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+show_completion() {
+    echo -e "${G}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${G}║              ✅ INSTALLATION COMPLETE ✅                        ║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  📍 Installation Directory: $INSTALL_DIR                   ${G}║${NC}"
+    echo -e "${G}║${NC}  📋 Requirements File: $INSTALL_DIR/requirements.txt       ${G}║${NC}"
+    echo -e "${G}║${NC}  📊 Database Location: $INSTALL_DIR/data/                  ${G}║${NC}"
+    echo -e "${G}║${NC}  📝 Logs Location: $INSTALL_DIR/logs/                      ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}              📋 NEXT STEPS                                  ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  1. Copy your v5.py file to:                                ${G}║${NC}"
+    echo -e "${G}║${NC}     $INSTALL_DIR/v5.py                   ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  2. Make it executable:                                     ${G}║${NC}"
+    echo -e "${G}║${NC}     chmod +x $INSTALL_DIR/v5.py          ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  3. Install Python packages (if not already):               ${G}║${NC}"
+    echo -e "${G}║${NC}     pip3 install -r $INSTALL_DIR/requirements.txt           ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  4. Run the bot manually to test:                           ${G}║${NC}"
+    echo -e "${G}║${NC}     python3 $INSTALL_DIR/v5.py                            ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}║${NC}  5. (Optional) Create systemd service for auto-start:       ${G}║${NC}"
+    echo -e "${G}║${NC}     See documentation for service file                      ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}              🔐 LICENSE INFORMATION                         ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}  License Key: $(cat $INSTALL_DIR/license.key)                      ${G}║${NC}"
+    echo -e "${G}║${NC}  Valid Keys: AnkitDev99\$@, SVM5-PRO-2025                    ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}              📞 SUPPORT                                     ${G}║${NC}"
+    echo -e "${G}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${G}║${NC}  Developer: Ankit-Dev                                       ${G}║${NC}"
+    echo -e "${G}║${NC}  UPI: 9892642904@ybl                                        ${G}║${NC}"
+    echo -e "${G}║${NC}  Discord: @Ankit-Dev                                        ${G}║${NC}"
+    echo -e "${G}║${NC}  GitHub: https://github.com/AnkitKing7/Svm5-bot             ${G}║${NC}"
+    echo -e "${G}║${NC}                                                              ${G}║${NC}"
+    echo -e "${G}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${G}🎉 System dependencies installed successfully! 🎉${NC}"
+    echo -e "${Y}📌 Remember to copy your v5.py file to: $INSTALL_DIR/svm5.py${NC}"
+    echo ""
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  🎯  MAIN INSTALLATION FUNCTION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+main() {
+    show_header
+    check_license
+    check_system
+    install_dependencies
+    configure_lxd
+    install_python_packages
+    configure_firewall
+    create_directories
+    create_requirements
+    show_completion
+}
+
+# Run main function
+main
