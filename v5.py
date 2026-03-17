@@ -4601,4 +4601,328 @@ async def system_info(ctx):
     net_info = f"```fix\n"
     net_info += f"Sent     : {network.bytes_sent/1024/1024:.2f} MB\n"
     net_info += f"Received : {network.bytes_recv/1024/1024:.2f} MB\n"
+    net_info += f"Packets Sent: {network.packets_sent}\n"
+    net_info += f"Packets Recv: {network.packets_recv}\n"
+    net_info += f"```"
+    embed.add_field(name="🌐 Network", value=net_info, inline=True)
     
+    await ctx.send(embed=embed)
+
+@bot.command(name="protect")
+@main_admin_only()
+@commands.cooldown(1, 2, commands.BucketType.user)
+async def main_protect(ctx, user: discord.Member, vps_num: int = None):
+    """Protect a VPS from purge"""
+    user_id = str(user.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=error_embed("No VPS", f"```diff\n- {user.mention} has no VPS.\n```"))
+        return
+    
+    if vps_num is None:
+        # Protect all
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('UPDATE vps SET purge_protected = 1 WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        
+        embed = success_embed("Protection Added", f"```fix\nAll VPS of {user.mention} are now protected from purge.\n```")
+        await ctx.send(embed=embed)
+    else:
+        if vps_num < 1 or vps_num > len(vps_list):
+            await ctx.send(embed=error_embed("Invalid Number", f"```diff\n- VPS number must be between 1 and {len(vps_list)}.\n```"))
+            return
+        
+        vps = vps_list[vps_num - 1]
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('UPDATE vps SET purge_protected = 1 WHERE container_name = ?', (vps['container_name'],))
+        conn.commit()
+        conn.close()
+        
+        embed = success_embed("Protection Added", f"```fix\nVPS #{vps_num} of {user.mention} is now protected from purge.\n```")
+        await ctx.send(embed=embed)
+
+@bot.command(name="unprotect")
+@main_admin_only()
+@commands.cooldown(1, 2, commands.BucketType.user)
+async def main_unprotect(ctx, user: discord.Member, vps_num: int = None):
+    """Remove purge protection from a VPS"""
+    user_id = str(user.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=error_embed("No VPS", f"```diff\n- {user.mention} has no VPS.\n```"))
+        return
+    
+    if vps_num is None:
+        # Unprotect all
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('UPDATE vps SET purge_protected = 0 WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        
+        embed = success_embed("Protection Removed", f"```fix\nAll VPS of {user.mention} are no longer protected from purge.\n```")
+        await ctx.send(embed=embed)
+    else:
+        if vps_num < 1 or vps_num > len(vps_list):
+            await ctx.send(embed=error_embed("Invalid Number", f"```diff\n- VPS number must be between 1 and {len(vps_list)}.\n```"))
+            return
+        
+        vps = vps_list[vps_num - 1]
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('UPDATE vps SET purge_protected = 0 WHERE container_name = ?', (vps['container_name'],))
+        conn.commit()
+        conn.close()
+        
+        embed = success_embed("Protection Removed", f"```fix\nVPS #{vps_num} of {user.mention} is no longer protected from purge.\n```")
+        await ctx.send(embed=embed)
+
+@bot.command(name="purge-all")
+@main_admin_only()
+@commands.cooldown(1, 300, commands.BucketType.user)
+async def main_purge_all(ctx):
+    """Purge all unprotected VPS"""
+    all_vps = get_all_vps()
+    
+    # Count unprotected
+    unprotected = [v for v in all_vps if not v.get('purge_protected', 0)]
+    
+    if not unprotected:
+        await ctx.send(embed=info_embed("No Unprotected VPS", "```fix\nAll VPS are protected.\n```"))
+        return
+    
+    embed = warning_embed(
+        "⚠️ PURGE ALL UNPROTECTED VPS",
+        f"```fix\nThis will delete {len(unprotected)} unprotected VPS.\nProtected VPS will be skipped.\n```\n\n"
+        f"**This action cannot be undone!**"
+    )
+    
+    view = View(timeout=60)
+    confirm_btn = Button(label="✅ PURGE", style=discord.ButtonStyle.danger)
+    cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+    
+    async def confirm_callback(interaction):
+        await perform_purge(interaction, unprotected)
+    
+    async def cancel_callback(interaction):
+        await interaction.response.edit_message(embed=info_embed("Cancelled", "```fix\nPurge cancelled.\n```"), view=None)
+    
+    confirm_btn.callback = confirm_callback
+    cancel_btn.callback = cancel_callback
+    view.add_item(confirm_btn)
+    view.add_item(cancel_btn)
+    
+    await ctx.send(embed=embed, view=view)
+
+async def perform_purge(interaction, unprotected):
+    await interaction.response.defer()
+    
+    progress = await interaction.followup.send(
+        embed=info_embed("Purging VPS", f"```fix\nStarting purge of {len(unprotected)} VPS...\n```"),
+        ephemeral=True
+    )
+    
+    deleted = 0
+    failed = 0
+    
+    for i, vps in enumerate(unprotected, 1):
+        container = vps['container_name']
+        
+        try:
+            # Update progress
+            if i % 5 == 0:
+                await progress.edit(embed=info_embed("Purging VPS", f"```fix\nProgress: {i}/{len(unprotected)}...\n```"))
+            
+            # Stop and delete
+            await run_lxc(f"lxc stop {container} --force")
+            await run_lxc(f"lxc delete {container}")
+            
+            # Remove from DB
+            delete_vps(container)
+            
+            # Log
+            log_suspension(container, vps['user_id'], 'purge', 'Purge all unprotected', str(interaction.user.id))
+            
+            deleted += 1
+            
+            # Small delay
+            await asyncio.sleep(2)
+            
+        except Exception as e:
+            logger.error(f"Failed to purge {container}: {e}")
+            failed += 1
+    
+    embed = success_embed("Purge Complete", f"```fix\nDeleted: {deleted}\nFailed: {failed}\n```")
+    await progress.edit(embed=embed)
+
+@bot.command(name="admin-users")
+@main_admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_users(ctx):
+    """List all users with VPS"""
+    all_vps = get_all_vps()
+    
+    # Group by user
+    users = {}
+    for vps in all_vps:
+        if vps['user_id'] not in users:
+            users[vps['user_id']] = []
+        users[vps['user_id']].append(vps)
+    
+    if not users:
+        await ctx.send(embed=info_embed("No Users", "```fix\nNo users have VPS.\n```"))
+        return
+    
+    embed = info_embed(f"Users with VPS ({len(users)})")
+    
+    for user_id, vps_list in list(users.items())[:10]:
+        try:
+            user = await bot.fetch_user(int(user_id))
+            username = f"{user.name} ({user.id})"
+        except:
+            username = f"Unknown ({user_id})"
+        
+        vps_count = len(vps_list)
+        running = sum(1 for v in vps_list if v['status'] == 'running' and not v['suspended'])
+        
+        embed.add_field(
+            name=username,
+            value=f"```fix\nVPS: {vps_count} (Running: {running})\nContainers: {', '.join([v['container_name'][:10] + '...' for v in vps_list[:3]])}\n```",
+            inline=False
+        )
+    
+    if len(users) > 10:
+        embed.add_field(name="📝 Note", value=f"Showing 10 of {len(users)} users", inline=False)
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="backup-db")
+@main_admin_only()
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def backup_db(ctx):
+    """Backup database"""
+    backup_name = f"svm5_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    backup_path = f"/opt/svm5-bot/backups/{backup_name}"
+    
+    # Create backups directory if not exists
+    os.makedirs("/opt/svm5-bot/backups", exist_ok=True)
+    
+    try:
+        # Copy database
+        import shutil
+        shutil.copy2("/opt/svm5-bot/svm5.db", backup_path)
+        
+        # Compress
+        import gzip
+        with open(backup_path, 'rb') as f_in:
+            with gzip.open(f"{backup_path}.gz", 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        
+        os.remove(backup_path)
+        
+        embed = success_embed("Database Backup Created", f"```fix\nBackup: {backup_name}.gz\nLocation: /opt/svm5-bot/backups/\n```")
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        await ctx.send(embed=error_embed("Backup Failed", f"```diff\n- {str(e)}\n```"))
+
+@bot.command(name="restore-db")
+@main_admin_only()
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def restore_db(ctx, backup_name: str):
+    """Restore database from backup"""
+    backup_path = f"/opt/svm5-bot/backups/{backup_name}"
+    
+    if not os.path.exists(backup_path):
+        await ctx.send(embed=error_embed("Backup Not Found", f"```diff\n- Backup {backup_name} not found.\n```"))
+        return
+    
+    # Confirmation view
+    view = View(timeout=60)
+    confirm_btn = Button(label="✅ Confirm Restore", style=discord.ButtonStyle.danger)
+    cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+    
+    async def confirm_callback(interaction):
+        try:
+            # Backup current database
+            import shutil
+            current_backup = f"/opt/svm5-bot/backups/current_before_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+            shutil.copy2("/opt/svm5-bot/svm5.db", current_backup)
+            
+            # Restore
+            shutil.copy2(backup_path, "/opt/svm5-bot/svm5.db")
+            
+            embed = success_embed("Database Restored", f"```fix\nRestored from: {backup_name}\nCurrent DB backed up to: {os.path.basename(current_backup)}\n```")
+            await interaction.response.edit_message(embed=embed, view=None)
+            
+            # Restart bot? Optional
+            
+        except Exception as e:
+            await interaction.response.edit_message(embed=error_embed("Restore Failed", f"```diff\n- {str(e)}\n```"), view=None)
+    
+    async def cancel_callback(interaction):
+        await interaction.response.edit_message(embed=info_embed("Cancelled", "```fix\nRestore cancelled.\n```"), view=None)
+    
+    confirm_btn.callback = confirm_callback
+    cancel_btn.callback = cancel_callback
+    view.add_item(confirm_btn)
+    view.add_item(cancel_btn)
+    
+    embed = warning_embed(
+        "⚠️ Confirm Database Restore",
+        f"```fix\nBackup: {backup_name}\n```\n\n"
+        f"**This will overwrite the current database!**\n"
+        f"A backup of the current database will be created automatically."
+    )
+    
+    await ctx.send(embed=embed, view=view)
+
+# ==================================================================================================
+#  🚀  RUN THE BOT
+# ==================================================================================================
+
+if __name__ == "__main__":
+    if BOT_TOKEN == "YOUR_DISCORD_BOT_TOKEN_HERE":
+        print("\n" + "="*80)
+        print("❌ ERROR: Please set your BOT_TOKEN in the configuration!")
+        print("="*80 + "\n")
+        sys.exit(1)
+    
+    # Check license
+    if not LICENSE_VERIFIED:
+        print("\n" + "="*80)
+        print("⚠️  WARNING: License not verified!")
+        print("   Valid license keys: AnkitDev99$@, SVM5-PRO-2025, SVM5-ENTERPRISE")
+        print("="*80 + "\n")
+    
+    # Check LXC
+    try:
+        subprocess.run(['lxc', '--version'], capture_output=True, check=True)
+    except:
+        print("\n" + "="*80)
+        print("❌ ERROR: LXC is not installed or not in PATH!")
+        print("Install LXC: sudo apt install lxc lxc-templates")
+        print("Then run: sudo lxd init")
+        print("="*80 + "\n")
+        sys.exit(1)
+    
+    # Create necessary directories
+    os.makedirs("/opt/svm5-bot/backups", exist_ok=True)
+    os.makedirs("/opt/svm5-bot/logs", exist_ok=True)
+    
+    # Run bot
+    try:
+        bot.run(BOT_TOKEN)
+    except discord.LoginFailure:
+        print("\n" + "="*80)
+        print("❌ ERROR: Invalid Discord token!")
+        print("="*80 + "\n")
+    except Exception as e:
+        print(f"\n❌ ERROR: {e}\n")
