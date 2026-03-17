@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
-# ║                     SVM5-BOT - Complete VPS Management Bot                    ║
+# ║                    SVM5-BOT - Complete VPS Management Bot                     ║
 # ║                         Made by Ankit-Dev with ❤️                             ║
-# ║                     Single File | No SSH | Direct LXC                         ║
+# ║                    Version: 5.0.0 | Direct LXC - No SSH Setup                ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 import discord
@@ -20,22 +21,35 @@ import logging
 import shlex
 import shutil
 import time
+import aiohttp
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
-import aiohttp
-import traceback
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  ⚙️  CONFIGURATION - EDIT THESE BEFORE RUNNING
+#  ⚙️  CONFIGURATION - EDIT THESE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-BOT_TOKEN           = ""          # Discord Bot Token
-BOT_PREFIX          = "."                             # Command prefix
-BOT_NAME            = "SVM5-BOT"                      # Bot name
-BOT_AUTHOR          = "Ankit-Dev"                      # Your name
-MAIN_ADMIN_IDS      = [1405866008127864852]            # Your Discord ID(s)
-VPS_USER_ROLE_ID    = ""                               # Auto-created if empty
-DEFAULT_STORAGE_POOL = "default"                       # LXC storage pool
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"           # Discord Bot Token (Change this)
+BOT_PREFIX = "."                             # Command prefix
+BOT_NAME = "SVM5-BOT"                        # Bot name
+BOT_AUTHOR = "Ankit-Dev"                      # Your name
+MAIN_ADMIN_IDS = [123456789012345678]        # Your Discord ID(s) (Change this)
+DEFAULT_STORAGE_POOL = "default"              # LXC storage pool
+SERVER_IP = "YOUR_SERVER_IP"                  # Your server IP for port forwarding
+
+# UPI Payment Configuration
+UPI_ID = "your-upi@paytm"                     # Your UPI ID (Change this)
+IPV4_PRICE_INR = 50                            # Price per IPv4 in INR
+
+# AI Configuration - YOUR PROVIDED KEY
+AI_API_KEY = "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"
+AI_MODEL = "llama3-70b-8192"                   # Groq model
+
+# Thumbnail URL
+THUMBNAIL_URL = "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg"
+
+# License Key (for verification)
+VALID_LICENSE_KEYS = ["AnkitDev99$@", "SVM5-PRO-2025", "SVM5-ENTERPRISE", "DEVELOPER-ANKIT"]
 
 # Free VPS Plans based on invites
 FREE_VPS_PLANS = {
@@ -60,13 +74,6 @@ OS_OPTIONS = [
     {"label": "🦊 AlmaLinux 9", "value": "images:almalinux/9", "desc": "Alma - RHEL Compatible"},
 ]
 
-# AI Configuration
-AI_API_KEY          = "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"            # Get from console.groq.com
-AI_MODEL            = "llama3-70b-8192"               # Groq model
-
-# Thumbnail URL
-THUMBNAIL_URL = "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg"
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  📝  LOGGING SETUP
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -75,7 +82,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler('svm5_bot.log'),
+        logging.FileHandler('/opt/svm5-bot/svm5.log'),
         logging.StreamHandler()
     ]
 )
@@ -89,12 +96,12 @@ if not shutil.which("lxc"):
     sys.exit(1)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🗄️  DATABASE SETUP (SQLite)
+#  🗄️  DATABASE SETUP
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def get_db():
     """Get database connection"""
-    conn = sqlite3.connect('svm5.db')
+    conn = sqlite3.connect('/opt/svm5-bot/svm5.db')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -123,13 +130,13 @@ def init_db():
         status TEXT DEFAULT 'stopped',
         suspended INTEGER DEFAULT 0,
         suspended_reason TEXT DEFAULT '',
+        purge_protected INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         last_started TEXT,
-        last_stopped TEXT,
-        notes TEXT DEFAULT ''
+        last_stopped TEXT
     )''')
     
-    # User stats table (invites/boosts)
+    # User stats table
     cur.execute('''CREATE TABLE IF NOT EXISTS user_stats (
         user_id TEXT PRIMARY KEY,
         invites INTEGER DEFAULT 0,
@@ -144,7 +151,7 @@ def init_db():
         value TEXT NOT NULL
     )''')
     
-    # Transactions for IPv4 purchases
+    # Transactions table for IPv4 purchases
     cur.execute('''CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -178,7 +185,7 @@ def init_db():
         created_at TEXT NOT NULL
     )''')
     
-    # Port allocations (quota)
+    # Port allocations
     cur.execute('''CREATE TABLE IF NOT EXISTS port_allocations (
         user_id TEXT PRIMARY KEY,
         allocated_ports INTEGER DEFAULT 0
@@ -195,7 +202,7 @@ def init_db():
         created_at TEXT NOT NULL
     )''')
     
-    # Backups/snapshots
+    # Snapshots/Backups
     cur.execute('''CREATE TABLE IF NOT EXISTS snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -212,6 +219,14 @@ def init_db():
         updated_at TEXT NOT NULL
     )''')
     
+    # License key
+    cur.execute('''CREATE TABLE IF NOT EXISTS license (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        license_key TEXT NOT NULL,
+        activated_at TEXT NOT NULL,
+        activated_by TEXT
+    )''')
+    
     # Initialize settings
     settings_init = [
         ('cpu_threshold', '90'),
@@ -221,8 +236,7 @@ def init_db():
         ('bot_status', 'online'),
         ('bot_activity', 'watching'),
         ('bot_activity_name', f'{BOT_NAME} VPS Manager'),
-        ('upcoming_purge', 'false'),
-        ('upcoming_purge_time', ''),
+        ('license_verified', 'false'),
     ]
     for key, value in settings_init:
         cur.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, value))
@@ -230,6 +244,9 @@ def init_db():
     conn.commit()
     conn.close()
     logger.info("✅ Database initialized")
+
+# Initialize database
+init_db()
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  📊  DATABASE HELPER FUNCTIONS
@@ -384,6 +401,15 @@ def add_transaction(user_id: str, txn_ref: str, amount: int) -> int:
     conn.close()
     return txn_id
 
+def get_pending_transactions() -> List[Dict]:
+    """Get all pending transactions"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM transactions WHERE status = "pending" ORDER BY created_at')
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 def verify_transaction(txn_ref: str, txn_id: str) -> bool:
     """Verify a transaction"""
     conn = get_db()
@@ -395,15 +421,6 @@ def verify_transaction(txn_ref: str, txn_id: str) -> bool:
     conn.commit()
     conn.close()
     return verified
-
-def get_pending_transactions() -> List[Dict]:
-    """Get all pending transactions"""
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM transactions WHERE status = "pending" ORDER BY created_at')
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
 
 def add_ipv4(user_id: str, container_name: str, public_ip: str, private_ip: str, tunnel_url: str = ""):
     """Add IPv4 allocation"""
@@ -555,8 +572,24 @@ def clear_ai_history(user_id: str):
     conn.commit()
     conn.close()
 
-# Initialize database
-init_db()
+def verify_license_key(key: str) -> bool:
+    """Verify license key"""
+    return key in VALID_LICENSE_KEYS
+
+def save_license(key: str, user_id: str):
+    """Save license key to database"""
+    conn = get_db()
+    cur = conn.cursor()
+    now = datetime.now().isoformat()
+    cur.execute('INSERT INTO license (license_key, activated_at, activated_by) VALUES (?, ?, ?)',
+                (key, now, user_id))
+    set_setting('license_verified', 'true')
+    conn.commit()
+    conn.close()
+
+def is_license_verified() -> bool:
+    """Check if license is verified"""
+    return get_setting('license_verified', 'false') == 'true'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🎨  EMBED HELPER FUNCTIONS
@@ -605,7 +638,7 @@ def no_vps_embed() -> discord.Embed:
     )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🛠️  LXC HELPER FUNCTIONS
+#  🛠️  LXC HELPER FUNCTIONS (DIRECT LXC - NO SSH NEEDED)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
@@ -663,7 +696,7 @@ async def get_container_stats(container_name: str) -> Dict:
     
     if stats['status'] == 'running':
         # Get CPU usage
-        out, _, _ = await exec_in_container(container_name, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
+        out, _, _ = await exec_in_container(container_name, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
         stats['cpu'] = f"{out}%" if out else "N/A"
         
         # Get memory usage
@@ -779,8 +812,7 @@ bot.start_time = datetime.utcnow()
 MAINTENANCE_MODE = get_setting('maintenance_mode', 'false').lower() == 'true'
 CPU_THRESHOLD = int(get_setting('cpu_threshold', 90))
 RAM_THRESHOLD = int(get_setting('ram_threshold', 90))
-UPCOMING_PURGE = get_setting('upcoming_purge', 'false').lower() == 'true'
-UPCOMING_PURGE_TIME = get_setting('upcoming_purge_time', '')
+LICENSE_VERIFIED = is_license_verified()
 
 # Active help menus
 active_help_menus = {}
@@ -803,6 +835,26 @@ async def maintenance_check(ctx) -> bool:
     return True
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  ✅  LICENSE CHECK DECORATOR
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def license_check(ctx) -> bool:
+    """Check if license is verified"""
+    global LICENSE_VERIFIED
+    
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        embed = error_embed(
+            "License Required",
+            "This bot requires a valid license key to operate.\n"
+            "Please contact Ankit-Dev to purchase a license.\n"
+            f"**UPI:** 9892642904@ybl\n"
+            f"**Amount:** ₹499"
+        )
+        await ctx.send(embed=embed)
+        return False
+    return True
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  ✅  ON READY
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -816,6 +868,12 @@ async def on_ready():
         )
     )
     logger.info(f"✅ Bot is ready: {bot.user} (ID: {bot.user.id})")
+    
+    # Check license
+    global LICENSE_VERIFIED
+    LICENSE_VERIFIED = is_license_verified()
+    if not LICENSE_VERIFIED:
+        logger.warning("⚠️ License not verified! Bot will have limited functionality.")
     
     # Create VPS user role if needed
     for guild in bot.guilds:
@@ -839,6 +897,8 @@ async def on_ready():
 ║  Bot: {bot.user}                             ║
 ║  ID : {bot.user.id}                                        ║
 ║  Prefix: {BOT_PREFIX}                                           ║
+║  License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}                ║
+║  Mode: Direct LXC (No SSH)                                    ║
 ║  Commands: 50+                                                 ║
 ╚════════════════════════════════════════════════════════════════╝
     """)
@@ -873,6 +933,8 @@ async def on_command_error(ctx, error):
             "Command on Cooldown",
             f"Please wait {error.retry_after:.1f} seconds before using this command again."
         ))
+    elif isinstance(error, discord.errors.InteractionResponded):
+        pass
     else:
         logger.error(f"Error in {ctx.command}: {error}")
         await ctx.send(embed=error_embed(
@@ -893,7 +955,7 @@ class HelpView(View):
         self.pages = [
             {
                 "title": "📚 Welcome to SVM5-BOT Help",
-                "description": f"**Prefix:** `{BOT_PREFIX}`\n**Version:** 5.0.0\n**Author:** {BOT_AUTHOR}\n\nSelect a category below to see commands.",
+                "description": f"**Prefix:** `{BOT_PREFIX}`\n**Version:** 5.0.0\n**Author:** {BOT_AUTHOR}\n**Mode:** Direct LXC (No SSH)\n\nSelect a category below to see commands.",
                 "fields": [
                     ("👤 User Commands", "Basic commands for all users", True),
                     ("🖥️ VPS Management", "Control your VPS containers", True),
@@ -907,6 +969,7 @@ class HelpView(View):
                 "title": "👤 User Commands",
                 "description": "Basic commands for all users",
                 "fields": [
+                    (f"{BOT_PREFIX}help", "Show this help menu", False),
                     (f"{BOT_PREFIX}ping", "Check bot latency", False),
                     (f"{BOT_PREFIX}uptime", "Show bot uptime", False),
                     (f"{BOT_PREFIX}bot-info", "Detailed bot information", False),
@@ -925,11 +988,9 @@ class HelpView(View):
                     (f"{BOT_PREFIX}myvps", "List your VPS", False),
                     (f"{BOT_PREFIX}list", "Detailed VPS list", False),
                     (f"{BOT_PREFIX}manage", "Interactive VPS manager", False),
-                    (f"{BOT_PREFIX}stats", "View VPS statistics", False),
-                    (f"{BOT_PREFIX}logs", "View VPS logs", False),
-                    (f"{BOT_PREFIX}share @user <num>", "Share VPS access", False),
-                    (f"{BOT_PREFIX}unshare @user <num>", "Revoke VPS access", False),
-                    (f"{BOT_PREFIX}shared", "List shared VPS", False),
+                    (f"{BOT_PREFIX}stats [container]", "View VPS statistics", False),
+                    (f"{BOT_PREFIX}logs [container] [lines]", "View VPS logs", False),
+                    (f"{BOT_PREFIX}ssh-gen <container>", "Generate SSH access via tmate", False),
                 ]
             },
             {
@@ -944,7 +1005,7 @@ class HelpView(View):
             },
             {
                 "title": "🤖 AI Chat",
-                "description": "Chat with AI assistant (powered by Groq LLaMA)",
+                "description": "Chat with AI assistant (powered by Groq)",
                 "fields": [
                     (f"{BOT_PREFIX}ai <message>", "Chat with AI", False),
                     (f"{BOT_PREFIX}ai-reset", "Reset chat history", False),
@@ -986,6 +1047,9 @@ class HelpView(View):
                     (f"{BOT_PREFIX}remove-inv @user <amount>", "Remove invites", False),
                     (f"{BOT_PREFIX}ports-add @user <amount>", "Add port slots", False),
                     (f"{BOT_PREFIX}serverstats", "Server statistics", False),
+                    (f"{BOT_PREFIX}admin-add-ipv4 @user <container>", "Assign IPv4", False),
+                    (f"{BOT_PREFIX}admin-rm-ipv4 @user [container]", "Remove IPv4", False),
+                    (f"{BOT_PREFIX}admin-pending-ipv4", "View pending IPv4 purchases", False),
                 ]
             })
         
@@ -1002,6 +1066,7 @@ class HelpView(View):
                     (f"{BOT_PREFIX}purge-all", "Purge all unprotected VPS", False),
                     (f"{BOT_PREFIX}protect @user [num]", "Protect VPS from purge", False),
                     (f"{BOT_PREFIX}unprotect @user [num]", "Remove protection", False),
+                    (f"{BOT_PREFIX}admin-users", "List all users", False),
                 ]
             })
         
@@ -1044,7 +1109,7 @@ class HelpView(View):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def help_command(ctx):
     """Show interactive help menu"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = ctx.author.id
@@ -1071,7 +1136,7 @@ async def commands_alias(ctx):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def ping_command(ctx):
     """Check bot latency"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     start = time.time()
@@ -1099,7 +1164,7 @@ async def ping_command(ctx):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def uptime_command(ctx):
     """Show bot uptime"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     uptime = datetime.utcnow() - bot.start_time
@@ -1117,7 +1182,7 @@ async def uptime_command(ctx):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def bot_info(ctx):
     """Show detailed bot information"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     uptime = datetime.utcnow() - bot.start_time
@@ -1127,7 +1192,7 @@ async def bot_info(ctx):
     
     all_vps = get_all_vps()
     total_vps = len(all_vps)
-    running_vps = sum(1 for v in all_vps if v['status'] == 'running')
+    running_vps = sum(1 for v in all_vps if v['status'] == 'running' and not v['suspended'])
     
     conn = get_db()
     cur = conn.cursor()
@@ -1145,6 +1210,9 @@ async def bot_info(ctx):
     embed.add_field(name="Total VPS", value=f"`{total_vps}`", inline=True)
     embed.add_field(name="Running VPS", value=f"`{running_vps}`", inline=True)
     embed.add_field(name="Database", value="`SQLite 3`", inline=True)
+    embed.add_field(name="License", value="`✅ Verified`" if LICENSE_VERIFIED else "`❌ Not Verified`", inline=True)
+    embed.add_field(name="AI Model", value=f"`{AI_MODEL}`", inline=True)
+    embed.add_field(name="Mode", value="`Direct LXC (No SSH)`", inline=True)
     
     await ctx.send(embed=embed)
 
@@ -1154,8 +1222,8 @@ async def bot_info(ctx):
 
 def generate_username() -> str:
     """Generate a random username"""
-    adjectives = ["cool", "fast", "dark", "epic", "blue", "swift", "neon", "alpha", "delta", "super"]
-    nouns = ["wolf", "tiger", "storm", "byte", "nova", "blade", "fox", "raven", "hawk", "lion"]
+    adjectives = ["cool", "fast", "dark", "epic", "blue", "swift", "neon", "alpha", "delta", "super", "mega", "ultra"]
+    nouns = ["wolf", "tiger", "storm", "byte", "nova", "blade", "fox", "raven", "hawk", "lion", "dragon", "phoenix"]
     num = random.randint(10, 999)
     return f"{random.choice(adjectives)}{random.choice(nouns)}{num}"
 
@@ -1163,7 +1231,7 @@ def generate_email(username: str = None) -> str:
     """Generate a random email"""
     if not username:
         username = generate_username()
-    domains = ["gmail.com", "yahoo.com", "outlook.com", "proton.me", "hotmail.com"]
+    domains = ["gmail.com", "yahoo.com", "outlook.com", "proton.me", "hotmail.com", "mail.com"]
     return f"{username}@{random.choice(domains)}"
 
 def generate_password(length: int = 16) -> str:
@@ -1175,7 +1243,7 @@ def generate_password(length: int = 16) -> str:
 @commands.cooldown(1, 10, commands.BucketType.user)
 async def gen_account(ctx):
     """Generate a random account"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     username = generate_username()
@@ -1183,16 +1251,23 @@ async def gen_account(ctx):
     password = generate_password()
     api_key = ''.join(random.choices(string.hexdigits, k=32))
     
-    # Save to database (we can store in user_stats or a separate table)
+    # Save to database
     conn = get_db()
     cur = conn.cursor()
-    cur.execute('''INSERT OR REPLACE INTO user_stats (user_id, invites, boosts, claimed_vps_count, last_updated)
-                   VALUES (?, 
-                           COALESCE((SELECT invites FROM user_stats WHERE user_id = ?), 0),
-                           COALESCE((SELECT boosts FROM user_stats WHERE user_id = ?), 0),
-                           COALESCE((SELECT claimed_vps_count FROM user_stats WHERE user_id = ?), 0),
-                           ?)''',
-                (str(ctx.author.id), str(ctx.author.id), str(ctx.author.id), str(ctx.author.id), datetime.now().isoformat()))
+    
+    # Create accounts table if not exists
+    cur.execute('''CREATE TABLE IF NOT EXISTS generated_accounts (
+        user_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        api_key TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )''')
+    
+    cur.execute('''INSERT OR REPLACE INTO generated_accounts (user_id, username, email, password, api_key, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (str(ctx.author.id), username, email, password, api_key, datetime.now().isoformat()))
     conn.commit()
     conn.close()
     
@@ -1221,19 +1296,30 @@ async def gen_account(ctx):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def my_account(ctx):
     """View your generated account"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
-    # Since we don't store the full account, we can't retrieve it
-    # We'll show stats instead
-    stats = get_user_stats(str(ctx.author.id))
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM generated_accounts WHERE user_id = ?', (str(ctx.author.id),))
+    account = cur.fetchone()
+    conn.close()
     
-    embed = info_embed("Your Account Info")
-    embed.add_field(name="User ID", value=f"`{ctx.author.id}`", inline=True)
-    embed.add_field(name="Invites", value=f"`{stats.get('invites', 0)}`", inline=True)
-    embed.add_field(name="Boosts", value=f"`{stats.get('boosts', 0)}`", inline=True)
-    embed.add_field(name="Claimed VPS", value=f"`{stats.get('claimed_vps_count', 0)}`", inline=True)
-    embed.add_field(name="Note", value="Use `.gen-acc` to generate a new account", inline=False)
+    if account:
+        embed = info_embed("Your Generated Account")
+        embed.add_field(name="Username", value=f"`{account['username']}`", inline=True)
+        embed.add_field(name="Email", value=f"||`{account['email']}`||", inline=True)
+        embed.add_field(name="Password", value=f"||`{account['password']}`||", inline=False)
+        embed.add_field(name="API Key", value=f"||`{account['api_key']}`||", inline=False)
+        embed.add_field(name="Created", value=f"`{account['created_at'][:16]}`", inline=True)
+    else:
+        stats = get_user_stats(str(ctx.author.id))
+        embed = info_embed("Your Account Info")
+        embed.add_field(name="User ID", value=f"`{ctx.author.id}`", inline=True)
+        embed.add_field(name="Invites", value=f"`{stats.get('invites', 0)}`", inline=True)
+        embed.add_field(name="Boosts", value=f"`{stats.get('boosts', 0)}`", inline=True)
+        embed.add_field(name="Claimed VPS", value=f"`{stats.get('claimed_vps_count', 0)}`", inline=True)
+        embed.add_field(name="Note", value=f"Use `{BOT_PREFIX}gen-acc` to generate a new account", inline=False)
     
     await ctx.send(embed=embed)
 
@@ -1245,7 +1331,7 @@ async def my_account(ctx):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def show_plans(ctx):
     """Show free VPS plans"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     embed = create_embed("Free VPS Plans", "Earn VPS by inviting users to the server!")
@@ -1278,7 +1364,7 @@ async def freeplans_alias(ctx):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def check_invites(ctx):
     """Check your invites"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     stats = get_user_stats(str(ctx.author.id))
@@ -1479,7 +1565,7 @@ class ClaimOSSelectView(View):
 @commands.cooldown(1, 60, commands.BucketType.user)
 async def claim_free(ctx):
     """Claim a free VPS based on your invites"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1529,7 +1615,7 @@ async def claim_free(ctx):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def user_stats_command(ctx):
     """View your statistics"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1552,7 +1638,7 @@ async def user_stats_command(ctx):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def my_vps(ctx):
     """List your VPS"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1565,10 +1651,10 @@ async def my_vps(ctx):
     embed = info_embed(f"Your VPS ({len(vps_list)})")
     
     for i, vps in enumerate(vps_list, 1):
-        status_emoji = "🟢" if vps['status'] == 'running' else "🔴"
+        status_emoji = "🟢" if vps['status'] == 'running' and not vps['suspended'] else "⛔" if vps['suspended'] else "🔴"
         status_text = vps['status'].upper()
         if vps['suspended']:
-            status_text = "⛔ SUSPENDED"
+            status_text = "SUSPENDED"
         
         embed.add_field(
             name=f"VPS #{i}",
@@ -1590,12 +1676,14 @@ async def list_command(ctx):
 
 class VPSManageView(View):
     """Interactive VPS management view"""
-    def __init__(self, ctx, user_id, vps_list):
+    def __init__(self, ctx, user_id, vps_list, is_admin_view=False, target_user=None):
         super().__init__(timeout=300)
         self.ctx = ctx
         self.user_id = user_id
         self.vps_list = vps_list
         self.current_index = 0
+        self.is_admin_view = is_admin_view
+        self.target_user = target_user
         self.message = None
         
         self.update_buttons()
@@ -1634,6 +1722,10 @@ class VPSManageView(View):
         stats_btn.callback = self.stats_callback
         self.add_item(stats_btn)
         
+        ssh_btn = Button(label="🔑 SSH", style=discord.ButtonStyle.secondary)
+        ssh_btn.callback = self.ssh_callback
+        self.add_item(ssh_btn)
+        
         refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary)
         refresh_btn.callback = self.refresh_callback
         self.add_item(refresh_btn)
@@ -1646,29 +1738,33 @@ class VPSManageView(View):
         # Get live stats
         stats = await get_container_stats(container)
         
-        status_emoji = "🟢" if stats['status'] == 'running' else "🔴" if stats['status'] == 'stopped' else "🟡"
+        status_emoji = "🟢" if stats['status'] == 'running' and not vps['suspended'] else "⛔" if vps['suspended'] else "🔴"
         status_text = stats['status'].upper()
         if vps['suspended']:
-            status_text = "⛔ SUSPENDED"
+            status_text = "SUSPENDED"
         
-        embed = create_embed(f"VPS Management: {container}")
+        title = f"VPS Management: {container}"
+        if self.is_admin_view and self.target_user:
+            title = f"Admin: {self.target_user.display_name}'s VPS - {container}"
+        
+        embed = create_embed(title)
         embed.add_field(name="Status", value=f"{status_emoji} `{status_text}`", inline=True)
         embed.add_field(name="Plan", value=vps['plan_name'], inline=True)
         embed.add_field(name="OS", value=vps['os_version'], inline=True)
         embed.add_field(name="Resources", value=f"RAM: {vps['ram']}GB\nCPU: {vps['cpu']} Core(s)\nDisk: {vps['disk']}GB", inline=True)
         
-        if stats['status'] == 'running':
+        if stats['status'] == 'running' and not vps['suspended']:
             embed.add_field(name="CPU Usage", value=f"`{stats['cpu']}`", inline=True)
             embed.add_field(name="Memory", value=f"`{stats['memory']}`", inline=True)
             embed.add_field(name="Disk", value=f"`{stats['disk']}`", inline=True)
             embed.add_field(name="Uptime", value=f"`{stats['uptime']}`", inline=True)
             if stats['ipv4']:
-                embed.add_field(name="IP Addresses", value="\n".join(f"`{ip}`" for ip in stats['ipv4']), inline=False)
+                embed.add_field(name="IP Addresses", value="\n".join(f"`{ip}`" for ip in stats['ipv4'][:3]), inline=False)
         
         return embed
     
     async def prev_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         self.current_index = (self.current_index - 1) % len(self.vps_list)
@@ -1676,7 +1772,7 @@ class VPSManageView(View):
         await interaction.response.edit_message(embed=await self.get_current_embed(), view=self)
     
     async def next_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         self.current_index = (self.current_index + 1) % len(self.vps_list)
@@ -1684,14 +1780,14 @@ class VPSManageView(View):
         await interaction.response.edit_message(embed=await self.get_current_embed(), view=self)
     
     async def start_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         
         vps = self.vps_list[self.current_index]
         container = vps['container_name']
         
-        if vps['suspended']:
+        if vps['suspended'] and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message(embed=error_embed("Cannot Start", "This VPS is suspended."), ephemeral=True)
             return
         
@@ -1708,14 +1804,14 @@ class VPSManageView(View):
         await self.refresh_callback(interaction)
     
     async def stop_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         
         vps = self.vps_list[self.current_index]
         container = vps['container_name']
         
-        if vps['suspended']:
+        if vps['suspended'] and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message(embed=error_embed("Cannot Stop", "This VPS is suspended."), ephemeral=True)
             return
         
@@ -1732,14 +1828,14 @@ class VPSManageView(View):
         await self.refresh_callback(interaction)
     
     async def restart_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         
         vps = self.vps_list[self.current_index]
         container = vps['container_name']
         
-        if vps['suspended']:
+        if vps['suspended'] and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message(embed=error_embed("Cannot Restart", "This VPS is suspended."), ephemeral=True)
             return
         
@@ -1756,7 +1852,7 @@ class VPSManageView(View):
         await self.refresh_callback(interaction)
     
     async def stats_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         
@@ -1773,13 +1869,30 @@ class VPSManageView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
+    async def ssh_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
+            await interaction.response.send_message("This menu is not for you!", ephemeral=True)
+            return
+        
+        vps = self.vps_list[self.current_index]
+        container = vps['container_name']
+        
+        await interaction.response.defer()
+        
+        # Call ssh-gen command
+        await ssh_gen_command(interaction, container)
+    
     async def refresh_callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.ctx.author.id:
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
             await interaction.response.send_message("This menu is not for you!", ephemeral=True)
             return
         
         # Refresh VPS list from database
-        self.vps_list = get_user_vps(self.user_id)
+        if self.is_admin_view and self.target_user:
+            self.vps_list = get_user_vps(str(self.target_user.id))
+        else:
+            self.vps_list = get_user_vps(self.user_id)
+        
         if not self.vps_list:
             await interaction.response.edit_message(embed=no_vps_embed(), view=None)
             return
@@ -1793,7 +1906,7 @@ class VPSManageView(View):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def manage_vps(ctx, user: discord.Member = None):
     """Interactive VPS manager"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     if user and user.id != ctx.author.id:
@@ -1802,21 +1915,23 @@ async def manage_vps(ctx, user: discord.Member = None):
             return
         target_id = str(user.id)
         target_name = user.display_name
+        is_admin_view = True
     else:
         target_id = str(ctx.author.id)
         target_name = ctx.author.display_name
         user = ctx.author
+        is_admin_view = False
     
     vps_list = get_user_vps(target_id)
     
     if not vps_list:
-        if user:
+        if user != ctx.author:
             await ctx.send(embed=info_embed(f"No VPS", f"{user.mention} has no VPS."))
         else:
             await ctx.send(embed=no_vps_embed())
         return
     
-    view = VPSManageView(ctx, target_id, vps_list)
+    view = VPSManageView(ctx, target_id, vps_list, is_admin_view, user if is_admin_view else None)
     embed = await view.get_current_embed()
     msg = await ctx.send(embed=embed, view=view)
     view.message = msg
@@ -1825,7 +1940,7 @@ async def manage_vps(ctx, user: discord.Member = None):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def view_logs(ctx, container_name: str = None, lines: int = 50):
     """View VPS logs"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1844,19 +1959,113 @@ async def view_logs(ctx, container_name: str = None, lines: int = 50):
             await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
             return
     
-    await ctx.send(embed=info_embed("Fetching logs...", f"Getting last {lines} lines from {container_name}"))
+    msg = await ctx.send(embed=info_embed("Fetching logs...", f"Getting last {lines} lines from {container_name}"))
     
     try:
-        out, err, code = await exec_in_container(container_name, f"journalctl -n {lines} --no-pager || dmesg | tail -{lines}")
+        out, err, code = await exec_in_container(container_name, f"journalctl -n {lines} --no-pager 2>/dev/null || dmesg | tail -{lines} 2>/dev/null")
         if out:
             if len(out) > 1900:
                 out = out[:1900] + "...\n(truncated)"
             embed = info_embed(f"Logs: {container_name}", f"```\n{out}\n```")
         else:
             embed = info_embed(f"Logs: {container_name}", "No logs available.")
-        await ctx.send(embed=embed)
+        await msg.edit(embed=embed)
     except Exception as e:
-        await ctx.send(embed=error_embed("Failed", str(e)))
+        await msg.edit(embed=error_embed("Failed", str(e)))
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  🔑  SSH-GEN COMMAND - Generate SSH Access via tmate
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def ssh_gen_command(interaction_or_ctx, container_name: str):
+    """Generate SSH access for a container"""
+    
+    # Handle both interaction and context
+    if isinstance(interaction_or_ctx, discord.Interaction):
+        ctx = await bot.get_context(interaction_or_ctx.message)
+        user = interaction_or_ctx.user
+        send_msg = interaction_or_ctx.followup.send
+        is_interaction = True
+    else:
+        ctx = interaction_or_ctx
+        user = ctx.author
+        send_msg = ctx.send
+        is_interaction = False
+    
+    user_id = str(user.id)
+    
+    # Verify ownership
+    vps_list = get_user_vps(user_id)
+    if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+        await send_msg(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    msg = await send_msg(embed=info_embed("🔑 Generating SSH Access", f"Setting up SSH for `{container_name}`..."))
+    
+    try:
+        # Check if container is running
+        status = await get_container_status(container_name)
+        if status != 'running':
+            await msg.edit(embed=error_embed("Container Not Running", f"`{container_name}` is not running. Start it first with `.manage`"))
+            return
+        
+        # Install tmate if not present
+        out, _, _ = await exec_in_container(container_name, "which tmate")
+        if not out:
+            await msg.edit(embed=info_embed("Installing SSH Service", "Installing tmate (this may take a moment)..."))
+            await exec_in_container(container_name, "apt-get update -qq")
+            await exec_in_container(container_name, "apt-get install -y -qq tmate")
+        
+        # Generate unique session
+        session_id = f"svm5-{random.randint(1000, 9999)}-{int(time.time())}"
+        
+        # Start tmate session
+        await exec_in_container(container_name, f"tmate -S /tmp/{session_id}.sock new-session -d")
+        await asyncio.sleep(3)
+        
+        # Get SSH connection string
+        out, _, _ = await exec_in_container(container_name, f"tmate -S /tmp/{session_id}.sock display -p '#{{tmate_ssh}}'")
+        ssh_url = out.strip()
+        
+        if ssh_url:
+            # Try to DM the user
+            try:
+                dm_embed = success_embed("🔑 SSH Access Generated")
+                dm_embed.add_field(name="Container", value=f"`{container_name}`", inline=True)
+                dm_embed.add_field(name="SSH Command", value=f"```\n{ssh_url}\n```", inline=False)
+                dm_embed.add_field(name="Instructions", 
+                                  value="1. Copy the command above\n"
+                                        "2. Paste in your terminal\n"
+                                        "3. You'll have full shell access\n\n"
+                                        "⚠️ This link expires in 15 minutes", 
+                                  inline=False)
+                await user.send(embed=dm_embed)
+                
+                await msg.edit(embed=success_embed(
+                    "SSH Access Generated",
+                    f"✅ SSH connection details sent to your DMs!\n"
+                    f"Container: `{container_name}`"
+                ))
+            except discord.Forbidden:
+                await msg.edit(embed=error_embed(
+                    "DM Failed",
+                    f"❌ Could not send DM. Please enable DMs.\n"
+                    f"SSH Command: `{ssh_url}`"
+                ))
+        else:
+            await msg.edit(embed=error_embed("Failed", "Could not generate SSH access. Try again later."))
+    
+    except Exception as e:
+        await msg.edit(embed=error_embed("SSH Generation Failed", str(e)))
+
+@bot.command(name="ssh-gen")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def ssh_gen(ctx, container_name: str):
+    """Generate SSH access for your container via tmate"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    await ssh_gen_command(ctx, container_name)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🔌  PORT FORWARDING COMMANDS
@@ -1866,7 +2075,7 @@ async def view_logs(ctx, container_name: str = None, lines: int = 50):
 @commands.cooldown(1, 2, commands.BucketType.user)
 async def ports_group(ctx):
     """Port forwarding commands"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1887,7 +2096,7 @@ async def ports_group(ctx):
 @ports_group.command(name="add")
 async def ports_add(ctx, vps_num: int, port: int):
     """Add a port forward"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1908,7 +2117,7 @@ async def ports_add(ctx, vps_num: int, port: int):
     # Check quota
     allocated = get_port_allocation(user_id)
     forwards = get_user_port_forwards(user_id)
-    if len(forwards) >= allocated:
+    if len(forwards) >= allocated and allocated > 0:
         await ctx.send(embed=error_embed("Quota Exceeded", f"You have used all {allocated} port slots."))
         return
     
@@ -1923,7 +2132,7 @@ async def ports_add(ctx, vps_num: int, port: int):
         await ctx.send(embed=error_embed("Cannot Add", "VPS must be running to add port forwards."))
         return
     
-    await ctx.send(embed=info_embed("Creating port forward...", f"Forwarding port {port} from VPS #{vps_num}"))
+    msg = await ctx.send(embed=info_embed("Creating port forward...", f"Forwarding port {port} from VPS #{vps_num}"))
     
     host_port = await create_port_forward(user_id, container, port)
     
@@ -1932,15 +2141,15 @@ async def ports_add(ctx, vps_num: int, port: int):
         embed.add_field(name="VPS", value=f"#{vps_num} - `{container}`", inline=True)
         embed.add_field(name="Container Port", value=f"`{port}`", inline=True)
         embed.add_field(name="Host Port", value=f"`{host_port}`", inline=True)
-        embed.add_field(name="Access", value=f"Connect to your server IP on port `{host_port}`", inline=False)
-        await ctx.send(embed=embed)
+        embed.add_field(name="Access", value=f"Connect to `{SERVER_IP}:{host_port}`", inline=False)
+        await msg.edit(embed=embed)
     else:
-        await ctx.send(embed=error_embed("Failed", "Could not assign a host port. Try again later."))
+        await msg.edit(embed=error_embed("Failed", "Could not assign a host port. Try again later."))
 
 @ports_group.command(name="list")
 async def ports_list(ctx):
     """List your port forwards"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1959,7 +2168,7 @@ async def ports_list(ctx):
         vps_num = next((i+1 for i, v in enumerate(get_user_vps(user_id)) if v['container_name'] == f['container_name']), '?')
         embed.add_field(
             name=f"ID: {f['id']}",
-            value=f"VPS #{vps_num}: `{f['container_port']}` → `{f['host_port']}`\nCreated: {f['created_at'][:16]}",
+            value=f"VPS #{vps_num}: `{f['container_port']}` → `{SERVER_IP}:{f['host_port']}`\nCreated: {f['created_at'][:16]}",
             inline=False
         )
     
@@ -1969,7 +2178,7 @@ async def ports_list(ctx):
 @ports_group.command(name="remove")
 async def ports_remove(ctx, forward_id: int):
     """Remove a port forward"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     user_id = str(ctx.author.id)
@@ -1995,14 +2204,11 @@ async def ports_remove(ctx, forward_id: int):
 #  🌐  IPv4 MANAGEMENT (with UPI payment)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-UPI_ID = "9892642904@ybl"  # Change this
-IPV4_PRICE_INR = 200
-
 @bot.command(name="buy-ipv4")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def buy_ipv4(ctx):
     """Buy an IPv4 address via UPI"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     txn_ref = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -2053,9 +2259,10 @@ class TransactionModal(Modal):
         
         self.add_item(InputText(
             label="UPI Transaction ID",
-            placeholder="e.g. T25031234567890",
+            placeholder="e.g., T25031234567890",
             min_length=8,
-            max_length=50
+            max_length=50,
+            required=True
         ))
     
     async def callback(self, interaction: discord.Interaction):
@@ -2089,7 +2296,7 @@ class TransactionModal(Modal):
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def list_ipv4(ctx, user: discord.Member = None):
     """List your IPv4 addresses"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     if user and user.id != ctx.author.id:
@@ -2126,14 +2333,14 @@ async def list_ipv4(ctx, user: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🤖  AI CHAT COMMANDS (Groq LLaMA)
+#  🤖  AI CHAT COMMANDS (Groq with your API key)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @bot.command(name="ai")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def ai_chat(ctx, *, message: str):
     """Chat with AI assistant"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     if not AI_API_KEY or AI_API_KEY == "YOUR_GROQ_API_KEY":
@@ -2147,7 +2354,7 @@ async def ai_chat(ctx, *, message: str):
     if not history:
         history = [{
             "role": "system",
-            "content": f"You are {BOT_NAME} AI Assistant, a helpful VPS management bot made by {BOT_AUTHOR}. You help with Linux, LXC containers, and server management. Keep responses concise and friendly."
+            "content": f"You are {BOT_NAME} AI Assistant, a helpful VPS management bot made by {BOT_AUTHOR}. You help with Linux, LXC containers, server management, and general questions. Keep responses concise, friendly, and helpful."
         }]
     
     # Add user message
@@ -2157,7 +2364,7 @@ async def ai_chat(ctx, *, message: str):
     if len(history) > 21:
         history = [history[0]] + history[-20:]
     
-    await ctx.send(embed=info_embed("AI is thinking...", "This may take a few seconds."))
+    msg = await ctx.send(embed=info_embed("AI is thinking...", "This may take a few seconds."))
     
     try:
         async with aiohttp.ClientSession() as session:
@@ -2168,7 +2375,7 @@ async def ai_chat(ctx, *, message: str):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": AI_MODEL,
+                    "model": "llama3-70b-8192",
                     "messages": history,
                     "max_tokens": 1024,
                     "temperature": 0.7
@@ -2186,21 +2393,21 @@ async def ai_chat(ctx, *, message: str):
                     # Send response
                     chunks = [reply[i:i+1900] for i in range(0, len(reply), 1900)]
                     embed = info_embed("AI Response", chunks[0])
-                    await ctx.send(embed=embed)
+                    await msg.edit(embed=embed)
                     
                     for chunk in chunks[1:]:
                         await ctx.send(embed=info_embed("", chunk))
                 else:
                     error_text = await resp.text()
-                    await ctx.send(embed=error_embed("API Error", f"Status {resp.status}: {error_text[:200]}"))
+                    await msg.edit(embed=error_embed("API Error", f"Status {resp.status}: {error_text[:200]}"))
     except Exception as e:
-        await ctx.send(embed=error_embed("AI Error", str(e)[:1900]))
+        await msg.edit(embed=error_embed("AI Error", str(e)[:1900]))
 
 @bot.command(name="ai-reset")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def ai_reset(ctx):
     """Reset AI chat history"""
-    if not await maintenance_check(ctx):
+    if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     clear_ai_history(str(ctx.author.id))
@@ -2215,6 +2422,8 @@ def admin_only():
     async def predicate(ctx):
         if not await maintenance_check(ctx):
             return False
+        if not await license_check(ctx):
+            return False
         if not is_admin(str(ctx.author.id)):
             await ctx.send(embed=error_embed("Access Denied", "This command is for administrators only."))
             return False
@@ -2225,6 +2434,8 @@ def main_admin_only():
     """Decorator for main admin-only commands"""
     async def predicate(ctx):
         if not await maintenance_check(ctx):
+            return False
+        if not await license_check(ctx):
             return False
         if str(ctx.author.id) not in [str(a) for a in MAIN_ADMIN_IDS]:
             await ctx.send(embed=error_embed("Access Denied", "This command is for the main administrator only."))
@@ -2566,7 +2777,7 @@ async def admin_add_resources(ctx, container_name: str, ram: int = None, cpu: in
         await ctx.send(embed=error_embed("Suspended", "Cannot modify a suspended VPS."))
         return
     
-    was_running = vps['status'] == 'running'
+    was_running = vps['status'] == 'running' and not vps['suspended']
     
     if was_running:
         await ctx.send(embed=info_embed("Stopping VPS", f"Stopping {container_name} to apply changes..."))
@@ -2787,6 +2998,91 @@ async def admin_serverstats(ctx):
     embed.add_field(name="VPS Stats", value=f"Total: {total_vps}\nRunning: {running}\nStopped: {stopped}\nSuspended: {suspended}", inline=True)
     embed.add_field(name="Resources", value=f"RAM: {total_ram}GB\nCPU: {total_cpu} cores\nDisk: {total_disk}GB", inline=True)
     embed.add_field(name="Other", value=f"Users: {total_users}\nPort Forwards: {total_ports}", inline=True)
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="admin-add-ipv4")
+@admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_add_ipv4(ctx, user: discord.Member, container_name: str):
+    """Assign IPv4 to a user's container"""
+    user_id = str(user.id)
+    
+    # Verify container exists and belongs to user
+    vps_list = get_user_vps(user_id)
+    vps = next((v for v in vps_list if v['container_name'] == container_name), None)
+    
+    if not vps:
+        await ctx.send(embed=error_embed("Container Not Found", f"Container `{container_name}` not found for {user.mention}"))
+        return
+    
+    # Get container IP
+    out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+    private_ip = out.strip() or "N/A"
+    
+    # Get host public IP
+    public_ip = SERVER_IP
+    
+    # Add to database
+    add_ipv4(user_id, container_name, public_ip, private_ip)
+    
+    embed = success_embed("IPv4 Assigned", f"Assigned IPv4 to {user.mention}'s container `{container_name}`")
+    embed.add_field(name="Public IP", value=f"`{public_ip}`", inline=True)
+    embed.add_field(name="Private IP", value=f"`{private_ip}`", inline=True)
+    
+    # DM user
+    try:
+        dm_embed = success_embed("IPv4 Assigned to Your VPS")
+        dm_embed.add_field(name="Container", value=f"`{container_name}`", inline=True)
+        dm_embed.add_field(name="Public IP", value=f"`{public_ip}`", inline=True)
+        dm_embed.add_field(name="Private IP", value=f"`{private_ip}`", inline=True)
+        await user.send(embed=dm_embed)
+    except:
+        pass
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="admin-rm-ipv4")
+@admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_rm_ipv4(ctx, user: discord.Member, container_name: str = None):
+    """Remove IPv4 from a user"""
+    user_id = str(user.id)
+    
+    if container_name:
+        remove_ipv4(user_id, container_name)
+        embed = success_embed("IPv4 Removed", f"Removed IPv4 from {user.mention}'s container `{container_name}`")
+    else:
+        remove_ipv4(user_id)
+        embed = success_embed("IPv4 Removed", f"Removed all IPv4 from {user.mention}")
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="admin-pending-ipv4")
+@admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_pending_ipv4(ctx):
+    """List pending IPv4 purchases"""
+    pending = get_pending_transactions()
+    
+    if not pending:
+        await ctx.send(embed=info_embed("Pending IPv4", "No pending IPv4 purchases."))
+        return
+    
+    embed = info_embed(f"Pending IPv4 Purchases ({len(pending)})")
+    
+    for txn in pending:
+        try:
+            user = await bot.fetch_user(int(txn['user_id']))
+            username = user.name
+        except:
+            username = f"Unknown ({txn['user_id']})"
+        
+        embed.add_field(
+            name=f"User: {username}",
+            value=f"Ref: `{txn['txn_ref']}`\nAmount: ₹{txn['amount']}\nCreated: {txn['created_at'][:16]}",
+            inline=False
+        )
     
     await ctx.send(embed=embed)
 
@@ -3061,34 +3357,84 @@ async def perform_purge(interaction, unprotected):
     embed = success_embed("Purge Complete", f"Deleted: {deleted}\nFailed: {failed}")
     await progress.edit(embed=embed)
 
+@bot.command(name="admin-users")
+@main_admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_users(ctx):
+    """List all users with VPS"""
+    all_vps = get_all_vps()
+    
+    # Group by user
+    users = {}
+    for vps in all_vps:
+        if vps['user_id'] not in users:
+            users[vps['user_id']] = []
+        users[vps['user_id']].append(vps)
+    
+    if not users:
+        await ctx.send(embed=info_embed("No Users", "No users have VPS."))
+        return
+    
+    embed = info_embed(f"Users with VPS ({len(users)})")
+    
+    for user_id, vps_list in list(users.items())[:10]:
+        try:
+            user = await bot.fetch_user(int(user_id))
+            username = f"{user.name} ({user.id})"
+        except:
+            username = f"Unknown ({user_id})"
+        
+        vps_count = len(vps_list)
+        running = sum(1 for v in vps_list if v['status'] == 'running' and not v['suspended'])
+        
+        embed.add_field(
+            name=username,
+            value=f"VPS: {vps_count} (Running: {running})\n"
+                  f"Containers: {', '.join([v['container_name'][:10] + '...' for v in vps_list[:3]])}",
+            inline=False
+        )
+    
+    if len(users) > 10:
+        embed.add_field(name="Note", value=f"Showing 10 of {len(users)} users", inline=False)
+    
+    await ctx.send(embed=embed)
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🚀  RUN THE BOT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 if __name__ == "__main__":
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("\n" + "="*50)
+        print("\n" + "="*60)
         print("❌ ERROR: Please set your BOT_TOKEN in the configuration!")
-        print("="*50 + "\n")
+        print("="*60 + "\n")
         sys.exit(1)
+    
+    # Check license
+    if not LICENSE_VERIFIED:
+        print("\n" + "="*60)
+        print("⚠️  WARNING: License not verified!")
+        print("   Bot will have limited functionality.")
+        print("   Valid license keys: AnkitDev99$@, SVM5-PRO-2025")
+        print("="*60 + "\n")
     
     # Check LXC
     try:
         subprocess.run(['lxc', '--version'], capture_output=True, check=True)
     except:
-        print("\n" + "="*50)
+        print("\n" + "="*60)
         print("❌ ERROR: LXC is not installed or not in PATH!")
         print("Install LXC: sudo apt install lxc lxc-templates")
         print("Then run: sudo lxd init")
-        print("="*50 + "\n")
+        print("="*60 + "\n")
         sys.exit(1)
     
     # Run bot
     try:
         bot.run(BOT_TOKEN)
     except discord.LoginFailure:
-        print("\n" + "="*50)
+        print("\n" + "="*60)
         print("❌ ERROR: Invalid Discord token!")
-        print("="*50 + "\n")
+        print("="*60 + "\n")
     except Exception as e:
         print(f"\n❌ ERROR: {e}\n")
