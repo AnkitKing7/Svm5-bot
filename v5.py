@@ -48,7 +48,7 @@ except:
     try:
         SERVER_IP = subprocess.getoutput("curl -s ifconfig.me")
     except:
-        SERVER_IP = "YOUR_SERVER_IP"  # Fallback
+        SERVER_IP = "13.208.181.149"  # Fallback
 
 # Get MAC address
 def get_mac_address():
