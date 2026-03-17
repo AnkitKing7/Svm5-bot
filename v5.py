@@ -201,22 +201,25 @@ def get_db():
     return conn
 
 def init_db():
-    """Initialize complete database with all tables"""
-    conn = get_db()
+    conn = sqlite3.connect('users.db')
     cur = conn.cursor()
     
-    # 👑 Admins table
-    cur.execute('''CREATE TABLE IF NOT EXISTS admins (
-        user_id TEXT PRIMARY KEY,
-        added_by TEXT,
-        added_at TEXT,
-        permissions TEXT DEFAULT 'all'
-    )''')
-    for admin_id in MAIN_ADMIN_IDS:
-        cur.execute(
-    'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
-    (str(admin_id), datetime.now().isoformat())
-)
+    # Table banate waqt 'added_at' column define hona chahiye
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS admins (
+            user_id TEXT PRIMARY KEY, 
+            added_at TEXT
+        )
+    ''')
+    
+    # Aapka INSERT statement yahan niche aayega
+    cur.execute(
+        'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
+        (str(admin_id), datetime.now().isoformat())
+    )
+    
+    conn.commit()
+    conn.close()
     
     # 🖥️ VPS table
     cur.execute('''CREATE TABLE IF NOT EXISTS vps (
