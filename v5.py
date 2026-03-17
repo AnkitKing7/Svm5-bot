@@ -23,7 +23,7 @@
 
 import discord
 from discord.ext import commands, tasks
-from discord.ui import Modal, InputText, View, Button, Select
+from discord.ui import Modal, TextInput, View, Button, Select
 import asyncio
 import json
 import os
@@ -53,7 +53,7 @@ from typing import Optional, List, Dict, Any, Tuple
 # ==================================================================================================
 
 # 🔑 Discord Bot Configuration
-BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"           # Get from https://discord.com/developers/applications
+BOT_TOKEN = ""           # Get from https://discord.com/developers/applications
 BOT_PREFIX = "."                                     # Command prefix (default: .)
 BOT_NAME = "SVM5-BOT"                                # Bot display name
 BOT_AUTHOR = "Ankit-Dev"                             # Your name/username
@@ -72,7 +72,7 @@ except:
         SERVER_IP = subprocess.getoutput("curl -s ifconfig.me")
         logger.info(f"✅ Auto-detected public IP: {SERVER_IP}")
     except:
-        SERVER_IP = "YOUR_SERVER_IP_HERE"            # Fallback - set manually if auto-detection fails
+        SERVER_IP = "13.208.181.149"            # Fallback - set manually if auto-detection fails
         logger.warning(f"⚠️ Could not auto-detect IP, using fallback: {SERVER_IP}")
 
 # 🔌 Get MAC Address
