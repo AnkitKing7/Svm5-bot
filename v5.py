@@ -2,7 +2,8 @@
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                    SVM5-BOT - Complete VPS Management Bot                     ║
 # ║                         Made by Ankit-Dev with ❤️                             ║
-# ║                    Version: 5.0.0 | Direct LXC - No SSH Setup                ║
+# ║                    Version: 5.0.0 | ALL COMMANDS FIXED                       ║
+# ║              Features: LXC, IPv4, AI, Ports, SSH, Panel, Stats               ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 import discord
@@ -22,6 +23,10 @@ import shlex
 import shutil
 import time
 import aiohttp
+import psutil
+import netifaces
+import socket
+import requests
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 
@@ -29,17 +34,41 @@ from typing import Optional, List, Dict, Any, Tuple
 #  ⚙️  CONFIGURATION - EDIT THESE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"           # Discord Bot Token (Change this)
+BOT_TOKEN = ""           # Discord Bot Token
 BOT_PREFIX = "."                             # Command prefix
 BOT_NAME = "SVM5-BOT"                        # Bot name
 BOT_AUTHOR = "Ankit-Dev"                      # Your name
-MAIN_ADMIN_IDS = [1405866008127864852]        # Your Discord ID(s) (Change this)
+MAIN_ADMIN_IDS = [1405866008127864852]        # Your Discord ID(s)
 DEFAULT_STORAGE_POOL = "default"              # LXC storage pool
-SERVER_IP = "YOUR_SERVER_IP"                  # Your server IP for port forwarding
+
+# Auto-detect server IP
+try:
+    SERVER_IP = requests.get('https://api.ipify.org', timeout=5).text.strip()
+except:
+    try:
+        SERVER_IP = subprocess.getoutput("curl -s ifconfig.me")
+    except:
+        SERVER_IP = "YOUR_SERVER_IP"  # Fallback
+
+# Get MAC address
+def get_mac_address():
+    try:
+        interfaces = netifaces.interfaces()
+        for iface in interfaces:
+            if iface != 'lo':
+                addr = netifaces.ifaddresses(iface)
+                if netifaces.AF_LINK in addr:
+                    return addr[netifaces.AF_LINK][0]['addr']
+    except:
+        pass
+    return "00:00:00:00:00:00"
+
+MAC_ADDRESS = get_mac_address()
+HOSTNAME = socket.gethostname()
 
 # UPI Payment Configuration
-UPI_ID = "9892642904@ybl"                     # Your UPI ID (Change this)
-IPV4_PRICE_INR = 200                           # Price per IPv4 in INR
+UPI_ID = "your-upi@paytm"                     # Your UPI ID
+IPV4_PRICE_INR = 50                            # Price per IPv4 in INR
 
 # AI Configuration - YOUR PROVIDED KEY
 AI_API_KEY = "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"
@@ -59,6 +88,7 @@ FREE_VPS_PLANS = {
         {'name': '🥇 Gold Plan', 'invites': 15, 'ram': 8, 'cpu': 4, 'disk': 80, 'emoji': '🥇'},
         {'name': '🏆 Platinum Plan', 'invites': 20, 'ram': 16, 'cpu': 8, 'disk': 160, 'emoji': '🏆'},
         {'name': '💎 Diamond Plan', 'invites': 25, 'ram': 32, 'cpu': 16, 'disk': 320, 'emoji': '💎'},
+        {'name': '👑 Royal Plan', 'invites': 30, 'ram': 64, 'cpu': 32, 'disk': 640, 'emoji': '👑'},
     ]
 }
 
@@ -70,8 +100,24 @@ OS_OPTIONS = [
     {"label": "🌀 Debian 11", "value": "images:debian/11", "desc": "Bullseye - Old Stable"},
     {"label": "🌀 Debian 12", "value": "images:debian/12", "desc": "Bookworm - Current Stable"},
     {"label": "🎩 Fedora 39", "value": "images:fedora/39", "desc": "Fedora - Latest"},
-    {"label": "🦊 Rocky Linux 9", "value": "images:rockylinux/9", "desc": "Rocky - Enterprise Linux"},
-    {"label": "🦊 AlmaLinux 9", "value": "images:almalinux/9", "desc": "Alma - RHEL Compatible"},
+    {"label": "🎩 Fedora 40", "value": "images:fedora/40", "desc": "Fedora 40 - Bleeding Edge"},
+    {"label": "🦊 Rocky Linux 8", "value": "images:rockylinux/8", "desc": "Rocky 8 - Enterprise"},
+    {"label": "🦊 Rocky Linux 9", "value": "images:rockylinux/9", "desc": "Rocky 9 - Latest"},
+    {"label": "🦊 AlmaLinux 8", "value": "images:almalinux/8", "desc": "Alma 8 - RHEL Compatible"},
+    {"label": "🦊 AlmaLinux 9", "value": "images:almalinux/9", "desc": "Alma 9 - Latest"},
+    {"label": "📦 CentOS 7", "value": "images:centos/7", "desc": "CentOS 7 - Legacy"},
+    {"label": "📦 CentOS 8", "value": "images:centos/8", "desc": "CentOS 8 - Stream"},
+    {"label": "📦 CentOS 9", "value": "images:centos/9", "desc": "CentOS 9 - Stream"},
+    {"label": "🔴 Red Hat 8", "value": "images:rhel/8", "desc": "RHEL 8 - Enterprise"},
+    {"label": "🔴 Red Hat 9", "value": "images:rhel/9", "desc": "RHEL 9 - Latest"},
+    {"label": "🐧 Alpine 3.18", "value": "images:alpine/3.18", "desc": "Alpine - Lightweight"},
+    {"label": "🐧 Alpine 3.19", "value": "images:alpine/3.19", "desc": "Alpine - Latest"},
+    {"label": "📀 Arch Linux", "value": "images:archlinux", "desc": "Arch - Rolling Release"},
+    {"label": "💻 Gentoo", "value": "images:gentoo", "desc": "Gentoo - Source based"},
+    {"label": "🔵 FreeBSD 13", "value": "images:freebsd/13", "desc": "FreeBSD 13 - Unix"},
+    {"label": "🔵 FreeBSD 14", "value": "images:freebsd/14", "desc": "FreeBSD 14 - Latest"},
+    {"label": "🟢 OpenSUSE 15.5", "value": "images:opensuse/15.5", "desc": "OpenSUSE Leap"},
+    {"label": "🟢 OpenSUSE Tumbleweed", "value": "images:opensuse/tumbleweed", "desc": "OpenSUSE Rolling"},
 ]
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -91,8 +137,7 @@ logger = logging.getLogger(BOT_NAME)
 # Check if LXC is installed
 if not shutil.which("lxc"):
     logger.error("❌ LXC command not found! Please install LXC first.")
-    logger.error("   Ubuntu/Debian: sudo apt install lxc lxc-templates")
-    logger.error("   Then run: sudo lxd init")
+    logger.error("   Run: sudo apt install lxc lxc-templates && sudo snap install lxd")
     sys.exit(1)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -133,7 +178,9 @@ def init_db():
         purge_protected INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         last_started TEXT,
-        last_stopped TEXT
+        last_stopped TEXT,
+        ip_address TEXT,
+        mac_address TEXT
     )''')
     
     # User stats table
@@ -170,6 +217,10 @@ def init_db():
         container_name TEXT NOT NULL,
         public_ip TEXT,
         private_ip TEXT,
+        mac_address TEXT,
+        gateway TEXT,
+        netmask TEXT,
+        interface TEXT,
         tunnel_url TEXT,
         assigned_at TEXT NOT NULL,
         UNIQUE(user_id, container_name)
@@ -182,6 +233,7 @@ def init_db():
         container_name TEXT NOT NULL,
         container_port INTEGER NOT NULL,
         host_port INTEGER UNIQUE NOT NULL,
+        protocol TEXT DEFAULT 'tcp+udp',
         created_at TEXT NOT NULL
     )''')
     
@@ -224,7 +276,21 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         license_key TEXT NOT NULL,
         activated_at TEXT NOT NULL,
-        activated_by TEXT
+        activated_by TEXT,
+        mac_address TEXT,
+        hostname TEXT
+    )''')
+    
+    # Panel installations
+    cur.execute('''CREATE TABLE IF NOT EXISTS panels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        panel_type TEXT NOT NULL,
+        panel_url TEXT,
+        admin_user TEXT,
+        admin_pass TEXT,
+        admin_email TEXT,
+        installed_at TEXT NOT NULL
     )''')
     
     # Initialize settings
@@ -237,6 +303,11 @@ def init_db():
         ('bot_activity', 'watching'),
         ('bot_activity_name', f'{BOT_NAME} VPS Manager'),
         ('license_verified', 'false'),
+        ('server_ip', SERVER_IP),
+        ('mac_address', MAC_ADDRESS),
+        ('hostname', HOSTNAME),
+        ('total_vps_created', '0'),
+        ('total_panels_installed', '0'),
     ]
     for key, value in settings_init:
         cur.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, value))
@@ -269,6 +340,11 @@ def set_setting(key: str, value: str):
     conn.commit()
     conn.close()
 
+def increment_setting(key: str):
+    """Increment a numeric setting"""
+    current = int(get_setting(key, '0'))
+    set_setting(key, str(current + 1))
+
 def get_user_vps(user_id: str) -> List[Dict]:
     """Get all VPS for a user"""
     conn = get_db()
@@ -293,12 +369,29 @@ def add_vps(user_id: str, container_name: str, ram: int, cpu: int, disk: int,
     conn = get_db()
     cur = conn.cursor()
     now = datetime.now().isoformat()
+    
+    # Get container IP and MAC
+    ip_address = "N/A"
+    mac_address = "N/A"
+    try:
+        out, _, _ = run_lxc_sync(f"lxc exec {container_name} -- ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+        if out:
+            ip_address = out.strip()
+        
+        out, _, _ = run_lxc_sync(f"lxc exec {container_name} -- ip link show eth0 | grep -oP '(?<=link/ether\\s)\\S+'")
+        if out:
+            mac_address = out.strip()
+    except:
+        pass
+    
     cur.execute('''INSERT INTO vps 
-                   (user_id, container_name, plan_name, ram, cpu, disk, os_version, status, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (user_id, container_name, plan_name, ram, cpu, disk, os_version, 'running', now))
+                   (user_id, container_name, plan_name, ram, cpu, disk, os_version, status, created_at, ip_address, mac_address)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (user_id, container_name, plan_name, ram, cpu, disk, os_version, 'running', now, ip_address, mac_address))
     vps_id = cur.lastrowid
     conn.commit()
+    
+    increment_setting('total_vps_created')
     
     cur.execute('SELECT * FROM vps WHERE id = ?', (vps_id,))
     vps = dict(cur.fetchone())
@@ -422,13 +515,17 @@ def verify_transaction(txn_ref: str, txn_id: str) -> bool:
     conn.close()
     return verified
 
-def add_ipv4(user_id: str, container_name: str, public_ip: str, private_ip: str, tunnel_url: str = ""):
-    """Add IPv4 allocation"""
+def add_ipv4(user_id: str, container_name: str, public_ip: str, private_ip: str, 
+             mac_address: str = "", gateway: str = "", netmask: str = "", 
+             interface: str = "eth0", tunnel_url: str = ""):
+    """Add IPv4 allocation with full details"""
     conn = get_db()
     cur = conn.cursor()
     now = datetime.now().isoformat()
-    cur.execute('''INSERT OR REPLACE INTO ipv4 (user_id, container_name, public_ip, private_ip, tunnel_url, assigned_at)
-                   VALUES (?, ?, ?, ?, ?, ?)''', (user_id, container_name, public_ip, private_ip, tunnel_url, now))
+    cur.execute('''INSERT OR REPLACE INTO ipv4 
+                   (user_id, container_name, public_ip, private_ip, mac_address, gateway, netmask, interface, tunnel_url, assigned_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+                (user_id, container_name, public_ip, private_ip, mac_address, gateway, netmask, interface, tunnel_url, now))
     conn.commit()
     conn.close()
 
@@ -484,13 +581,13 @@ def get_user_port_forwards(user_id: str) -> List[Dict]:
     conn.close()
     return [dict(row) for row in rows]
 
-def add_port_forward(user_id: str, container_name: str, container_port: int, host_port: int) -> int:
+def add_port_forward(user_id: str, container_name: str, container_port: int, host_port: int, protocol: str = "tcp+udp") -> int:
     """Add a port forward"""
     conn = get_db()
     cur = conn.cursor()
     now = datetime.now().isoformat()
-    cur.execute('''INSERT INTO port_forwards (user_id, container_name, container_port, host_port, created_at)
-                   VALUES (?, ?, ?, ?, ?)''', (user_id, container_name, container_port, host_port, now))
+    cur.execute('''INSERT INTO port_forwards (user_id, container_name, container_port, host_port, protocol, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)''', (user_id, container_name, container_port, host_port, protocol, now))
     pf_id = cur.lastrowid
     conn.commit()
     conn.close()
@@ -572,17 +669,37 @@ def clear_ai_history(user_id: str):
     conn.commit()
     conn.close()
 
+def add_panel(user_id: str, panel_type: str, panel_url: str, admin_user: str, admin_pass: str, admin_email: str):
+    """Add panel installation record"""
+    conn = get_db()
+    cur = conn.cursor()
+    now = datetime.now().isoformat()
+    cur.execute('''INSERT INTO panels (user_id, panel_type, panel_url, admin_user, admin_pass, admin_email, installed_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''', (user_id, panel_type, panel_url, admin_user, admin_pass, admin_email, now))
+    conn.commit()
+    conn.close()
+    increment_setting('total_panels_installed')
+
+def get_user_panels(user_id: str) -> List[Dict]:
+    """Get panels for a user"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels WHERE user_id = ? ORDER BY installed_at DESC', (user_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 def verify_license_key(key: str) -> bool:
     """Verify license key"""
     return key in VALID_LICENSE_KEYS
 
 def save_license(key: str, user_id: str):
-    """Save license key to database"""
+    """Save license key to database with hardware info"""
     conn = get_db()
     cur = conn.cursor()
     now = datetime.now().isoformat()
-    cur.execute('INSERT INTO license (license_key, activated_at, activated_by) VALUES (?, ?, ?)',
-                (key, now, user_id))
+    cur.execute('INSERT INTO license (license_key, activated_at, activated_by, mac_address, hostname) VALUES (?, ?, ?, ?, ?)',
+                (key, now, user_id, MAC_ADDRESS, HOSTNAME))
     set_setting('license_verified', 'true')
     conn.commit()
     conn.close()
@@ -590,6 +707,236 @@ def save_license(key: str, user_id: str):
 def is_license_verified() -> bool:
     """Check if license is verified"""
     return get_setting('license_verified', 'false') == 'true'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  🛠️  LXC HELPER FUNCTIONS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def run_lxc_sync(command: str, timeout: int = 60) -> Tuple[str, str, int]:
+    """Run LXC command synchronously"""
+    try:
+        cmd = shlex.split(command)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return result.stdout.strip(), result.stderr.strip(), result.returncode
+    except subprocess.TimeoutExpired:
+        return "", f"Command timed out after {timeout} seconds", -1
+    except Exception as e:
+        return "", str(e), -1
+
+async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
+    """Run an LXC command asynchronously"""
+    return await asyncio.get_event_loop().run_in_executor(None, run_lxc_sync, command, timeout)
+
+async def exec_in_container(container_name: str, command: str, timeout: int = 30) -> Tuple[str, str, int]:
+    """Execute a command inside a container"""
+    return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
+
+def get_container_status_sync(container_name: str) -> str:
+    """Get container status synchronously"""
+    try:
+        result = subprocess.run(['lxc', 'info', container_name], 
+                                capture_output=True, text=True, timeout=10)
+        for line in result.stdout.splitlines():
+            if line.startswith("Status: "):
+                return line.split(": ", 1)[1].strip().lower()
+        return "unknown"
+    except:
+        return "unknown"
+
+async def get_container_status(container_name: str) -> str:
+    """Get container status asynchronously"""
+    return await asyncio.get_event_loop().run_in_executor(None, get_container_status_sync, container_name)
+
+async def get_container_stats(container_name: str) -> Dict:
+    """Get detailed container stats with terminal-like output"""
+    stats = {
+        'status': 'unknown',
+        'cpu': '0.0%',
+        'memory': '0/0 MB (0%)',
+        'disk': '0/0 GB (0%)',
+        'uptime': '0 min',
+        'ipv4': [],
+        'ipv6': [],
+        'mac': 'N/A',
+        'processes': '0',
+        'load': '0.00 0.00 0.00',
+        'network_rx': '0 B',
+        'network_tx': '0 B',
+        'hostname': container_name,
+        'kernel': 'N/A',
+        'os': 'N/A'
+    }
+    
+    # Get status
+    stats['status'] = await get_container_status(container_name)
+    
+    if stats['status'] == 'running':
+        # Get CPU usage
+        out, _, _ = await exec_in_container(container_name, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
+        stats['cpu'] = f"{out}%" if out else "0.0%"
+        
+        # Get memory usage
+        out, _, _ = await exec_in_container(container_name, "free -m | awk '/^Mem:/{printf \"%d/%d MB (%.1f%%)\", $3, $2, $3/$2*100}'")
+        stats['memory'] = out if out else "0/0 MB (0%)"
+        
+        # Get disk usage
+        out, _, _ = await exec_in_container(container_name, "df -h / | awk 'NR==2{printf \"%s/%s (%s)\", $3, $2, $5}'")
+        stats['disk'] = out if out else "0/0 GB (0%)"
+        
+        # Get uptime
+        out, _, _ = await exec_in_container(container_name, "uptime -p | sed 's/up //'")
+        stats['uptime'] = out if out else "0 min"
+        
+        # Get IPv4 addresses
+        out, _, _ = await exec_in_container(container_name, "ip -4 addr show | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | grep -v '127.0.0.1'")
+        if out:
+            stats['ipv4'] = out.splitlines()
+        
+        # Get IPv6 addresses
+        out, _, _ = await exec_in_container(container_name, "ip -6 addr show | grep -oP '(?<=inet6\\s)[a-f0-9:]+' | grep -v '::1'")
+        if out:
+            stats['ipv6'] = out.splitlines()
+        
+        # Get MAC address
+        out, _, _ = await exec_in_container(container_name, "ip link show eth0 | grep -oP '(?<=link/ether\\s)\\S+'")
+        stats['mac'] = out.strip() if out else "N/A"
+        
+        # Get process count
+        out, _, _ = await exec_in_container(container_name, "ps aux | wc -l")
+        stats['processes'] = out.strip() if out else "0"
+        
+        # Get load average
+        out, _, _ = await exec_in_container(container_name, "cat /proc/loadavg | awk '{print $1, $2, $3}'")
+        stats['load'] = out.strip() if out else "0.00 0.00 0.00"
+        
+        # Get network stats
+        out, _, _ = await exec_in_container(container_name, "cat /sys/class/net/eth0/statistics/rx_bytes | numfmt --to=iec")
+        stats['network_rx'] = out.strip() if out else "0 B"
+        
+        out, _, _ = await exec_in_container(container_name, "cat /sys/class/net/eth0/statistics/tx_bytes | numfmt --to=iec")
+        stats['network_tx'] = out.strip() if out else "0 B"
+        
+        # Get hostname
+        out, _, _ = await exec_in_container(container_name, "hostname")
+        stats['hostname'] = out.strip() if out else container_name
+        
+        # Get kernel version
+        out, _, _ = await exec_in_container(container_name, "uname -r")
+        stats['kernel'] = out.strip() if out else "N/A"
+        
+        # Get OS info
+        out, _, _ = await exec_in_container(container_name, "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'")
+        stats['os'] = out.strip() if out else "N/A"
+    
+    return stats
+
+async def apply_lxc_config(container_name: str):
+    """Apply LXC configuration for better compatibility"""
+    try:
+        # Enable nesting and privileged mode
+        await run_lxc(f"lxc config set {container_name} security.nesting true")
+        await run_lxc(f"lxc config set {container_name} security.privileged true")
+        
+        # Add kernel modules
+        await run_lxc(f"lxc config set {container_name} linux.kernel_modules overlay,br_netfilter,nf_nat,ip_tables,ip6_tables,netlink_diag,xt_conntrack,nf_conntrack")
+        
+        # Raw LXC config
+        raw_config = """
+lxc.apparmor.profile = unconfined
+lxc.cgroup.devices.allow = a
+lxc.cap.drop =
+lxc.mount.auto = proc:rw sys:rw cgroup:rw
+"""
+        await run_lxc(f"lxc config set {container_name} raw.lxc '{raw_config}'")
+        
+        logger.info(f"✅ Applied LXC config to {container_name}")
+    except Exception as e:
+        logger.error(f"Failed to apply LXC config to {container_name}: {e}")
+
+async def apply_internal_permissions(container_name: str):
+    """Apply internal permissions for Docker compatibility"""
+    await asyncio.sleep(3)  # Wait for container to start
+    commands = [
+        "mkdir -p /etc/sysctl.d/",
+        "echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/99-custom.conf",
+        "echo 'net.ipv4.ping_group_range=0 2147483647' >> /etc/sysctl.d/99-custom.conf",
+        "echo 'fs.inotify.max_user_watches=524288' >> /etc/sysctl.d/99-custom.conf",
+        "sysctl -p /etc/sysctl.d/99-custom.conf || true",
+        "apt-get update -qq",
+        "apt-get install -y -qq curl wget sudo vim nano htop net-tools iproute2 iputils-ping dnsutils traceroute mtr tcpdump telnet ncdu tmux screen",
+    ]
+    for cmd in commands:
+        await exec_in_container(container_name, cmd)
+
+async def get_available_host_port() -> Optional[int]:
+    """Get an available host port for forwarding"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT host_port FROM port_forwards')
+    used_ports = {row[0] for row in cur.fetchall()}
+    conn.close()
+    
+    # Also check system for used ports
+    try:
+        result = subprocess.run(['ss', '-tuln'], capture_output=True, text=True)
+        for line in result.stdout.splitlines():
+            if ':' in line:
+                parts = line.split()
+                for part in parts:
+                    if ':' in part and part.split(':')[-1].isdigit():
+                        used_ports.add(int(part.split(':')[-1]))
+    except:
+        pass
+    
+    for _ in range(100):
+        port = random.randint(20000, 50000)
+        if port not in used_ports:
+            return port
+    return None
+
+async def create_port_forward(user_id: str, container_name: str, container_port: int, protocol: str = "tcp+udp") -> Optional[int]:
+    """Create a port forward"""
+    host_port = await get_available_host_port()
+    if not host_port:
+        return None
+    
+    try:
+        if protocol == "tcp" or protocol == "tcp+udp":
+            await run_lxc(f"lxc config device add {container_name} proxy-tcp-{host_port} proxy listen=tcp:0.0.0.0:{host_port} connect=tcp:127.0.0.1:{container_port}")
+        
+        if protocol == "udp" or protocol == "tcp+udp":
+            await run_lxc(f"lxc config device add {container_name} proxy-udp-{host_port} proxy listen=udp:0.0.0.0:{host_port} connect=udp:127.0.0.1:{container_port}")
+        
+        add_port_forward(user_id, container_name, container_port, host_port, protocol)
+        return host_port
+    except Exception as e:
+        logger.error(f"Failed to create port forward: {e}")
+        return None
+
+async def remove_port_forward_device(container_name: str, host_port: int):
+    """Remove port forward devices"""
+    try:
+        await run_lxc(f"lxc config device remove {container_name} proxy-tcp-{host_port}")
+    except:
+        pass
+    try:
+        await run_lxc(f"lxc config device remove {container_name} proxy-udp-{host_port}")
+    except:
+        pass
+
+async def get_container_console(container_name: str, lines: int = 20) -> str:
+    """Get console output from container (like .ss command)"""
+    try:
+        # Get last N lines of console output
+        out, _, _ = await exec_in_container(container_name, f"dmesg | tail -{lines} 2>/dev/null || journalctl -n {lines} --no-pager 2>/dev/null")
+        if out:
+            return out
+        
+        # Fallback to process list
+        out, _, _ = await exec_in_container(container_name, f"ps aux --forest | head -{lines*2}")
+        return out or "No console output available"
+    except Exception as e:
+        return f"Error getting console: {str(e)}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🎨  EMBED HELPER FUNCTIONS
@@ -626,6 +973,16 @@ def warning_embed(title: str, description: str = "") -> discord.Embed:
     """Create a warning embed"""
     return create_embed(title, description, 0xFEE75C)
 
+def terminal_embed(title: str, content: str, color: int = 0x2C2F33) -> discord.Embed:
+    """Create a terminal-style embed for console output"""
+    embed = discord.Embed(
+        title=f"🖥️ {title}",
+        description=f"```bash\n{content[:1900]}\n```",
+        color=color
+    )
+    embed.set_footer(text=f"{BOT_NAME} • Terminal Output • {datetime.now().strftime('%H:%M:%S')}")
+    return embed
+
 def no_vps_embed() -> discord.Embed:
     """Create a no VPS embed"""
     return info_embed(
@@ -636,167 +993,6 @@ def no_vps_embed() -> discord.Embed:
         f"• Use `{BOT_PREFIX}claim-free` to claim based on invites\n"
         f"• Contact an admin for custom VPS"
     )
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🛠️  LXC HELPER FUNCTIONS (DIRECT LXC - NO SSH NEEDED)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
-    """Run an LXC command asynchronously"""
-    try:
-        cmd = shlex.split(command)
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            return "", f"Command timed out after {timeout} seconds", -1
-    except Exception as e:
-        return "", str(e), -1
-
-async def exec_in_container(container_name: str, command: str, timeout: int = 30) -> Tuple[str, str, int]:
-    """Execute a command inside a container"""
-    return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
-
-def get_container_status_sync(container_name: str) -> str:
-    """Get container status synchronously"""
-    try:
-        result = subprocess.run(['lxc', 'info', container_name], 
-                                capture_output=True, text=True, timeout=10)
-        for line in result.stdout.splitlines():
-            if line.startswith("Status: "):
-                return line.split(": ", 1)[1].strip().lower()
-        return "unknown"
-    except:
-        return "unknown"
-
-async def get_container_status(container_name: str) -> str:
-    """Get container status asynchronously"""
-    return await asyncio.get_event_loop().run_in_executor(None, get_container_status_sync, container_name)
-
-async def get_container_stats(container_name: str) -> Dict:
-    """Get detailed container stats"""
-    stats = {
-        'status': 'unknown',
-        'cpu': 'N/A',
-        'memory': 'N/A',
-        'disk': 'N/A',
-        'uptime': 'N/A',
-        'ipv4': []
-    }
-    
-    # Get status
-    stats['status'] = await get_container_status(container_name)
-    
-    if stats['status'] == 'running':
-        # Get CPU usage
-        out, _, _ = await exec_in_container(container_name, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
-        stats['cpu'] = f"{out}%" if out else "N/A"
-        
-        # Get memory usage
-        out, _, _ = await exec_in_container(container_name, "free -m | awk '/^Mem:/{printf \"%d/%d MB (%.1f%%)\", $3, $2, $3/$2*100}'")
-        stats['memory'] = out if out else "N/A"
-        
-        # Get disk usage
-        out, _, _ = await exec_in_container(container_name, "df -h / | awk 'NR==2{printf \"%s/%s (%s)\", $3, $2, $5}'")
-        stats['disk'] = out if out else "N/A"
-        
-        # Get uptime
-        out, _, _ = await exec_in_container(container_name, "uptime -p | sed 's/up //'")
-        stats['uptime'] = out if out else "N/A"
-        
-        # Get IPv4 addresses
-        out, _, _ = await exec_in_container(container_name, "ip -4 addr show | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | grep -v '127.0.0.1'")
-        if out:
-            stats['ipv4'] = out.splitlines()
-    
-    return stats
-
-async def apply_lxc_config(container_name: str):
-    """Apply LXC configuration for better compatibility"""
-    try:
-        # Enable nesting and privileged mode
-        await run_lxc(f"lxc config set {container_name} security.nesting true")
-        await run_lxc(f"lxc config set {container_name} security.privileged true")
-        
-        # Add kernel modules
-        await run_lxc(f"lxc config set {container_name} linux.kernel_modules overlay,br_netfilter,nf_nat,ip_tables")
-        
-        # Raw LXC config
-        raw_config = """
-lxc.apparmor.profile = unconfined
-lxc.cgroup.devices.allow = a
-lxc.cap.drop =
-lxc.mount.auto = proc:rw sys:rw cgroup:rw
-"""
-        await run_lxc(f"lxc config set {container_name} raw.lxc '{raw_config}'")
-        
-        logger.info(f"✅ Applied LXC config to {container_name}")
-    except Exception as e:
-        logger.error(f"Failed to apply LXC config to {container_name}: {e}")
-
-async def apply_internal_permissions(container_name: str):
-    """Apply internal permissions for Docker compatibility"""
-    await asyncio.sleep(3)  # Wait for container to start
-    commands = [
-        "mkdir -p /etc/sysctl.d/",
-        "echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/99-custom.conf",
-        "echo 'net.ipv4.ping_group_range=0 2147483647' >> /etc/sysctl.d/99-custom.conf",
-        "sysctl -p /etc/sysctl.d/99-custom.conf || true",
-        "apt-get update -qq",
-        "apt-get install -y -qq curl wget sudo vim nano htop net-tools",
-    ]
-    for cmd in commands:
-        await exec_in_container(container_name, cmd)
-
-async def get_available_host_port() -> Optional[int]:
-    """Get an available host port for forwarding"""
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT host_port FROM port_forwards')
-    used_ports = {row[0] for row in cur.fetchall()}
-    conn.close()
-    
-    for _ in range(100):
-        port = random.randint(20000, 50000)
-        if port not in used_ports:
-            return port
-    return None
-
-async def create_port_forward(user_id: str, container_name: str, container_port: int) -> Optional[int]:
-    """Create a port forward"""
-    host_port = await get_available_host_port()
-    if not host_port:
-        return None
-    
-    try:
-        # Add TCP proxy
-        await run_lxc(f"lxc config device add {container_name} proxy-tcp-{host_port} proxy listen=tcp:0.0.0.0:{host_port} connect=tcp:127.0.0.1:{container_port}")
-        # Add UDP proxy
-        await run_lxc(f"lxc config device add {container_name} proxy-udp-{host_port} proxy listen=udp:0.0.0.0:{host_port} connect=udp:127.0.0.1:{container_port}")
-        
-        add_port_forward(user_id, container_name, container_port, host_port)
-        return host_port
-    except Exception as e:
-        logger.error(f"Failed to create port forward: {e}")
-        return None
-
-async def remove_port_forward_device(container_name: str, host_port: int):
-    """Remove port forward devices"""
-    try:
-        await run_lxc(f"lxc config device remove {container_name} proxy-tcp-{host_port}")
-    except:
-        pass
-    try:
-        await run_lxc(f"lxc config device remove {container_name} proxy-udp-{host_port}")
-    except:
-        pass
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🤖  BOT SETUP
@@ -872,8 +1068,11 @@ async def on_ready():
     # Check license
     global LICENSE_VERIFIED
     LICENSE_VERIFIED = is_license_verified()
-    if not LICENSE_VERIFIED:
-        logger.warning("⚠️ License not verified! Bot will have limited functionality.")
+    
+    # Get server stats
+    all_vps = get_all_vps()
+    total_vps = len(all_vps)
+    running_vps = sum(1 for v in all_vps if v['status'] == 'running' and not v['suspended'])
     
     # Create VPS user role if needed
     for guild in bot.guilds:
@@ -890,64 +1089,99 @@ async def on_ready():
                 pass
     
     print(f"""
-╔════════════════════════════════════════════════════════════════╗
-║                     {BOT_NAME} - ONLINE                          ║
-║                         Made by {BOT_AUTHOR}                      ║
-╠════════════════════════════════════════════════════════════════╣
-║  Bot: {bot.user}                             ║
-║  ID : {bot.user.id}                                        ║
-║  Prefix: {BOT_PREFIX}                                           ║
-║  License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}                ║
-║  Mode: Direct LXC (No SSH)                                    ║
-║  Commands: 50+                                                 ║
-╚════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════╗
+║                           {BOT_NAME} - ONLINE                              ║
+║                         Made by {BOT_AUTHOR}                                ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║  Bot: {bot.user}                                         ║
+║  ID : {bot.user.id}                                                    ║
+║  Prefix: {BOT_PREFIX}                                                       ║
+║  License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}                        ║
+║  Server IP: {SERVER_IP}                                               ║
+║  MAC Address: {MAC_ADDRESS}                                          ║
+║  Hostname: {HOSTNAME}                                                    ║
+║  Total VPS: {total_vps} (Running: {running_vps})                                   ║
+║  Commands: 65+                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
     """)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  ❌  ERROR HANDLER
+#  ❌  ERROR HANDLER - FIXED FOR INTERACTION FAILED
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @bot.event
 async def on_command_error(ctx, error):
-    """Global error handler"""
+    """Global error handler - FIXED for Interaction Failed"""
     if isinstance(error, commands.CommandNotFound):
         return
+    
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(embed=error_embed(
+        embed = error_embed(
             "Missing Argument",
             f"Usage: `{BOT_PREFIX}{ctx.command.name} {ctx.command.signature}`\n"
             f"Use `{BOT_PREFIX}help` for more info."
-        ))
+        )
+        await ctx.send(embed=embed)
+    
     elif isinstance(error, commands.BadArgument):
-        await ctx.send(embed=error_embed(
+        embed = error_embed(
             "Invalid Argument",
             "Please check your input and try again."
-        ))
+        )
+        await ctx.send(embed=embed)
+    
     elif isinstance(error, commands.CheckFailure):
-        await ctx.send(embed=error_embed(
+        embed = error_embed(
             "Access Denied",
             "You don't have permission to use this command."
-        ))
+        )
+        await ctx.send(embed=embed)
+    
     elif isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(embed=warning_embed(
+        embed = warning_embed(
             "Command on Cooldown",
             f"Please wait {error.retry_after:.1f} seconds before using this command again."
-        ))
+        )
+        await ctx.send(embed=embed)
+    
     elif isinstance(error, discord.errors.InteractionResponded):
-        pass
+        # Handle already responded interactions
+        try:
+            await ctx.send(embed=warning_embed("Slow Down", "Please wait a moment before using this again."), ephemeral=True)
+        except:
+            pass
+    
+    elif isinstance(error, discord.errors.Forbidden):
+        embed = error_embed(
+            "Permission Error",
+            "I don't have permission to do that. Please check my permissions."
+        )
+        await ctx.send(embed=embed)
+    
+    elif isinstance(error, asyncio.TimeoutError):
+        embed = error_embed(
+            "Timeout Error",
+            "The operation timed out. Please try again."
+        )
+        await ctx.send(embed=embed)
+    
     else:
         logger.error(f"Error in {ctx.command}: {error}")
-        await ctx.send(embed=error_embed(
+        embed = error_embed(
             "Unexpected Error",
-            f"```\n{str(error)[:1900]}\n```"
-        ))
+            f"```\n{str(error)[:1900]}\n```\nPlease report this to an admin."
+        )
+        try:
+            await ctx.send(embed=embed)
+        except:
+            pass
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  📖  HELP COMMAND (INTERACTIVE)
+#  📖  HELP COMMAND - FULLY INTERACTIVE WITH ALL COMMANDS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class HelpView(View):
-    """Interactive help menu"""
+    """Interactive help menu with all commands"""
     def __init__(self, ctx):
         super().__init__(timeout=300)
         self.ctx = ctx
@@ -955,24 +1189,27 @@ class HelpView(View):
         self.pages = [
             {
                 "title": "📚 Welcome to SVM5-BOT Help",
-                "description": f"**Prefix:** `{BOT_PREFIX}`\n**Version:** 5.0.0\n**Author:** {BOT_AUTHOR}\n**Mode:** Direct LXC (No SSH)\n\nSelect a category below to see commands.",
+                "description": f"**Prefix:** `{BOT_PREFIX}`\n**Version:** 5.0.0\n**Author:** {BOT_AUTHOR}\n**Server IP:** `{SERVER_IP}`\n**MAC:** `{MAC_ADDRESS}`\n\nSelect a category below to see commands.",
                 "fields": [
                     ("👤 User Commands", "Basic commands for all users", True),
                     ("🖥️ VPS Management", "Control your VPS containers", True),
+                    ("📟 Console & SSH", "Terminal access and console commands", True),
                     ("🔌 Port Forwarding", "Manage port forwards", True),
                     ("🤖 AI Chat", "Chat with AI assistant", True),
                     ("💰 Invite System", "Earn free VPS with invites", True),
                     ("🌐 IPv4 Management", "Buy and manage IPv4", True),
+                    ("📦 Panel Install", "Install Pterodactyl/Pufferpanel", True),
                 ]
             },
             {
                 "title": "👤 User Commands",
                 "description": "Basic commands for all users",
                 "fields": [
-                    (f"{BOT_PREFIX}help", "Show this help menu", False),
+                    (f"{BOT_PREFIX}help", "Show this interactive help menu", False),
                     (f"{BOT_PREFIX}ping", "Check bot latency", False),
                     (f"{BOT_PREFIX}uptime", "Show bot uptime", False),
                     (f"{BOT_PREFIX}bot-info", "Detailed bot information", False),
+                    (f"{BOT_PREFIX}server-info", "Show server hardware info", False),
                     (f"{BOT_PREFIX}plans", "View free VPS plans", False),
                     (f"{BOT_PREFIX}stats", "View your stats", False),
                     (f"{BOT_PREFIX}inv", "Check your invites", False),
@@ -990,7 +1227,22 @@ class HelpView(View):
                     (f"{BOT_PREFIX}manage", "Interactive VPS manager", False),
                     (f"{BOT_PREFIX}stats [container]", "View VPS statistics", False),
                     (f"{BOT_PREFIX}logs [container] [lines]", "View VPS logs", False),
-                    (f"{BOT_PREFIX}ssh-gen <container>", "Generate SSH access via tmate", False),
+                    (f"{BOT_PREFIX}reboot <container>", "Reboot VPS", False),
+                    (f"{BOT_PREFIX}shutdown <container>", "Shutdown VPS", False),
+                ]
+            },
+            {
+                "title": "📟 Console & SSH Commands",
+                "description": "Terminal access and console commands",
+                "fields": [
+                    (f"{BOT_PREFIX}ss [container]", "Show VPS console/screenshot", False),
+                    (f"{BOT_PREFIX}console <container>", "Interactive console (type commands)", False),
+                    (f"{BOT_PREFIX}ssh-gen <container>", "Generate temporary SSH access", False),
+                    (f"{BOT_PREFIX}execute <container> <cmd>", "Execute command in VPS", False),
+                    (f"{BOT_PREFIX}top <container>", "Show live process monitor", False),
+                    (f"{BOT_PREFIX}df <container>", "Show disk usage", False),
+                    (f"{BOT_PREFIX}free <container>", "Show memory usage", False),
+                    (f"{BOT_PREFIX}netstat <container>", "Show network connections", False),
                 ]
             },
             {
@@ -998,17 +1250,28 @@ class HelpView(View):
                 "description": "Manage port forwarding for your VPS",
                 "fields": [
                     (f"{BOT_PREFIX}ports", "Port forwarding help", False),
-                    (f"{BOT_PREFIX}ports add <num> <port>", "Add port forward", False),
+                    (f"{BOT_PREFIX}ports add <num> <port> [tcp/udp]", "Add port forward", False),
                     (f"{BOT_PREFIX}ports list", "List your forwards", False),
                     (f"{BOT_PREFIX}ports remove <id>", "Remove port forward", False),
+                    (f"{BOT_PREFIX}ports quota", "Check your port quota", False),
                 ]
             },
             {
-                "title": "🤖 AI Chat",
-                "description": "Chat with AI assistant (powered by Groq)",
+                "title": "📦 Panel Installation",
+                "description": "Install game server panels on your VPS",
                 "fields": [
-                    (f"{BOT_PREFIX}ai <message>", "Chat with AI", False),
-                    (f"{BOT_PREFIX}ai-reset", "Reset chat history", False),
+                    (f"{BOT_PREFIX}install-panel", "Install Pterodactyl/Pufferpanel", False),
+                    (f"{BOT_PREFIX}panel-info", "Show your installed panel info", False),
+                    (f"{BOT_PREFIX}panel-reset <type>", "Reset panel admin password", False),
+                ]
+            },
+            {
+                "title": "🌐 IPv4 Management",
+                "description": "Buy and manage IPv4 addresses",
+                "fields": [
+                    (f"{BOT_PREFIX}ipv4", "View your IPv4 list", False),
+                    (f"{BOT_PREFIX}buy-ipv4", "Purchase IPv4 via UPI", False),
+                    (f"{BOT_PREFIX}ipv4-details <container>", "Show detailed IPv4 info", False),
                 ]
             },
             {
@@ -1022,11 +1285,11 @@ class HelpView(View):
                 ]
             },
             {
-                "title": "🌐 IPv4 Management",
-                "description": "Buy and manage IPv4 addresses",
+                "title": "🤖 AI Chat",
+                "description": "Chat with AI assistant (powered by Groq)",
                 "fields": [
-                    (f"{BOT_PREFIX}ipv4", "View your IPv4 list", False),
-                    (f"{BOT_PREFIX}buy-ipv4", "Purchase IPv4 via UPI", False),
+                    (f"{BOT_PREFIX}ai <message>", "Chat with AI", False),
+                    (f"{BOT_PREFIX}ai-reset", "Reset chat history", False),
                 ]
             },
         ]
@@ -1050,6 +1313,7 @@ class HelpView(View):
                     (f"{BOT_PREFIX}admin-add-ipv4 @user <container>", "Assign IPv4", False),
                     (f"{BOT_PREFIX}admin-rm-ipv4 @user [container]", "Remove IPv4", False),
                     (f"{BOT_PREFIX}admin-pending-ipv4", "View pending IPv4 purchases", False),
+                    (f"{BOT_PREFIX}admin-panels", "List all installed panels", False),
                 ]
             })
         
@@ -1067,6 +1331,7 @@ class HelpView(View):
                     (f"{BOT_PREFIX}protect @user [num]", "Protect VPS from purge", False),
                     (f"{BOT_PREFIX}unprotect @user [num]", "Remove protection", False),
                     (f"{BOT_PREFIX}admin-users", "List all users", False),
+                    (f"{BOT_PREFIX}system-info", "Detailed system information", False),
                 ]
             })
         
@@ -1108,7 +1373,7 @@ class HelpView(View):
 @bot.command(name="help")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def help_command(ctx):
-    """Show interactive help menu"""
+    """Show interactive help menu - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -1135,7 +1400,7 @@ async def commands_alias(ctx):
 @bot.command(name="ping")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def ping_command(ctx):
-    """Check bot latency"""
+    """Check bot latency - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -1178,6 +1443,30 @@ async def uptime_command(ctx):
     )
     await ctx.send(embed=embed)
 
+@bot.command(name="server-info")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def server_info(ctx):
+    """Show server hardware information"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    # Get system info
+    cpu_count = psutil.cpu_count()
+    cpu_percent = psutil.cpu_percent(interval=1)
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    
+    embed = create_embed("Server Information")
+    embed.add_field(name="Hostname", value=f"`{HOSTNAME}`", inline=True)
+    embed.add_field(name="Server IP", value=f"`{SERVER_IP}`", inline=True)
+    embed.add_field(name="MAC Address", value=f"`{MAC_ADDRESS}`", inline=True)
+    embed.add_field(name="CPU Cores", value=f"`{cpu_count}`", inline=True)
+    embed.add_field(name="CPU Usage", value=f"`{cpu_percent}%`", inline=True)
+    embed.add_field(name="RAM", value=f"`{memory.used//1024//1024}MB/{memory.total//1024//1024}MB ({memory.percent}%)`", inline=True)
+    embed.add_field(name="Disk", value=f"`{disk.used//1024//1024//1024}GB/{disk.total//1024//1024//1024}GB ({disk.percent}%)`", inline=True)
+    
+    await ctx.send(embed=embed)
+
 @bot.command(name="bot-info")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def bot_info(ctx):
@@ -1198,6 +1487,9 @@ async def bot_info(ctx):
     cur = conn.cursor()
     cur.execute('SELECT COUNT(DISTINCT user_id) FROM vps')
     total_users = cur.fetchone()[0] or 0
+    
+    cur.execute('SELECT COUNT(*) FROM panels')
+    total_panels = cur.fetchone()[0] or 0
     conn.close()
     
     embed = create_embed("Bot Information")
@@ -1209,10 +1501,11 @@ async def bot_info(ctx):
     embed.add_field(name="Users", value=f"`{total_users}`", inline=True)
     embed.add_field(name="Total VPS", value=f"`{total_vps}`", inline=True)
     embed.add_field(name="Running VPS", value=f"`{running_vps}`", inline=True)
-    embed.add_field(name="Database", value="`SQLite 3`", inline=True)
+    embed.add_field(name="Panels Installed", value=f"`{total_panels}`", inline=True)
+    embed.add_field(name="Server IP", value=f"`{SERVER_IP}`", inline=True)
+    embed.add_field(name="MAC Address", value=f"`{MAC_ADDRESS}`", inline=True)
     embed.add_field(name="License", value="`✅ Verified`" if LICENSE_VERIFIED else "`❌ Not Verified`", inline=True)
     embed.add_field(name="AI Model", value=f"`{AI_MODEL}`", inline=True)
-    embed.add_field(name="Mode", value="`Direct LXC (No SSH)`", inline=True)
     
     await ctx.send(embed=embed)
 
@@ -1222,16 +1515,16 @@ async def bot_info(ctx):
 
 def generate_username() -> str:
     """Generate a random username"""
-    adjectives = ["cool", "fast", "dark", "epic", "blue", "swift", "neon", "alpha", "delta", "super", "mega", "ultra"]
-    nouns = ["wolf", "tiger", "storm", "byte", "nova", "blade", "fox", "raven", "hawk", "lion", "dragon", "phoenix"]
-    num = random.randint(10, 999)
+    adjectives = ["cool", "fast", "dark", "epic", "blue", "swift", "neon", "alpha", "delta", "super", "mega", "ultra", "hyper", "cyber", "tech", "quantum", "nano", "pixel", "digital", "cloud"]
+    nouns = ["wolf", "tiger", "storm", "byte", "nova", "blade", "fox", "raven", "hawk", "lion", "dragon", "phoenix", "eagle", "shark", "viper", "phantom", "shadow", "ghost", "knight", "warrior"]
+    num = random.randint(10, 9999)
     return f"{random.choice(adjectives)}{random.choice(nouns)}{num}"
 
 def generate_email(username: str = None) -> str:
     """Generate a random email"""
     if not username:
         username = generate_username()
-    domains = ["gmail.com", "yahoo.com", "outlook.com", "proton.me", "hotmail.com", "mail.com"]
+    domains = ["gmail.com", "yahoo.com", "outlook.com", "proton.me", "hotmail.com", "mail.com", "icloud.com", "aol.com", "yandex.com", "gmx.com"]
     return f"{username}@{random.choice(domains)}"
 
 def generate_password(length: int = 16) -> str:
@@ -1242,14 +1535,14 @@ def generate_password(length: int = 16) -> str:
 @bot.command(name="gen-acc")
 @commands.cooldown(1, 10, commands.BucketType.user)
 async def gen_account(ctx):
-    """Generate a random account"""
+    """Generate a random account - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
     username = generate_username()
     email = generate_email(username)
     password = generate_password()
-    api_key = ''.join(random.choices(string.hexdigits, k=32))
+    api_key = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
     
     # Save to database
     conn = get_db()
@@ -1397,16 +1690,16 @@ class ClaimOSSelectView(View):
         self.plan = plan
         
         options = []
-        for os in OS_OPTIONS:
+        for os in OS_OPTIONS[:25]:  # Discord max 25 options
             options.append(discord.SelectOption(
-                label=os["label"],
+                label=os["label"][:100],
                 value=os["value"],
-                description=os["desc"]
+                description=os["desc"][:100] if os["desc"] else None
             ))
         
         self.select = Select(
             placeholder="Select an operating system...",
-            options=options[:25],
+            options=options,
             min_values=1,
             max_values=1
         )
@@ -1454,7 +1747,7 @@ class ClaimOSSelectView(View):
         await interaction.response.edit_message(embed=embed, view=view)
     
     async def create_vps(self, interaction: discord.Interaction, os_version: str):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         
         user_id = str(self.ctx.author.id)
         stats = get_user_stats(user_id)
@@ -1469,7 +1762,7 @@ class ClaimOSSelectView(View):
             return
         
         # Generate container name
-        container_name = f"svm5-{user_id[:8]}-{random.randint(1000, 9999)}"
+        container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
         
         # Create the container
         progress = await interaction.followup.send(
@@ -1534,6 +1827,7 @@ class ClaimOSSelectView(View):
                 dm_embed.add_field(name="OS", value=os_version, inline=True)
                 dm_embed.add_field(name="Resources", value=f"{self.plan['ram']}GB RAM / {self.plan['cpu']} CPU / {self.plan['disk']}GB Disk", inline=False)
                 dm_embed.add_field(name="Management", value=f"Use `{BOT_PREFIX}manage` to control your VPS", inline=False)
+                dm_embed.add_field(name="Console", value=f"Use `{BOT_PREFIX}ss {container_name}` to view console", inline=False)
                 await self.ctx.author.send(embed=dm_embed)
             except:
                 pass
@@ -1545,6 +1839,7 @@ class ClaimOSSelectView(View):
             embed.add_field(name="OS", value=os_version, inline=True)
             embed.add_field(name="Resources", value=f"{self.plan['ram']}GB RAM / {self.plan['cpu']} CPU / {self.plan['disk']}GB Disk", inline=False)
             embed.add_field(name="Management", value=f"Use `{BOT_PREFIX}manage` to control your VPS", inline=False)
+            embed.add_field(name="Console", value=f"Use `{BOT_PREFIX}ss {container_name}` to view console", inline=False)
             
             await progress.edit(embed=embed)
             
@@ -1661,7 +1956,8 @@ async def my_vps(ctx):
             value=f"{status_emoji} **`{vps['container_name']}`**\n"
                   f"Status: `{status_text}`\n"
                   f"Plan: {vps['plan_name']}\n"
-                  f"Resources: {vps['ram']}GB RAM / {vps['cpu']} CPU / {vps['disk']}GB Disk",
+                  f"Resources: {vps['ram']}GB RAM / {vps['cpu']} CPU / {vps['disk']}GB Disk\n"
+                  f"IP: `{vps.get('ip_address', 'N/A')}`",
             inline=False
         )
     
@@ -1675,7 +1971,7 @@ async def list_command(ctx):
     await my_vps(ctx)
 
 class VPSManageView(View):
-    """Interactive VPS management view"""
+    """Interactive VPS management view with all controls"""
     def __init__(self, ctx, user_id, vps_list, is_admin_view=False, target_user=None):
         super().__init__(timeout=300)
         self.ctx = ctx
@@ -1685,6 +1981,8 @@ class VPSManageView(View):
         self.is_admin_view = is_admin_view
         self.target_user = target_user
         self.message = None
+        self.console_mode = False
+        self.current_container = None
         
         self.update_buttons()
     
@@ -1722,6 +2020,10 @@ class VPSManageView(View):
         stats_btn.callback = self.stats_callback
         self.add_item(stats_btn)
         
+        console_btn = Button(label="📟 Console", style=discord.ButtonStyle.secondary)
+        console_btn.callback = self.console_callback
+        self.add_item(console_btn)
+        
         ssh_btn = Button(label="🔑 SSH", style=discord.ButtonStyle.secondary)
         ssh_btn.callback = self.ssh_callback
         self.add_item(ssh_btn)
@@ -1731,9 +2033,10 @@ class VPSManageView(View):
         self.add_item(refresh_btn)
     
     async def get_current_embed(self) -> discord.Embed:
-        """Get embed for current VPS"""
+        """Get embed for current VPS with full stats"""
         vps = self.vps_list[self.current_index]
         container = vps['container_name']
+        self.current_container = container
         
         # Get live stats
         stats = await get_container_stats(container)
@@ -1748,18 +2051,38 @@ class VPSManageView(View):
             title = f"Admin: {self.target_user.display_name}'s VPS - {container}"
         
         embed = create_embed(title)
-        embed.add_field(name="Status", value=f"{status_emoji} `{status_text}`", inline=True)
-        embed.add_field(name="Plan", value=vps['plan_name'], inline=True)
-        embed.add_field(name="OS", value=vps['os_version'], inline=True)
-        embed.add_field(name="Resources", value=f"RAM: {vps['ram']}GB\nCPU: {vps['cpu']} Core(s)\nDisk: {vps['disk']}GB", inline=True)
+        
+        # Basic Info
+        basic = f"**Status:** {status_emoji} `{status_text}`\n"
+        basic += f"**Plan:** `{vps['plan_name']}`\n"
+        basic += f"**OS:** `{vps['os_version']}`\n"
+        basic += f"**Resources:** `{vps['ram']}GB RAM / {vps['cpu']} CPU / {vps['disk']}GB Disk`\n"
+        basic += f"**IP:** `{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}`\n"
+        basic += f"**MAC:** `{stats['mac']}`"
+        embed.add_field(name="📋 Basic Info", value=basic, inline=False)
         
         if stats['status'] == 'running' and not vps['suspended']:
-            embed.add_field(name="CPU Usage", value=f"`{stats['cpu']}`", inline=True)
-            embed.add_field(name="Memory", value=f"`{stats['memory']}`", inline=True)
-            embed.add_field(name="Disk", value=f"`{stats['disk']}`", inline=True)
-            embed.add_field(name="Uptime", value=f"`{stats['uptime']}`", inline=True)
-            if stats['ipv4']:
-                embed.add_field(name="IP Addresses", value="\n".join(f"`{ip}`" for ip in stats['ipv4'][:3]), inline=False)
+            # Live Stats
+            live = f"**CPU:** `{stats['cpu']}`\n"
+            live += f"**Memory:** `{stats['memory']}`\n"
+            live += f"**Disk:** `{stats['disk']}`\n"
+            live += f"**Uptime:** `{stats['uptime']}`\n"
+            live += f"**Processes:** `{stats['processes']}`\n"
+            live += f"**Load:** `{stats['load']}`"
+            embed.add_field(name="📊 Live Stats", value=live, inline=True)
+            
+            # Network Stats
+            network = f"**IPv4:** `{', '.join(stats['ipv4'][:2]) if stats['ipv4'] else 'N/A'}`\n"
+            network += f"**IPv6:** `{', '.join(stats['ipv6'][:2]) if stats['ipv6'] else 'N/A'}`\n"
+            network += f"**RX:** `{stats['network_rx']}`\n"
+            network += f"**TX:** `{stats['network_tx']}`"
+            embed.add_field(name="🌐 Network", value=network, inline=True)
+            
+            # System Info
+            sysinfo = f"**Hostname:** `{stats['hostname']}`\n"
+            sysinfo += f"**Kernel:** `{stats['kernel']}`\n"
+            sysinfo += f"**OS:** `{stats['os']}`"
+            embed.add_field(name="⚙️ System", value=sysinfo, inline=True)
         
         return embed
     
@@ -1791,7 +2114,7 @@ class VPSManageView(View):
             await interaction.response.send_message(embed=error_embed("Cannot Start", "This VPS is suspended."), ephemeral=True)
             return
         
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         
         try:
             await run_lxc(f"lxc start {container}")
@@ -1815,7 +2138,7 @@ class VPSManageView(View):
             await interaction.response.send_message(embed=error_embed("Cannot Stop", "This VPS is suspended."), ephemeral=True)
             return
         
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         
         try:
             await run_lxc(f"lxc stop {container} --force")
@@ -1839,7 +2162,7 @@ class VPSManageView(View):
             await interaction.response.send_message(embed=error_embed("Cannot Restart", "This VPS is suspended."), ephemeral=True)
             return
         
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         
         try:
             await run_lxc(f"lxc restart {container}")
@@ -1866,6 +2189,24 @@ class VPSManageView(View):
         embed.add_field(name="Memory", value=stats['memory'], inline=True)
         embed.add_field(name="Disk", value=stats['disk'], inline=True)
         embed.add_field(name="Uptime", value=stats['uptime'], inline=True)
+        embed.add_field(name="Processes", value=stats['processes'], inline=True)
+        embed.add_field(name="Load", value=stats['load'], inline=True)
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    async def console_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id and not is_admin(str(interaction.user.id)):
+            await interaction.response.send_message("This menu is not for you!", ephemeral=True)
+            return
+        
+        vps = self.vps_list[self.current_index]
+        container = vps['container_name']
+        
+        # Show console output
+        console = await get_container_console(container, 30)
+        
+        embed = terminal_embed(f"Console: {container}", console)
+        embed.add_field(name="Commands", value=f"`{BOT_PREFIX}execute {container} <cmd>` to run commands", inline=False)
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
@@ -1877,7 +2218,7 @@ class VPSManageView(View):
         vps = self.vps_list[self.current_index]
         container = vps['container_name']
         
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         
         # Call ssh-gen command
         await ssh_gen_command(interaction, container)
@@ -1905,7 +2246,7 @@ class VPSManageView(View):
 @bot.command(name="manage")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def manage_vps(ctx, user: discord.Member = None):
-    """Interactive VPS manager"""
+    """Interactive VPS manager - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -1936,10 +2277,14 @@ async def manage_vps(ctx, user: discord.Member = None):
     msg = await ctx.send(embed=embed, view=view)
     view.message = msg
 
-@bot.command(name="logs")
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  📟  CONSOLE & SSH COMMANDS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@bot.command(name="ss")
 @commands.cooldown(1, 5, commands.BucketType.user)
-async def view_logs(ctx, container_name: str = None, lines: int = 50):
-    """View VPS logs"""
+async def ss_command(ctx, container_name: str = None):
+    """Show VPS console/screenshot - FIXED with terminal UI"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -1959,19 +2304,177 @@ async def view_logs(ctx, container_name: str = None, lines: int = 50):
             await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
             return
     
-    msg = await ctx.send(embed=info_embed("Fetching logs...", f"Getting last {lines} lines from {container_name}"))
+    msg = await ctx.send(embed=info_embed("📸 Taking VPS Snapshot", f"Getting console output from {container_name}..."))
     
-    try:
-        out, err, code = await exec_in_container(container_name, f"journalctl -n {lines} --no-pager 2>/dev/null || dmesg | tail -{lines} 2>/dev/null")
-        if out:
-            if len(out) > 1900:
-                out = out[:1900] + "...\n(truncated)"
-            embed = info_embed(f"Logs: {container_name}", f"```\n{out}\n```")
-        else:
-            embed = info_embed(f"Logs: {container_name}", "No logs available.")
-        await msg.edit(embed=embed)
-    except Exception as e:
-        await msg.edit(embed=error_embed("Failed", str(e)))
+    # Get console output
+    console = await get_container_console(container_name, 40)
+    
+    # Get stats
+    stats = await get_container_stats(container_name)
+    
+    # Create terminal-style embed
+    terminal_output = f"=== {container_name} Console Output ===\n"
+    terminal_output += f"Status: {stats['status'].upper()} | Uptime: {stats['uptime']}\n"
+    terminal_output += f"CPU: {stats['cpu']} | Memory: {stats['memory']} | Disk: {stats['disk']}\n"
+    terminal_output += "="*50 + "\n\n"
+    terminal_output += console
+    
+    embed = terminal_embed(f"VPS Console: {container_name}", terminal_output)
+    
+    await msg.edit(embed=embed)
+
+@bot.command(name="console")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def console_command(ctx, container_name: str, *, command: str = None):
+    """Interactive console - type commands"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # Verify ownership
+    vps_list = get_user_vps(user_id)
+    if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    if not command:
+        # Just show console
+        await ss_command(ctx, container_name)
+        return
+    
+    # Execute command
+    msg = await ctx.send(embed=info_embed("⚡ Executing Command", f"Running: `{command}` in {container_name}..."))
+    
+    out, err, code = await exec_in_container(container_name, command, timeout=60)
+    
+    output = out if out else err
+    
+    terminal_output = f"$ {command}\n\n"
+    terminal_output += output
+    
+    embed = terminal_embed(f"Command Output: {container_name}", terminal_output)
+    embed.add_field(name="Exit Code", value=f"`{code}`", inline=True)
+    
+    await msg.edit(embed=embed)
+
+@bot.command(name="execute")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def execute_command(ctx, container_name: str, *, command: str):
+    """Execute a command in VPS"""
+    await console_command(ctx, container_name, command=command)
+
+@bot.command(name="top")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def top_command(ctx, container_name: str = None):
+    """Show live process monitor"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # Find the container
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await ctx.send(embed=no_vps_embed())
+            return
+        container_name = vps_list[0]['container_name']
+    else:
+        # Verify ownership
+        vps_list = get_user_vps(user_id)
+        if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+    
+    msg = await ctx.send(embed=info_embed("📊 Getting process list...", f"Fetching top output from {container_name}"))
+    
+    out, _, _ = await exec_in_container(container_name, "ps aux --sort=-%cpu | head -20")
+    
+    terminal_output = f"=== Process List: {container_name} ===\n\n"
+    terminal_output += out
+    
+    embed = terminal_embed(f"Process Monitor: {container_name}", terminal_output)
+    
+    await msg.edit(embed=embed)
+
+@bot.command(name="df")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def df_command(ctx, container_name: str = None):
+    """Show disk usage"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await ctx.send(embed=no_vps_embed())
+            return
+        container_name = vps_list[0]['container_name']
+    else:
+        vps_list = get_user_vps(user_id)
+        if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+    
+    out, _, _ = await exec_in_container(container_name, "df -h")
+    
+    embed = terminal_embed(f"Disk Usage: {container_name}", out)
+    await ctx.send(embed=embed)
+
+@bot.command(name="free")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def free_command(ctx, container_name: str = None):
+    """Show memory usage"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await ctx.send(embed=no_vps_embed())
+            return
+        container_name = vps_list[0]['container_name']
+    else:
+        vps_list = get_user_vps(user_id)
+        if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+    
+    out, _, _ = await exec_in_container(container_name, "free -h")
+    
+    embed = terminal_embed(f"Memory Usage: {container_name}", out)
+    await ctx.send(embed=embed)
+
+@bot.command(name="netstat")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def netstat_command(ctx, container_name: str = None):
+    """Show network connections"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await ctx.send(embed=no_vps_embed())
+            return
+        container_name = vps_list[0]['container_name']
+    else:
+        vps_list = get_user_vps(user_id)
+        if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+    
+    out, _, _ = await exec_in_container(container_name, "netstat -tuln | head -20")
+    
+    embed = terminal_embed(f"Network Connections: {container_name}", out)
+    await ctx.send(embed=embed)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🔑  SSH-GEN COMMAND - Generate SSH Access via tmate
@@ -2067,6 +2570,54 @@ async def ssh_gen(ctx, container_name: str):
     
     await ssh_gen_command(ctx, container_name)
 
+@bot.command(name="reboot")
+@commands.cooldown(1, 10, commands.BucketType.user)
+async def reboot_vps(ctx, container_name: str):
+    """Reboot VPS"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # Verify ownership
+    vps_list = get_user_vps(user_id)
+    if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    await ctx.send(embed=info_embed("🔄 Rebooting", f"Rebooting VPS `{container_name}`..."))
+    
+    try:
+        await run_lxc(f"lxc restart {container_name}")
+        update_vps_status(container_name, 'running')
+        await ctx.send(embed=success_embed("Rebooted", f"VPS `{container_name}` has been rebooted."))
+    except Exception as e:
+        await ctx.send(embed=error_embed("Failed", str(e)))
+
+@bot.command(name="shutdown")
+@commands.cooldown(1, 10, commands.BucketType.user)
+async def shutdown_vps(ctx, container_name: str):
+    """Shutdown VPS"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # Verify ownership
+    vps_list = get_user_vps(user_id)
+    if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    await ctx.send(embed=info_embed("⏹️ Shutting Down", f"Shutting down VPS `{container_name}`..."))
+    
+    try:
+        await run_lxc(f"lxc stop {container_name}")
+        update_vps_status(container_name, 'stopped')
+        await ctx.send(embed=success_embed("Shutdown", f"VPS `{container_name}` has been shut down."))
+    except Exception as e:
+        await ctx.send(embed=error_embed("Failed", str(e)))
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  🔌  PORT FORWARDING COMMANDS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2074,7 +2625,7 @@ async def ssh_gen(ctx, container_name: str):
 @bot.group(name="ports", invoke_without_command=True)
 @commands.cooldown(1, 2, commands.BucketType.user)
 async def ports_group(ctx):
-    """Port forwarding commands"""
+    """Port forwarding commands - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -2086,15 +2637,16 @@ async def ports_group(ctx):
     embed.add_field(name="Your Quota", value=f"Allocated: `{allocated}`\nUsed: `{len(forwards)}`\nAvailable: `{allocated - len(forwards)}`", inline=False)
     embed.add_field(
         name="Commands",
-        value=f"`{BOT_PREFIX}ports add <vps_num> <port>` - Add forward\n"
+        value=f"`{BOT_PREFIX}ports add <vps_num> <port> [tcp/udp]` - Add forward\n"
               f"`{BOT_PREFIX}ports list` - List your forwards\n"
-              f"`{BOT_PREFIX}ports remove <id>` - Remove forward",
+              f"`{BOT_PREFIX}ports remove <id>` - Remove forward\n"
+              f"`{BOT_PREFIX}ports quota` - Check your quota",
         inline=False
     )
     await ctx.send(embed=embed)
 
 @ports_group.command(name="add")
-async def ports_add(ctx, vps_num: int, port: int):
+async def ports_add(ctx, vps_num: int, port: int, protocol: str = "tcp+udp"):
     """Add a port forward"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
@@ -2112,6 +2664,10 @@ async def ports_add(ctx, vps_num: int, port: int):
     
     if port < 1 or port > 65535:
         await ctx.send(embed=error_embed("Invalid Port", "Port must be between 1 and 65535."))
+        return
+    
+    if protocol not in ["tcp", "udp", "tcp+udp"]:
+        await ctx.send(embed=error_embed("Invalid Protocol", "Protocol must be tcp, udp, or tcp+udp"))
         return
     
     # Check quota
@@ -2132,15 +2688,16 @@ async def ports_add(ctx, vps_num: int, port: int):
         await ctx.send(embed=error_embed("Cannot Add", "VPS must be running to add port forwards."))
         return
     
-    msg = await ctx.send(embed=info_embed("Creating port forward...", f"Forwarding port {port} from VPS #{vps_num}"))
+    msg = await ctx.send(embed=info_embed("Creating port forward...", f"Forwarding port {port} ({protocol}) from VPS #{vps_num}"))
     
-    host_port = await create_port_forward(user_id, container, port)
+    host_port = await create_port_forward(user_id, container, port, protocol)
     
     if host_port:
         embed = success_embed("Port Forward Created")
         embed.add_field(name="VPS", value=f"#{vps_num} - `{container}`", inline=True)
         embed.add_field(name="Container Port", value=f"`{port}`", inline=True)
         embed.add_field(name="Host Port", value=f"`{host_port}`", inline=True)
+        embed.add_field(name="Protocol", value=f"`{protocol}`", inline=True)
         embed.add_field(name="Access", value=f"Connect to `{SERVER_IP}:{host_port}`", inline=False)
         await msg.edit(embed=embed)
     else:
@@ -2168,7 +2725,7 @@ async def ports_list(ctx):
         vps_num = next((i+1 for i, v in enumerate(get_user_vps(user_id)) if v['container_name'] == f['container_name']), '?')
         embed.add_field(
             name=f"ID: {f['id']}",
-            value=f"VPS #{vps_num}: `{f['container_port']}` → `{SERVER_IP}:{f['host_port']}`\nCreated: {f['created_at'][:16]}",
+            value=f"VPS #{vps_num}: `{f['container_port']}` → `{SERVER_IP}:{f['host_port']}` ({f['protocol']})\nCreated: {f['created_at'][:16]}",
             inline=False
         )
     
@@ -2200,14 +2757,234 @@ async def ports_remove(ctx, forward_id: int):
     
     await ctx.send(embed=success_embed("Removed", f"Port forward ID {forward_id} has been removed."))
 
+@ports_group.command(name="quota")
+async def ports_quota(ctx):
+    """Check your port quota"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    allocated = get_port_allocation(user_id)
+    used = len(get_user_port_forwards(user_id))
+    
+    embed = info_embed("Port Quota")
+    embed.add_field(name="Allocated", value=f"`{allocated}`", inline=True)
+    embed.add_field(name="Used", value=f"`{used}`", inline=True)
+    embed.add_field(name="Available", value=f"`{allocated - used}`", inline=True)
+    
+    await ctx.send(embed=embed)
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🌐  IPv4 MANAGEMENT (with UPI payment)
+#  📦  PANEL INSTALLATION COMMANDS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class PanelSelectView(View):
+    """Panel selection view"""
+    def __init__(self, ctx):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        
+        ptero_btn = Button(label="🦅 Pterodactyl", style=discord.ButtonStyle.primary, emoji="🦅")
+        ptero_btn.callback = self.ptero_callback
+        
+        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
+        puffer_btn.callback = self.puffer_callback
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(ptero_btn)
+        self.add_item(puffer_btn)
+        self.add_item(cancel_btn)
+    
+    async def ptero_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pterodactyl")
+    
+    async def puffer_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pufferpanel")
+    
+    async def cancel_callback(self, interaction: discord.Interaction):
+        await interaction.response.edit_message(embed=info_embed("Cancelled", "Panel installation cancelled."), view=None)
+    
+    async def install_panel(self, interaction: discord.Interaction, panel_type: str):
+        await interaction.response.defer()
+        
+        user_id = str(self.ctx.author.id)
+        
+        # Check if user has VPS
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await interaction.followup.send(embed=error_embed("No VPS", "You need a VPS to install a panel."), ephemeral=True)
+            return
+        
+        container = vps_list[0]['container_name']
+        
+        progress = await interaction.followup.send(
+            embed=info_embed(f"Installing {panel_type.title()}", "Step 1/5: Preparing installation..."),
+            ephemeral=True
+        )
+        
+        try:
+            # Generate credentials
+            admin_user = generate_username()
+            admin_email = generate_email(admin_user)
+            admin_pass = generate_password(16)
+            
+            if panel_type == "pterodactyl":
+                # Install Pterodactyl
+                await progress.edit(embed=info_embed("Installing Pterodactyl", "Step 2/5: Installing dependencies..."))
+                
+                commands = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git unzip tar",
+                    "apt-get install -y -qq nginx mariadb-server redis-server",
+                    "apt-get install -y -qq php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
+                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
+                    "mkdir -p /var/www/pterodactyl",
+                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
+                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/"
+                ]
+                
+                for cmd in commands:
+                    await exec_in_container(container, cmd)
+                    await asyncio.sleep(1)
+                
+                await progress.edit(embed=info_embed("Installing Pterodactyl", "Step 3/5: Configuring environment..."))
+                
+                # Create .env and install
+                env_cmds = [
+                    "cd /var/www/pterodactyl && cp .env.example .env",
+                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
+                    "cd /var/www/pterodactyl && php artisan key:generate --force",
+                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
+                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{admin_email}' --username='{admin_user}' --password='{admin_pass}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
+                ]
+                
+                for cmd in env_cmds:
+                    await exec_in_container(container, cmd)
+                    await asyncio.sleep(1)
+                
+                # Get IP
+                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+                ip = out.strip() or SERVER_IP
+                panel_url = f"http://{ip}"
+                
+            else:  # pufferpanel
+                await progress.edit(embed=info_embed("Installing Pufferpanel", "Step 2/5: Installing..."))
+                
+                commands = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git",
+                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
+                    "apt-get install -y -qq pufferpanel",
+                    "systemctl enable pufferpanel",
+                    "systemctl start pufferpanel",
+                    f"pufferpanel user add --name '{admin_user}' --email '{admin_email}' --password '{admin_pass}' --admin"
+                ]
+                
+                for cmd in commands:
+                    await exec_in_container(container, cmd)
+                    await asyncio.sleep(1)
+                
+                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+                ip = out.strip() or SERVER_IP
+                panel_url = f"http://{ip}:8080"
+            
+            # Save to database
+            add_panel(user_id, panel_type, panel_url, admin_user, admin_pass, admin_email)
+            
+            # Success message
+            embed = success_embed(f"✅ {panel_type.title()} Installed Successfully!")
+            embed.add_field(name="Panel URL", value=f"`{panel_url}`", inline=False)
+            embed.add_field(name="Username", value=f"||`{admin_user}`||", inline=True)
+            embed.add_field(name="Email", value=f"||`{admin_email}`||", inline=True)
+            embed.add_field(name="Password", value=f"||`{admin_pass}`||", inline=False)
+            embed.add_field(name="Container", value=f"`{container}`", inline=True)
+            
+            await progress.edit(embed=embed)
+            
+            # DM user
+            try:
+                dm_embed = success_embed(f"🔐 Your {panel_type.title()} Credentials")
+                dm_embed.add_field(name="Panel URL", value=panel_url, inline=False)
+                dm_embed.add_field(name="Username", value=admin_user, inline=True)
+                dm_embed.add_field(name="Email", value=admin_email, inline=True)
+                dm_embed.add_field(name="Password", value=admin_pass, inline=False)
+                await self.ctx.author.send(embed=dm_embed)
+            except:
+                pass
+            
+        except Exception as e:
+            await progress.edit(embed=error_embed("Installation Failed", str(e)))
+
+@bot.command(name="install-panel")
+@commands.cooldown(1, 300, commands.BucketType.user)
+async def install_panel(ctx):
+    """Install Pterodactyl or Pufferpanel on your VPS"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    # Check if user has VPS
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=no_vps_embed())
+        return
+    
+    embed = info_embed(
+        "Panel Installation",
+        f"Select a panel to install on your VPS:\n\n"
+        f"**Your VPS:** `{vps_list[0]['container_name']}`\n\n"
+        f"🦅 **Pterodactyl** - Popular game server panel\n"
+        f"🐡 **Pufferpanel** - Lightweight alternative"
+    )
+    
+    view = PanelSelectView(ctx)
+    await ctx.send(embed=embed, view=view)
+
+@bot.command(name="panel-info")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def panel_info(ctx):
+    """Show your installed panel info"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    panels = get_user_panels(user_id)
+    
+    if not panels:
+        await ctx.send(embed=info_embed("No Panels", "You haven't installed any panels yet. Use `.install-panel` to install one."))
+        return
+    
+    embed = info_embed(f"Your Panels ({len(panels)})")
+    
+    for panel in panels:
+        embed.add_field(
+            name=f"{'🦅' if panel['panel_type'] == 'pterodactyl' else '🐡'} {panel['panel_type'].title()}",
+            value=f"URL: `{panel['panel_url']}`\n"
+                  f"Username: ||`{panel['admin_user']}`||\n"
+                  f"Password: ||`{panel['admin_pass']}`||\n"
+                  f"Installed: {panel['installed_at'][:16]}",
+            inline=False
+        )
+    
+    await ctx.send(embed=embed)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  🌐  IPv4 MANAGEMENT (with UPI payment) - FIXED
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @bot.command(name="buy-ipv4")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def buy_ipv4(ctx):
-    """Buy an IPv4 address via UPI"""
+    """Buy an IPv4 address via UPI - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -2295,7 +3072,7 @@ class TransactionModal(Modal):
 @bot.command(name="ipv4")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def list_ipv4(ctx, user: discord.Member = None):
-    """List your IPv4 addresses"""
+    """List your IPv4 addresses with full details"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -2319,27 +3096,73 @@ async def list_ipv4(ctx, user: discord.Member = None):
     embed = info_embed(f"IPv4 Addresses - {target_name}", f"Total: {len(ipv4_list)}")
     
     for i, ip in enumerate(ipv4_list, 1):
-        value = f"Container: `{ip['container_name']}`\n"
+        value = f"**Container:** `{ip['container_name']}`\n"
         if ip['public_ip']:
-            value += f"Public IP: `{ip['public_ip']}`\n"
+            value += f"**Public IP:** `{ip['public_ip']}`\n"
         if ip['private_ip']:
-            value += f"Private IP: `{ip['private_ip']}`\n"
+            value += f"**Private IP:** `{ip['private_ip']}`\n"
+        if ip['mac_address']:
+            value += f"**MAC Address:** `{ip['mac_address']}`\n"
+        if ip['gateway']:
+            value += f"**Gateway:** `{ip['gateway']}`\n"
+        if ip['netmask']:
+            value += f"**Netmask:** `{ip['netmask']}`\n"
+        if ip['interface']:
+            value += f"**Interface:** `{ip['interface']}`\n"
         if ip['tunnel_url']:
-            value += f"Tunnel: {ip['tunnel_url']}\n"
-        value += f"Assigned: {ip['assigned_at'][:16]}"
+            value += f"**Tunnel:** {ip['tunnel_url']}\n"
+        value += f"**Assigned:** {ip['assigned_at'][:16]}"
         
         embed.add_field(name=f"IPv4 #{i}", value=value, inline=False)
     
     await ctx.send(embed=embed)
 
+@bot.command(name="ipv4-details")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def ipv4_details(ctx, container_name: str):
+    """Show detailed IPv4 info for a container"""
+    if not await maintenance_check(ctx) or not await license_check(ctx):
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # Get IPv4 from database
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM ipv4 WHERE user_id = ? AND container_name = ?', (user_id, container_name))
+    ipv4 = cur.fetchone()
+    
+    # Get live network info
+    out, _, _ = await exec_in_container(container_name, "ip addr show")
+    routes, _, _ = await exec_in_container(container_name, "ip route show")
+    
+    conn.close()
+    
+    if ipv4:
+        embed = info_embed(f"IPv4 Details: {container_name}")
+        embed.add_field(name="Public IP", value=f"`{ipv4['public_ip']}`", inline=True)
+        embed.add_field(name="Private IP", value=f"`{ipv4['private_ip']}`", inline=True)
+        embed.add_field(name="MAC Address", value=f"`{ipv4['mac_address']}`", inline=True)
+        embed.add_field(name="Gateway", value=f"`{ipv4['gateway']}`", inline=True)
+        embed.add_field(name="Netmask", value=f"`{ipv4['netmask']}`", inline=True)
+        embed.add_field(name="Interface", value=f"`{ipv4['interface']}`", inline=True)
+        embed.add_field(name="Assigned", value=f"`{ipv4['assigned_at'][:16]}`", inline=True)
+    else:
+        embed = info_embed(f"Network Info: {container_name}")
+    
+    embed.add_field(name="Live Network Config", value=f"```\n{out[:500]}\n```", inline=False)
+    embed.add_field(name="Routing Table", value=f"```\n{routes[:500]}\n```", inline=False)
+    
+    await ctx.send(embed=embed)
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  🤖  AI CHAT COMMANDS (Groq with your API key)
+#  🤖  AI CHAT COMMANDS - FIXED
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @bot.command(name="ai")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def ai_chat(ctx, *, message: str):
-    """Chat with AI assistant"""
+    """Chat with AI assistant - FIXED"""
     if not await maintenance_check(ctx) or not await license_check(ctx):
         return
     
@@ -2354,7 +3177,7 @@ async def ai_chat(ctx, *, message: str):
     if not history:
         history = [{
             "role": "system",
-            "content": f"You are {BOT_NAME} AI Assistant, a helpful VPS management bot made by {BOT_AUTHOR}. You help with Linux, LXC containers, server management, and general questions. Keep responses concise, friendly, and helpful."
+            "content": f"You are {BOT_NAME} AI Assistant, a helpful VPS management bot made by {BOT_AUTHOR}. You help with Linux, LXC containers, server management, and general questions. Keep responses concise, friendly, and helpful. Server IP: {SERVER_IP}"
         }]
     
     # Add user message
@@ -2400,6 +3223,8 @@ async def ai_chat(ctx, *, message: str):
                 else:
                     error_text = await resp.text()
                     await msg.edit(embed=error_embed("API Error", f"Status {resp.status}: {error_text[:200]}"))
+    except asyncio.TimeoutError:
+        await msg.edit(embed=error_embed("Timeout", "The AI request timed out. Please try again."))
     except Exception as e:
         await msg.edit(embed=error_embed("AI Error", str(e)[:1900]))
 
@@ -2455,10 +3280,10 @@ async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member)
     # OS selection view
     view = View(timeout=60)
     options = []
-    for os in OS_OPTIONS:
-        options.append(discord.SelectOption(label=os["label"], value=os["value"], description=os["desc"]))
+    for os in OS_OPTIONS[:25]:
+        options.append(discord.SelectOption(label=os["label"][:100], value=os["value"], description=os["desc"][:100] if os["desc"] else None))
     
-    select = Select(placeholder="Select operating system...", options=options[:25])
+    select = Select(placeholder="Select operating system...", options=options)
     
     async def select_callback(interaction: discord.Interaction):
         if interaction.user.id != ctx.author.id:
@@ -2503,10 +3328,10 @@ async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member)
     await ctx.send(embed=embed, view=view)
 
 async def create_vps_action(interaction, user, ram, cpu, disk, os_version):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
     
     user_id = str(user.id)
-    container_name = f"svm5-{user_id[:8]}-{random.randint(1000, 9999)}"
+    container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
     
     progress = await interaction.followup.send(
         embed=info_embed("Creating VPS", "Step 1/4: Initializing container..."),
@@ -2853,6 +3678,7 @@ async def admin_userinfo(ctx, user: discord.Member):
     ipv4_list = get_user_ipv4(user_id)
     forwards = get_user_port_forwards(user_id)
     port_quota = get_port_allocation(user_id)
+    panels = get_user_panels(user_id)
     
     embed = info_embed(f"User Info: {user.display_name}")
     embed.add_field(name="User ID", value=f"`{user.id}`", inline=True)
@@ -2876,6 +3702,9 @@ async def admin_userinfo(ctx, user: discord.Member):
     if ipv4_list:
         embed.add_field(name=f"IPv4 ({len(ipv4_list)})", value="\n".join(f"`{ip['container_name']}`" for ip in ipv4_list), inline=False)
     
+    if panels:
+        embed.add_field(name=f"Panels ({len(panels)})", value="\n".join(f"`{p['panel_type']}`" for p in panels), inline=False)
+    
     await ctx.send(embed=embed)
 
 @bot.command(name="list-all")
@@ -2898,7 +3727,7 @@ async def admin_list_all(ctx):
     
     embed = info_embed(f"All VPS ({len(all_vps)})")
     
-    for user_id, vps_list in list(users.items())[:5]:  # Limit to 5 users per embed
+    for user_id, vps_list in list(users.items())[:5]:
         try:
             user = await bot.fetch_user(int(user_id))
             username = user.name
@@ -2992,12 +3821,15 @@ async def admin_serverstats(ctx):
     
     cur.execute('SELECT COUNT(*) FROM port_forwards')
     total_ports = cur.fetchone()[0] or 0
+    
+    cur.execute('SELECT COUNT(*) FROM panels')
+    total_panels = cur.fetchone()[0] or 0
     conn.close()
     
     embed = info_embed("Server Statistics")
     embed.add_field(name="VPS Stats", value=f"Total: {total_vps}\nRunning: {running}\nStopped: {stopped}\nSuspended: {suspended}", inline=True)
     embed.add_field(name="Resources", value=f"RAM: {total_ram}GB\nCPU: {total_cpu} cores\nDisk: {total_disk}GB", inline=True)
-    embed.add_field(name="Other", value=f"Users: {total_users}\nPort Forwards: {total_ports}", inline=True)
+    embed.add_field(name="Other", value=f"Users: {total_users}\nPort Forwards: {total_ports}\nPanels: {total_panels}", inline=True)
     
     await ctx.send(embed=embed)
 
@@ -3005,7 +3837,7 @@ async def admin_serverstats(ctx):
 @admin_only()
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def admin_add_ipv4(ctx, user: discord.Member, container_name: str):
-    """Assign IPv4 to a user's container"""
+    """Assign IPv4 to a user's container with full details"""
     user_id = str(user.id)
     
     # Verify container exists and belongs to user
@@ -3016,19 +3848,31 @@ async def admin_add_ipv4(ctx, user: discord.Member, container_name: str):
         await ctx.send(embed=error_embed("Container Not Found", f"Container `{container_name}` not found for {user.mention}"))
         return
     
-    # Get container IP
-    out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
-    private_ip = out.strip() or "N/A"
+    # Get container network details
+    private_ip, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+    private_ip = private_ip.strip() or "N/A"
+    
+    mac, _, _ = await exec_in_container(container_name, "ip link show eth0 | grep -oP '(?<=link/ether\\s)\\S+'")
+    mac = mac.strip() or "N/A"
+    
+    gateway, _, _ = await exec_in_container(container_name, "ip route | grep default | awk '{print $3}'")
+    gateway = gateway.strip() or "N/A"
+    
+    netmask, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=/)\\d+'")
+    netmask = netmask.strip() or "24"
     
     # Get host public IP
     public_ip = SERVER_IP
     
     # Add to database
-    add_ipv4(user_id, container_name, public_ip, private_ip)
+    add_ipv4(user_id, container_name, public_ip, private_ip, mac, gateway, netmask, "eth0")
     
     embed = success_embed("IPv4 Assigned", f"Assigned IPv4 to {user.mention}'s container `{container_name}`")
     embed.add_field(name="Public IP", value=f"`{public_ip}`", inline=True)
     embed.add_field(name="Private IP", value=f"`{private_ip}`", inline=True)
+    embed.add_field(name="MAC Address", value=f"`{mac}`", inline=True)
+    embed.add_field(name="Gateway", value=f"`{gateway}`", inline=True)
+    embed.add_field(name="Netmask", value=f"`{netmask}`", inline=True)
     
     # DM user
     try:
@@ -3036,6 +3880,8 @@ async def admin_add_ipv4(ctx, user: discord.Member, container_name: str):
         dm_embed.add_field(name="Container", value=f"`{container_name}`", inline=True)
         dm_embed.add_field(name="Public IP", value=f"`{public_ip}`", inline=True)
         dm_embed.add_field(name="Private IP", value=f"`{private_ip}`", inline=True)
+        dm_embed.add_field(name="MAC", value=f"`{mac}`", inline=True)
+        dm_embed.add_field(name="Gateway", value=f"`{gateway}`", inline=True)
         await user.send(embed=dm_embed)
     except:
         pass
@@ -3081,6 +3927,38 @@ async def admin_pending_ipv4(ctx):
         embed.add_field(
             name=f"User: {username}",
             value=f"Ref: `{txn['txn_ref']}`\nAmount: ₹{txn['amount']}\nCreated: {txn['created_at'][:16]}",
+            inline=False
+        )
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="admin-panels")
+@admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def admin_panels(ctx):
+    """List all installed panels"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels ORDER BY installed_at DESC LIMIT 20')
+    panels = cur.fetchall()
+    conn.close()
+    
+    if not panels:
+        await ctx.send(embed=info_embed("Panels", "No panels installed."))
+        return
+    
+    embed = info_embed(f"Installed Panels ({len(panels)})")
+    
+    for panel in panels:
+        try:
+            user = await bot.fetch_user(int(panel['user_id']))
+            username = user.name
+        except:
+            username = f"Unknown ({panel['user_id']})"
+        
+        embed.add_field(
+            name=f"{'🦅' if panel['panel_type'] == 'pterodactyl' else '🐡'} {panel['panel_type'].title()} - {username}",
+            value=f"URL: `{panel['panel_url']}`\nInstalled: {panel['installed_at'][:16]}",
             inline=False
         )
     
@@ -3200,6 +4078,32 @@ async def main_set_threshold(ctx, cpu: int, ram: int):
     set_setting('ram_threshold', str(ram))
     
     embed = success_embed("Thresholds Updated", f"CPU: {cpu}%\nRAM: {ram}%")
+    await ctx.send(embed=embed)
+
+@bot.command(name="system-info")
+@main_admin_only()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def system_info(ctx):
+    """Detailed system information"""
+    # Get system stats
+    cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    network = psutil.net_io_counters()
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    
+    embed = create_embed("System Information")
+    embed.add_field(name="Hostname", value=f"`{HOSTNAME}`", inline=True)
+    embed.add_field(name="Server IP", value=f"`{SERVER_IP}`", inline=True)
+    embed.add_field(name="MAC Address", value=f"`{MAC_ADDRESS}`", inline=True)
+    embed.add_field(name="CPU Cores", value=f"`{psutil.cpu_count()}`", inline=True)
+    embed.add_field(name="CPU Usage", value=f"`{sum(cpu_percent)/len(cpu_percent):.1f}%`", inline=True)
+    embed.add_field(name="RAM", value=f"`{memory.used//1024//1024}MB/{memory.total//1024//1024}MB ({memory.percent}%)`", inline=True)
+    embed.add_field(name="Disk", value=f"`{disk.used//1024//1024//1024}GB/{disk.total//1024//1024//1024}GB ({disk.percent}%)`", inline=True)
+    embed.add_field(name="Network Sent", value=f"`{network.bytes_sent/1024/1024:.2f} MB`", inline=True)
+    embed.add_field(name="Network Received", value=f"`{network.bytes_recv/1024/1024:.2f} MB`", inline=True)
+    embed.add_field(name="Boot Time", value=f"`{boot_time.strftime('%Y-%m-%d %H:%M:%S')}`", inline=True)
+    
     await ctx.send(embed=embed)
 
 @bot.command(name="protect")
@@ -3414,7 +4318,6 @@ if __name__ == "__main__":
     if not LICENSE_VERIFIED:
         print("\n" + "="*60)
         print("⚠️  WARNING: License not verified!")
-        print("   Bot will have limited functionality.")
         print("   Valid license keys: AnkitDev99$@, SVM5-PRO-2025")
         print("="*60 + "\n")
     
