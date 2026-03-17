@@ -33,13 +33,13 @@ BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"           # Discord Bot Token (Change this)
 BOT_PREFIX = "."                             # Command prefix
 BOT_NAME = "SVM5-BOT"                        # Bot name
 BOT_AUTHOR = "Ankit-Dev"                      # Your name
-MAIN_ADMIN_IDS = [123456789012345678]        # Your Discord ID(s) (Change this)
+MAIN_ADMIN_IDS = [1405866008127864852]        # Your Discord ID(s) (Change this)
 DEFAULT_STORAGE_POOL = "default"              # LXC storage pool
 SERVER_IP = "YOUR_SERVER_IP"                  # Your server IP for port forwarding
 
 # UPI Payment Configuration
-UPI_ID = "your-upi@paytm"                     # Your UPI ID (Change this)
-IPV4_PRICE_INR = 50                            # Price per IPv4 in INR
+UPI_ID = "9892642904@ybl"                     # Your UPI ID (Change this)
+IPV4_PRICE_INR = 200                           # Price per IPv4 in INR
 
 # AI Configuration - YOUR PROVIDED KEY
 AI_API_KEY = "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"
