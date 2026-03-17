@@ -47,7 +47,14 @@ import base64
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
+import logging
 
+# Logging setup karein
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 # ==================================================================================================
 #  ⚙️  CONFIGURATION SECTION - EDIT THESE VALUES
 # ==================================================================================================
@@ -206,8 +213,10 @@ def init_db():
         permissions TEXT DEFAULT 'all'
     )''')
     for admin_id in MAIN_ADMIN_IDS:
-        cur.execute('INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)', 
-                   (str(admin_id), datetime.now().isoformat()))
+        cur.execute(
+    'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
+    (str(admin_id), datetime.now().isoformat())
+)
     
     # 🖥️ VPS table
     cur.execute('''CREATE TABLE IF NOT EXISTS vps (
