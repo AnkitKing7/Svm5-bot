@@ -402,7 +402,7 @@ Wants=network.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/svm5.py
+ExecStart=/usr/bin/python3 $INSTALL_DIR/v5.py
 Restart=always
 RestartSec=10
 StandardOutput=append:$LOG_FILE
@@ -453,21 +453,21 @@ show_completion() {
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║              📋 NEXT STEPS                                                      ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║  1. Copy your v5.py file to: $INSTALL_DIR/svm5.py            ║${NC}"
+    echo -e "${G}║  1. Copy your v5.py file to: $INSTALL_DIR/v5.py            ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║  2. Edit the configuration in svm5.py:                                          ║${NC}"
+    echo -e "${G}║  2. Edit the configuration in v5.py:                                          ║${NC}"
     echo -e "${G}║     - Set your BOT_TOKEN                                                       ║${NC}"
     echo -e "${G}║     - Verify MAIN_ADMIN_IDS includes your Discord ID                           ║${NC}"
     echo -e "${G}║     - Set your UPI_ID for payments                                             ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  3. Make it executable:                                                       ║${NC}"
-    echo -e "${G}║     chmod +x $INSTALL_DIR/svm5.py                              ║${NC}"
+    echo -e "${G}║     chmod +x $INSTALL_DIR/v5.py                              ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  4. Install Python packages (if not already):                                 ║${NC}"
     echo -e "${G}║     pip3 install -r $INSTALL_DIR/requirements.txt              ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  5. Test the bot manually:                                                    ║${NC}"
-    echo -e "${G}║     python3 $INSTALL_DIR/svm5.py                               ║${NC}"
+    echo -e "${G}║     python3 $INSTALL_DIR/v5.py                               ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  6. Start the service (after testing):                                        ║${NC}"
     echo -e "${G}║     systemctl start $SERVICE_NAME                                             ║${NC}"
@@ -492,7 +492,7 @@ show_completion() {
     echo -e "${G}╚═══════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${G}🎉 System dependencies installed successfully! All issues have been fixed! 🎉${NC}"
-    echo -e "${Y}📌 Remember to copy your v5.py file to: $INSTALL_DIR/svm5.py${NC}"
+    echo -e "${Y}📌 Remember to copy your v5.py file to: $INSTALL_DIR/v5.py${NC}"
     echo -e "${Y}📌 Your admin ID is set to: 1405866008127864852${NC}"
     echo -e "${Y}📌 AI model updated to: llama-3.3-70b-versatile (working)${NC}"
     echo ""
