@@ -60,7 +60,7 @@ check_license() {
     echo -e "${Y}│                    🔐 LICENSE ACTIVATION                         │${NC}"
     echo -e "${Y}├─────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "${W}│  This software requires a valid license key to install.         │${NC}"
-    echo -e "${W}│  Valid keys: AnkitDev99\$@, SVM5-PRO-2025, SVM5-ENTERPRISE        │${NC}"
+    echo -e "${W}│  Valid keys: Buy Now License Key        │${NC}"
     echo -e "${Y}└─────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
     
