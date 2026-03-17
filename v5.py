@@ -201,24 +201,36 @@ def get_db():
     return conn
 
 def init_db():
-    admin_id = "YOUR_ID_HERE"  # Apni ID yahan likhein
+    admin_id = "YOUR_ID_HERE"
     conn = sqlite3.connect('users.db')
     cur = conn.cursor()
     
+    # 1. Pehle Admins table banayein
     cur.execute('''
         CREATE TABLE IF NOT EXISTS admins (
             user_id TEXT PRIMARY KEY,
             added_at TEXT
         )
     ''')
-    
+
+    # 2. Phir VPS table (ya koi bhi aur table) banayein
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS vps (
+            vps_id INTEGER PRIMARY KEY,
+            ip TEXT,
+            owner_id TEXT
+        )
+    ''')
+
+    # 3. Admin insert karein
     cur.execute(
         'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
         (str(admin_id), datetime.now().isoformat())
     )
     
-    conn.commit()  # <--- Check karein iske aage extra space na ho
-    conn.close()   # <--- Yeh bhi commit ke thik niche hona chahiye
+    # --- SABSE ZAROORI: Ye do lines sabse aakhri mein honi chahiye ---
+    conn.commit() 
+    conn.close()
     
     # 🖥️ VPS table
     cur.execute('''CREATE TABLE IF NOT EXISTS vps (
