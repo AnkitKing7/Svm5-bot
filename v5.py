@@ -212,12 +212,12 @@ def init_db():
         )
     ''')
     
-    # Aapka INSERT statement yahan niche aayega
-    cur.execute(
-        'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
-        (str(admin_id), datetime.now().isoformat())
-    )
-    
+    # Replace 'admin_id' with your real ID
+cur.execute(
+    'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)',
+    ("123456789", datetime.now().isoformat()) # Yahan apni ID dalein
+)
+
     conn.commit()
     conn.close()
     
