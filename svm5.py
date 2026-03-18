@@ -1505,7 +1505,7 @@ async def get_container_real_time_stats(container_name: str) -> Dict:
         out, _, _ = await exec_in_container(container_name, "cat /sys/class/net/eth0/statistics/tx_bytes")
         if out and out.isdigit():
             stats['network_tx_bytes'] = int(out)
-            stats['network_tx'] = f{stats['network_tx_bytes']/1024/1024:.2f} MB
+            stats['network_tx'] = f"{stats['network_tx_bytes']/1024/1024:.2f} MB"
         
         # Get hostname
         out, _, _ = await exec_in_container(container_name, "hostname")
