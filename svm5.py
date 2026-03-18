@@ -51,7 +51,23 @@ import io
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import closing
+from functools import wraps
 
+# Make sure you have a variable or list for your Admin IDs
+ADMIN_IDS = [1405866008127864852]  # <-- Replace with your actual Telegram User ID
+
+def admin_only():
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(update, context, *args, **kwargs):
+            user_id = update.effective_user.id
+            if user_id not in ADMIN_IDS:
+                await update.message.reply_text("❌ This command is restricted to admins.")
+                return
+            return await func(update, context, *args, **kwargs)
+        return wrapper
+    return decorator
+    
 # ==================================================================================================
 #  📝  LOGGING SETUP - FIXED (Moved before database to avoid import issues)
 # ==================================================================================================
@@ -443,7 +459,7 @@ def init_db():
             ('license_verified', 'false', 'License verification status'),
             ('server_ip', SERVER_IP, 'Server public IP'),
             ('mac_address', MAC_ADDRESS, 'Server MAC address'),
-            ('hostname', HOSTNAME, 'Server hostname'),
+            ('hostname', BOT_NAME, 'Server hostname'),
             ('total_vps_created', '0', 'Total VPS created'),
             ('total_panels_installed', '0', 'Total panels installed'),
             ('total_nodes', '0', 'Total nodes added'),
