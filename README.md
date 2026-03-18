@@ -23,6 +23,7 @@
 - [📦 Panel Installation](#-panel-installation)
 - [🔌 Port Forwarding](#-port-forwarding)
 - [🌍 IPv4 Management](#-ipv4-management)
+- [💳 UPI Payments](#-upi-payments)
 - [🤖 AI Chat](#-ai-chat)
 - [📟 Console Commands](#-console-commands)
 - [🛡️ Admin Commands](#️-admin-commands)
@@ -40,20 +41,23 @@
 ### 🖥️ **VPS Management (Direct LXC)**
 - ✅ Create/Delete VPS containers automatically
 - ✅ Start/Stop/Restart containers with interactive buttons
-- ✅ Live statistics (CPU, RAM, Disk, Uptime, Processes)
+- ✅ Real-time statistics with live graphs (CPU, RAM, Disk, Uptime)
 - ✅ 30+ OS options (Ubuntu, Debian, Fedora, Rocky, Alma, CentOS, Alpine, Arch, FreeBSD, OpenSUSE)
 - ✅ Resource limits per container
 - ✅ View container logs
 - ✅ SSH access via tmate (temporary SSH links)
 - ✅ Reboot and shutdown commands
+- ✅ Rename containers
+- ✅ Live console output with command input
 
-### 🌐 **Node Management (NEW)**
+### 🌐 **Node Management**
 - ✅ Add/Remove multiple LXC nodes
-- ✅ Monitor node health and resources
+- ✅ Monitor node health and resources in real-time
 - ✅ Distributed container management
 - ✅ Node statistics and health checks
 - ✅ API key authentication for nodes
 - ✅ Region-based node grouping
+- ✅ Sync containers from remote nodes
 
 ### 🔌 **Port Forwarding**
 - ✅ Forward ports from container to host
@@ -62,6 +66,7 @@
 - ✅ List and manage active forwards
 - ✅ Random port allocation (20000-50000)
 - ✅ Protocol selection (tcp, udp, tcp+udp)
+- ✅ Port availability checker
 
 ### 📦 **Panel Installation**
 - ✅ Install Pterodactyl game panel
@@ -70,6 +75,7 @@
 - ✅ Cloudflared tunnel support for public URLs
 - ✅ Panel information storage
 - ✅ Automatic DM with credentials
+- ✅ Password reset functionality
 
 ### 💰 **Free VPS System**
 - ✅ Earn VPS by inviting users
@@ -78,6 +84,7 @@
 - ✅ Invite tracking
 - ✅ Boost rewards
 - ✅ 7 plans with increasing resources
+- ✅ Top inviters leaderboard
 
 ### 🌍 **IPv4 Management**
 - ✅ Purchase IPv4 via UPI
@@ -86,31 +93,45 @@
 - ✅ MAC address, gateway, netmask tracking
 - ✅ View your IPv4 addresses
 - ✅ ₹50 per IPv4 (configurable)
+- ✅ DHCP lease renewal
+- ✅ Cloudflared tunnel URLs
 
-### 🤖 **AI Assistant (FIXED)**
+### 💳 **UPI Payments**
+- ✅ QR code generation for payments
+- ✅ Payment links for easy access
+- ✅ Configurable UPI ID
+- ✅ Transaction tracking
+- ✅ Admin approval system
+- ✅ Payment history
+
+### 🤖 **AI Assistant**
 - ✅ Groq LLaMA 3.3 integration (updated working model)
 - ✅ Chat history per user
 - ✅ Server management help
 - ✅ 24/7 availability
 - ✅ Reset conversation option
-- ✅ No more "model deprecated" errors
+- ✅ AI help on specific topics
 
 ### 📟 **Console Commands**
-- ✅ `.ss` - Take VPS screenshot/console output
-- ✅ `.console` - Interactive console
+- ✅ `.ss` - Take VPS screenshot/console output (real-time)
+- ✅ `.console` - Interactive console with command input
 - ✅ `.execute` - Run commands in VPS
-- ✅ `.top` - Show process monitor
-- ✅ `.df` - Show disk usage
-- ✅ `.free` - Show memory usage
+- ✅ `.top` - Show live process monitor with graphs
+- ✅ `.df` - Show disk usage with visual graphs
+- ✅ `.free` - Show memory usage with visual graphs
 - ✅ `.netstat` - Show network connections
+- ✅ `.ps` - Show process list
+- ✅ `.who` - Show logged-in users
+- ✅ `.uptime` - Show container uptime
 
 ### 👤 **User Features**
 - ✅ Account generator (username/email/password)
 - ✅ View your generated accounts
 - ✅ Check invite statistics
-- ✅ Interactive help menu
+- ✅ Interactive help menu with glow effects
 - ✅ Bot info and uptime
 - ✅ Server hardware info
+- ✅ API key generation per user
 
 ### 🛡️ **Admin Features**
 - ✅ Full admin panel
@@ -122,6 +143,7 @@
 - ✅ Add/Remove admins
 - ✅ List all users and VPS
 - ✅ Database backup/restore
+- ✅ View pending IPv4 purchases
 
 ### 👑 **Main Admin Features**
 - ✅ Maintenance mode
@@ -130,6 +152,7 @@
 - ✅ Set CPU/RAM/Disk thresholds
 - ✅ View all users
 - ✅ System information
+- ✅ Reset license verification
 
 ### 🔒 **Security**
 - ✅ License key verification
@@ -138,6 +161,7 @@
 - ✅ Audit logs
 - ✅ Firewall configuration
 - ✅ Fail2ban integration
+- ✅ Per-user API keys
 
 ---
 
@@ -145,6 +169,7 @@
 
 | Issue | Status | Fix |
 |-------|--------|-----|
+| Database closed error | ✅ FIXED | Added proper connection handling with try/finally blocks |
 | `.help` interaction failed | ✅ FIXED | Added proper defer pattern and view handling |
 | AI model deprecated | ✅ FIXED | Updated to `llama-3.3-70b-versatile` |
 | SSH generation timeout | ✅ FIXED | Increased wait time and added error handling |
@@ -154,7 +179,10 @@
 | IPv4 details incomplete | ✅ FIXED | Added MAC, gateway, netmask, interface |
 | Console commands not working | ✅ FIXED | Added `.ss`, `.console`, `.top`, `.df`, `.free`, `.netstat` |
 | Database backup missing | ✅ FIXED | Added backup/restore commands |
-| Error handling improved | ✅ FIXED | Added comprehensive error handling |
+| UPI QR codes missing | ✅ FIXED | Added QR code generation with Pillow |
+| API keys per user | ✅ FIXED | Added automatic API key generation |
+| Real-time stats missing | ✅ FIXED | Added live graphs and updates |
+| Command input modal | ✅ FIXED | Added interactive command input |
 
 ---
 
