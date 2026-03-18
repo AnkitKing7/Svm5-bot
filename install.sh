@@ -3,7 +3,7 @@
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                 SVM5-BOT - Complete Installation Script                       ║
 # ║                         Made by Ankit-Dev with ❤️                             ║
-# ║                    Version: 5.0.0 | ALL FEATURES FIXED                       ║
+# ║                    Version: 5.0.0 | ALL ISSUES FIXED                         ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26,7 +26,7 @@ BLINK='\033[5m'
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 INSTALL_DIR="/opt/svm5-bot"
-BOT_SCRIPT="v5.py"
+BOT_SCRIPT="svm5.py"
 SERVICE_NAME="svm5-bot"
 LOG_FILE="/var/log/svm5-bot.log"
 
@@ -48,7 +48,7 @@ show_header() {
     echo -e "${G}║                    🚀 Complete VPS Management Bot v5.0 🚀                    ║${NC}"
     echo -e "${C}║                        Made by ${BOLD}Ankit-Dev${NC}${C} with ❤️                         ║${NC}"
     echo -e "${P}║                     📅 Release Date: March 2025                              ║${NC}"
-    echo -e "${R}║                      🔧 ALL COMMANDS FIXED - ALL ISSUES RESOLVED             ║${NC}"
+    echo -e "${R}║                      🔧 ALL ISSUES FIXED - ALL COMMANDS WORKING               ║${NC}"
     echo -e "${R}╚═══════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -63,7 +63,7 @@ check_license() {
     echo -e "${Y}│                    🔐 LICENSE ACTIVATION                         │${NC}"
     echo -e "${Y}├─────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "${W}│  This software is licensed and requires a valid license key.    │${NC}"
-    echo -e "${W}│  Valid keys: Buy License Key Enter    │${NC}"
+    echo -e "${W}│  Valid keys: Buy Now License key Enter Press        │${NC}"
     echo -e "${Y}└─────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
     
@@ -304,6 +304,8 @@ install_python_packages() {
         requests \
         python-dotenv \
         paramiko \
+        qrcode[pil] \
+        Pillow \
         > /dev/null 2>&1
     
     echo -e "${G}✅ Python packages installed!${NC}"
@@ -349,13 +351,17 @@ create_directories() {
     mkdir -p "$INSTALL_DIR/logs"
     echo -e "${Y}   → Created $INSTALL_DIR/logs${NC}"
     
-    # Create database directory
+    # Create data directory for database
     mkdir -p "$INSTALL_DIR/data"
     echo -e "${Y}   → Created $INSTALL_DIR/data${NC}"
     
     # Create backups directory
     mkdir -p "$INSTALL_DIR/backups"
     echo -e "${Y}   → Created $INSTALL_DIR/backups${NC}"
+    
+    # Create QR codes directory
+    mkdir -p "$INSTALL_DIR/qr_codes"
+    echo -e "${Y}   → Created $INSTALL_DIR/qr_codes${NC}"
     
     # Set permissions
     chmod 755 "$INSTALL_DIR"
@@ -379,6 +385,8 @@ netifaces>=0.11.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 paramiko>=3.4.0
+qrcode[pil]>=7.4.2
+Pillow>=10.0.0
 EOF
     
     echo -e "${G}✅ requirements.txt created at $INSTALL_DIR/requirements.txt${NC}"
@@ -402,7 +410,7 @@ Wants=network.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/v5.py
+ExecStart=/usr/bin/python3 $INSTALL_DIR/svm5.py
 Restart=always
 RestartSec=10
 StandardOutput=append:$LOG_FILE
@@ -424,7 +432,7 @@ EOF
 show_completion() {
     echo -e "${G}╔═══════════════════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║              ✅ INSTALLATION COMPLETE - ALL FIXES APPLIED ✅                   ║${NC}"
+    echo -e "${G}║              ✅ INSTALLATION COMPLETE - ALL ISSUES FIXED ✅                   ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}╠═══════════════════════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${G}║                                                                               ║${NC}"
@@ -433,13 +441,15 @@ show_completion() {
     echo -e "${G}║  📊 Database Location: $INSTALL_DIR/data/             ║${NC}"
     echo -e "${G}║  📝 Logs Location: $INSTALL_DIR/logs/                 ║${NC}"
     echo -e "${G}║  💾 Backups Location: $INSTALL_DIR/backups/           ║${NC}"
+    echo -e "${G}║  📸 QR Codes Location: $INSTALL_DIR/qr_codes/         ║${NC}"
     echo -e "${G}║  🔧 Service Name: $SERVICE_NAME                       ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}╠═══════════════════════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║              🔧 ALL ISSUES FIXED IN THIS VERSION 🔧                           ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║  ✅ .help command - Fixed interaction failed                                    ║${NC}"
+    echo -e "${G}║  ✅ Database connection - Fixed closed database error                         ║${NC}"
+    echo -e "${G}║  ✅ .help command - Fixed interaction failed                                   ║${NC}"
     echo -e "${G}║  ✅ AI model - Updated to llama-3.3-70b-versatile (working)                    ║${NC}"
     echo -e "${G}║  ✅ SSH generation - Fixed timeout and connection issues                       ║${NC}"
     echo -e "${G}║  ✅ Node commands - Added complete node management                             ║${NC}"
@@ -447,27 +457,30 @@ show_completion() {
     echo -e "${G}║  ✅ IPv4 management - Added MAC, gateway, netmask details                      ║${NC}"
     echo -e "${G}║  ✅ Port forwarding - Fixed quota and protocol handling                        ║${NC}"
     echo -e "${G}║  ✅ Console commands - Added .ss, .console, .top, .df, .free                   ║${NC}"
+    echo -e "${G}║  ✅ Real-time stats - Added live graphs and updates                            ║${NC}"
+    echo -e "${G}║  ✅ UPI payments - Added QR codes and payment links                            ║${NC}"
+    echo -e "${G}║  ✅ API keys - Added per-user API key generation                               ║${NC}"
     echo -e "${G}║  ✅ Database backup/restore - Added backup commands                            ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}╠═══════════════════════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║              📋 NEXT STEPS                                                      ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║  1. Copy your v5.py file to: $INSTALL_DIR/v5.py            ║${NC}"
+    echo -e "${G}║  1. Copy your v5.py file to: $INSTALL_DIR/svm5.py            ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
-    echo -e "${G}║  2. Edit the configuration in v5.py:                                          ║${NC}"
+    echo -e "${G}║  2. Edit the configuration in svm5.py:                                          ║${NC}"
     echo -e "${G}║     - Set your BOT_TOKEN                                                       ║${NC}"
-    echo -e "${G}║     - Verify MAIN_ADMIN_IDS includes your Discord ID                           ║${NC}"
+    echo -e "${G}║     - MAIN_ADMIN_IDS already set to 1405866008127864852                        ║${NC}"
     echo -e "${G}║     - Set your UPI_ID for payments                                             ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  3. Make it executable:                                                       ║${NC}"
-    echo -e "${G}║     chmod +x $INSTALL_DIR/v5.py                              ║${NC}"
+    echo -e "${G}║     chmod +x $INSTALL_DIR/svm5.py                              ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  4. Install Python packages (if not already):                                 ║${NC}"
     echo -e "${G}║     pip3 install -r $INSTALL_DIR/requirements.txt              ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  5. Test the bot manually:                                                    ║${NC}"
-    echo -e "${G}║     python3 $INSTALL_DIR/v5.py                               ║${NC}"
+    echo -e "${G}║     python3 $INSTALL_DIR/svm5.py                               ║${NC}"
     echo -e "${G}║                                                                               ║${NC}"
     echo -e "${G}║  6. Start the service (after testing):                                        ║${NC}"
     echo -e "${G}║     systemctl start $SERVICE_NAME                                             ║${NC}"
@@ -492,9 +505,10 @@ show_completion() {
     echo -e "${G}╚═══════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${G}🎉 System dependencies installed successfully! All issues have been fixed! 🎉${NC}"
-    echo -e "${Y}📌 Remember to copy your v5.py file to: $INSTALL_DIR/v5.py${NC}"
+    echo -e "${Y}📌 Remember to copy your v5.py file to: $INSTALL_DIR/svm5.py${NC}"
     echo -e "${Y}📌 Your admin ID is set to: 1405866008127864852${NC}"
     echo -e "${Y}📌 AI model updated to: llama-3.3-70b-versatile (working)${NC}"
+    echo -e "${Y}📌 Database connection fixed - No more closed database errors${NC}"
     echo ""
 }
 
