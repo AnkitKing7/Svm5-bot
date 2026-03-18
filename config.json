@@ -1,0 +1,91 @@
+{
+  "bot_config": {
+    "version": "5.0.0",
+    "name": "SVM5-BOT",
+    "prefix": ".",
+    "author": "Ankit-Dev",
+    "main_admin_ids": [1405866008127864852]
+  },
+  
+  "discord_config": {
+    "token": "discordbot",
+    "status": "online",
+    "activity_type": "watching",
+    "activity_name": ".help | SVM5-BOT"
+  },
+  
+  "server_config": {
+    "storage_pool": "default",
+    "backup_path": "/opt/svm5-bot/backups",
+    "logs_path": "/opt/svm5-bot/logs",
+    "data_path": "/opt/svm5-bot/data"
+  },
+  
+  "database_config": {
+    "type": "sqlite",
+    "path": "/opt/svm5-bot/data/svm5.db"
+  },
+  
+  "vps_config": {
+    "default_ram": 2,
+    "default_cpu": 1,
+    "default_disk": 20,
+    "enable_nesting": true
+  },
+  
+  "free_vps_plans": {
+    "enabled": true,
+    "plans": [
+      {"name": "🥉 Bronze", "invites": 5, "ram": 2, "cpu": 1, "disk": 20},
+      {"name": "🥈 Silver", "invites": 10, "ram": 4, "cpu": 2, "disk": 40},
+      {"name": "🥇 Gold", "invites": 15, "ram": 8, "cpu": 4, "disk": 80}
+    ]
+  },
+  
+  "port_forwarding": {
+    "enabled": true,
+    "default_quota": 5,
+    "port_range_start": 20000,
+    "port_range_end": 50000
+  },
+  
+  "ipv4_management": {
+    "enabled": true,
+    "price_inr": 50,
+    "default_upi_id": "9892642904@ybl"
+  },
+  
+  "ai_config": {
+    "enabled": true,
+    "api_key": "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",
+    "model": "llama-3.3-70b-versatile"
+  },
+  
+  "node_management": {
+    "enabled": true,
+    "main_node": "local",
+    "config_file": "/opt/svm5-bot/nodes.json"
+  },
+  
+  "security_config": {
+    "require_license": true,
+    "license_keys": ["AnkitDev99$@", "SVM5-PRO-2025", "SVM5-ENTERPRISE"]
+  },
+  
+  "features": {
+    "free_vps": true,
+    "port_forwarding": true,
+    "ipv4_sales": true,
+    "ai_chat": true,
+    "node_management": true,
+    "panel_installation": true,
+    "ssh_access": true,
+    "console_commands": true,
+    "upi_payments": true,
+    "invite_system": true
+  },
+  
+  "embeds": {
+    "thumbnail_url": "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg"
+  }
+}
