@@ -77,7 +77,7 @@ logger = logging.getLogger("SVM5-BOT")
 # ==================================================================================================
 
 # 🔑 Discord Bot Configuration
-BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"           # Get from Discord Developer Portal
+BOT_TOKEN = ""           # Get from Discord Developer Portal
 BOT_PREFIX = "."                                      # Command prefix
 BOT_NAME = "SVM5-BOT"                                 # Bot display name
 BOT_AUTHOR = "Ankit-Dev"                              # Your name
@@ -96,7 +96,7 @@ except:
         SERVER_IP = subprocess.getoutput("curl -s ifconfig.me")
         logger.info(f"✅ Auto-detected public IP: {SERVER_IP}")
     except:
-        SERVER_IP = "YOUR_SERVER_IP_HERE"
+        SERVER_IP = "13.208.181.149"
         logger.warning(f"⚠️ Could not auto-detect IP, using fallback: {SERVER_IP}")
 
 # 🔌 Get MAC Address
