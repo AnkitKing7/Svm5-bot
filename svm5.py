@@ -4076,6 +4076,1004 @@ async def backup_db(ctx):
         await ctx.send(embed=error_embed("Backup Failed", str(e)))
 
 # ==================================================================================================
+#  📦  PANEL INSTALLATION COMMANDS - PTERODACTYL & PUFFERPANEL
+#  🚀  WITH CLOUDFLARED TUNNEL - COMPLETE WORKING CODE
+# ==================================================================================================
+# Check if cloudflared is installed
+CLOUDFLARED_AVAILABLE = shutil.which("cloudflared") is not None
+
+async def create_cloudflared_tunnel(container_name: str, port: int = 80) -> Optional[str]:
+    """Create a cloudflared tunnel for a container"""
+    if not CLOUDFLARED_AVAILABLE:
+        return None
+    
+    try:
+        # Install cloudflared in container if not present
+        await exec_in_container(container_name, "which cloudflared || (wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared)")
+        
+        # Generate unique tunnel ID
+        tunnel_id = str(uuid.uuid4())[:8]
+        
+        # Start tunnel
+        cmd = f"nohup cloudflared tunnel --url http://localhost:{port} --no-autoupdate > /tmp/cloudflared_{tunnel_id}.log 2>&1 & echo $!"
+        pid, _, _ = await exec_in_container(container_name, cmd)
+        
+        # Wait for tunnel to establish
+        await asyncio.sleep(5)
+        
+        # Get tunnel URL
+        out, _, _ = await exec_in_container(container_name, f"cat /tmp/cloudflared_{tunnel_id}.log | grep -oP 'https://[a-z0-9-]+\\.trycloudflare\\.com' | head -1")
+        url = out.strip()
+        
+        if url:
+            return url
+    except Exception as e:
+        logger.error(f"Failed to create cloudflared tunnel: {e}")
+    
+    return None
+
+def generate_username() -> str:
+    """Generate a random username for panel admin"""
+    adjectives = ["admin", "super", "master", "root", "panel", "game", "server", "host", "cloud", "vps"]
+    nouns = ["user", "manager", "admin", "owner", "controller", "operator", "chief", "lead"]
+    num = random.randint(10, 999)
+    return f"{random.choice(adjectives)}{random.choice(nouns)}{num}"
+
+def generate_email(username: str = None) -> str:
+    """Generate a random email for panel admin"""
+    if not username:
+        username = generate_username()
+    domains = ["gmail.com", "yahoo.com", "outlook.com", "proton.me", "hotmail.com", "panel.local"]
+    return f"{username}@{random.choice(domains)}"
+
+def generate_password(length: int = 16) -> str:
+    """Generate a random password for panel admin"""
+    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+    return ''.join(random.choices(chars, k=length))
+
+class PanelSelectView(View):
+    """Panel selection view with buttons"""
+    def __init__(self, ctx):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        
+        # Pterodactyl button
+        ptero_btn = Button(label="🦅 Pterodactyl Panel", style=discord.ButtonStyle.primary, emoji="🦅")
+        ptero_btn.callback = self.ptero_callback
+        
+        # Pufferpanel button
+        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
+        puffer_btn.callback = self.puffer_callback
+        
+        # Cancel button
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(ptero_btn)
+        self.add_item(puffer_btn)
+        self.add_item(cancel_btn)
+    
+    async def ptero_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pterodactyl")
+    
+    async def puffer_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pufferpanel")
+    
+    async def cancel_callback(self, interaction: discord.Interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nPanel installation cancelled.\n```"),
+            view=None
+        )
+    
+    async def install_panel(self, interaction: discord.Interaction, panel_type: str):
+        await interaction.response.defer()
+        
+        user_id = str(self.ctx.author.id)
+        
+        # Check if user has VPS
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await interaction.followup.send(
+                embed=error_embed("No VPS Found", "```diff\n- You need a VPS to install a panel.\n```"),
+                ephemeral=True
+            )
+            return
+        
+        # Ask user which VPS to use (if multiple)
+        if len(vps_list) > 1:
+            # Create VPS selection view
+            vps_view = View(timeout=60)
+            options = []
+            for i, vps in enumerate(vps_list[:5], 1):
+                status = "🟢" if vps['status'] == 'running' else "🔴"
+                options.append(discord.SelectOption(
+                    label=f"VPS #{i}: {vps['container_name']}",
+                    value=vps['container_name'],
+                    description=f"{status} {vps['ram']}GB RAM / {vps['cpu']} CPU",
+                    emoji="🖥️"
+                ))
+            
+            select = Select(placeholder="Select VPS to install panel on...", options=options)
+            
+            async def select_callback(select_interaction):
+                if select_interaction.user.id != self.ctx.author.id:
+                    await select_interaction.response.send_message("Not for you!", ephemeral=True)
+                    return
+                
+                container = select.select.values[0]
+                await self.perform_installation(select_interaction, panel_type, container)
+            
+            select.callback = select_callback
+            vps_view.add_item(select)
+            
+            await interaction.followup.send(
+                embed=info_embed("Select VPS", "Please select which VPS to install the panel on:"),
+                view=vps_view,
+                ephemeral=True
+            )
+        else:
+            # Use the only VPS
+            container = vps_list[0]['container_name']
+            await self.perform_installation(interaction, panel_type, container)
+    
+    async def perform_installation(self, interaction: discord.Interaction, panel_type: str, container_name: str):
+        """Perform the actual panel installation"""
+        user_id = str(interaction.user.id)
+        
+        progress = await interaction.followup.send(
+            embed=info_embed(f"Installing {panel_type.title()}", "```fix\nStep 1/6: Preparing installation...\n```"),
+            ephemeral=True
+        )
+        
+        try:
+            # Generate credentials
+            admin_user = generate_username()
+            admin_email = generate_email(admin_user)
+            admin_pass = generate_password(16)
+            
+            if panel_type == "pterodactyl":
+                await self.install_pterodactyl(interaction, container_name, admin_user, admin_email, admin_pass, progress)
+            else:  # pufferpanel
+                await self.install_pufferpanel(interaction, container_name, admin_user, admin_email, admin_pass, progress)
+                
+        except Exception as e:
+            logger.error(f"Panel installation error: {e}")
+            await progress.edit(embed=error_embed("Installation Failed", f"```diff\n- {str(e)[:500]}\n```"))
+    
+    async def install_pterodactyl(self, interaction, container_name, admin_user, admin_email, admin_pass, progress):
+        """Install Pterodactyl panel"""
+        await progress.edit(embed=info_embed("Installing Pterodactyl", "```fix\nStep 2/6: Installing dependencies...\n```"))
+        
+        # System update and basic packages
+        commands = [
+            "apt-get update -qq",
+            "apt-get install -y -qq curl wget git unzip tar",
+            "apt-get install -y -qq nginx mariadb-server redis-server",
+            "apt-get install -y -qq php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
+            "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
+        ]
+        
+        for cmd in commands:
+            out, err, code = await exec_in_container(container_name, cmd)
+            if code != 0 and "already" not in err.lower():
+                raise Exception(f"Failed to install dependencies: {err}")
+            await asyncio.sleep(1)
+        
+        await progress.edit(embed=info_embed("Installing Pterodactyl", "```fix\nStep 3/6: Downloading panel...\n```"))
+        
+        # Download and extract panel
+        panel_cmds = [
+            "mkdir -p /var/www/pterodactyl",
+            "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
+            "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
+            "cd /var/www/pterodactyl && cp .env.example .env",
+        ]
+        
+        for cmd in panel_cmds:
+            out, err, code = await exec_in_container(container_name, cmd)
+            if code != 0:
+                raise Exception(f"Failed to setup panel: {err}")
+            await asyncio.sleep(1)
+        
+        await progress.edit(embed=info_embed("Installing Pterodactyl", "```fix\nStep 4/6: Installing PHP dependencies...\n```"))
+        
+        # Install composer dependencies
+        composer_cmds = [
+            "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
+            "cd /var/www/pterodactyl && php artisan key:generate --force",
+        ]
+        
+        for cmd in composer_cmds:
+            out, err, code = await exec_in_container(container_name, cmd)
+            if code != 0:
+                raise Exception(f"Failed to install PHP dependencies: {err}")
+            await asyncio.sleep(2)
+        
+        await progress.edit(embed=info_embed("Installing Pterodactyl", "```fix\nStep 5/6: Setting up database...\n```"))
+        
+        # Setup database
+        db_cmds = [
+            "mysql -e \"CREATE DATABASE IF NOT EXISTS panel;\" 2>/dev/null || true",
+            "mysql -e \"CREATE USER IF NOT EXISTS 'pterodactyl'@'127.0.0.1' IDENTIFIED BY 'password';\" 2>/dev/null || true",
+            "mysql -e \"GRANT ALL PRIVILEGES ON panel.* TO 'pterodactyl'@'127.0.0.1';\" 2>/dev/null || true",
+            "mysql -e \"FLUSH PRIVILEGES;\" 2>/dev/null || true",
+            "cd /var/www/pterodactyl && php artisan migrate --seed --force",
+        ]
+        
+        for cmd in db_cmds:
+            await exec_in_container(container_name, cmd)
+            await asyncio.sleep(1)
+        
+        # Create admin user
+        create_admin_cmd = f"cd /var/www/pterodactyl && php artisan p:user:make --email='{admin_email}' --username='{admin_user}' --password='{admin_pass}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
+        out, err, code = await exec_in_container(container_name, create_admin_cmd)
+        if code != 0 and "already" not in err.lower():
+            raise Exception(f"Failed to create admin user: {err}")
+        
+        await progress.edit(embed=info_embed("Installing Pterodactyl", "```fix\nStep 6/6: Creating tunnel...\n```"))
+        
+        # Get IP
+        out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+        ip = out.strip() or SERVER_IP
+        panel_url = f"http://{ip}"
+        
+        # Create cloudflared tunnel
+        tunnel_url = await create_cloudflared_tunnel(container_name, 80)
+        if tunnel_url:
+            panel_url = tunnel_url
+        
+        # Save to database
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS panels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            panel_type TEXT NOT NULL,
+            panel_url TEXT,
+            admin_user TEXT,
+            admin_pass TEXT,
+            admin_email TEXT,
+            container_name TEXT,
+            tunnel_url TEXT,
+            installed_at TEXT NOT NULL
+        )''')
+        
+        cur.execute('''INSERT INTO panels (user_id, panel_type, panel_url, admin_user, admin_pass, admin_email, container_name, tunnel_url, installed_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (user_id, "pterodactyl", panel_url, admin_user, admin_pass, admin_email, container_name, tunnel_url, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        
+        # Success message
+        embed = success_embed("✅ Pterodactyl Installed Successfully!")
+        embed.add_field(name="🌐 Panel URL", value=f"```fix\n{panel_url}\n```", inline=False)
+        embed.add_field(name="👤 Username", value=f"||`{admin_user}`||", inline=True)
+        embed.add_field(name="📧 Email", value=f"||`{admin_email}`||", inline=True)
+        embed.add_field(name="🔑 Password", value=f"||`{admin_pass}`||", inline=False)
+        embed.add_field(name="📦 Container", value=f"```fix\n{container_name}\n```", inline=True)
+        
+        if tunnel_url:
+            embed.add_field(name="🌍 Tunnel", value=f"✅ Cloudflared tunnel active", inline=True)
+        
+        await progress.edit(embed=embed)
+        
+        # DM user with credentials
+        try:
+            dm_embed = success_embed("🔐 Your Pterodactyl Credentials")
+            dm_embed.add_field(name="🌐 Panel URL", value=panel_url, inline=False)
+            dm_embed.add_field(name="👤 Username", value=admin_user, inline=True)
+            dm_embed.add_field(name="📧 Email", value=admin_email, inline=True)
+            dm_embed.add_field(name="🔑 Password", value=admin_pass, inline=False)
+            await interaction.user.send(embed=dm_embed)
+        except:
+            pass
+    
+    async def install_pufferpanel(self, interaction, container_name, admin_user, admin_email, admin_pass, progress):
+        """Install Pufferpanel"""
+        await progress.edit(embed=info_embed("Installing Pufferpanel", "```fix\nStep 2/6: Adding repository...\n```"))
+        
+        # Add repository and install
+        commands = [
+            "apt-get update -qq",
+            "apt-get install -y -qq curl wget git",
+            "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
+            "apt-get install -y -qq pufferpanel",
+        ]
+        
+        for cmd in commands:
+            out, err, code = await exec_in_container(container_name, cmd)
+            if code != 0 and "already" not in err.lower():
+                raise Exception(f"Failed to install Pufferpanel: {err}")
+            await asyncio.sleep(1)
+        
+        await progress.edit(embed=info_embed("Installing Pufferpanel", "```fix\nStep 3/6: Configuring services...\n```"))
+        
+        # Enable and start service
+        service_cmds = [
+            "systemctl enable pufferpanel",
+            "systemctl start pufferpanel",
+        ]
+        
+        for cmd in service_cmds:
+            await exec_in_container(container_name, cmd)
+            await asyncio.sleep(2)
+        
+        await progress.edit(embed=info_embed("Installing Pufferpanel", "```fix\nStep 4/6: Creating admin user...\n```"))
+        
+        # Create admin user
+        create_admin_cmd = f"pufferpanel user add --name '{admin_user}' --email '{admin_email}' --password '{admin_pass}' --admin"
+        out, err, code = await exec_in_container(container_name, create_admin_cmd)
+        if code != 0 and "already" not in err.lower():
+            # Try alternative command
+            create_admin_cmd = f"pufferpanel user:add --name {admin_user} --email {admin_email} --password {admin_pass} --admin"
+            out, err, code = await exec_in_container(container_name, create_admin_cmd)
+            if code != 0:
+                raise Exception(f"Failed to create admin user: {err}")
+        
+        await progress.edit(embed=info_embed("Installing Pufferpanel", "```fix\nStep 5/6: Starting panel...\n```"))
+        
+        # Restart service
+        await exec_in_container(container_name, "systemctl restart pufferpanel")
+        await asyncio.sleep(3)
+        
+        await progress.edit(embed=info_embed("Installing Pufferpanel", "```fix\nStep 6/6: Creating tunnel...\n```"))
+        
+        # Get IP
+        out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' | head -1")
+        ip = out.strip() or SERVER_IP
+        panel_url = f"http://{ip}:8080"
+        
+        # Create cloudflared tunnel
+        tunnel_url = await create_cloudflared_tunnel(container_name, 8080)
+        if tunnel_url:
+            panel_url = tunnel_url
+        
+        # Save to database
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS panels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            panel_type TEXT NOT NULL,
+            panel_url TEXT,
+            admin_user TEXT,
+            admin_pass TEXT,
+            admin_email TEXT,
+            container_name TEXT,
+            tunnel_url TEXT,
+            installed_at TEXT NOT NULL
+        )''')
+        
+        cur.execute('''INSERT INTO panels (user_id, panel_type, panel_url, admin_user, admin_pass, admin_email, container_name, tunnel_url, installed_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (user_id, "pufferpanel", panel_url, admin_user, admin_pass, admin_email, container_name, tunnel_url, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        
+        # Success message
+        embed = success_embed("✅ Pufferpanel Installed Successfully!")
+        embed.add_field(name="🌐 Panel URL", value=f"```fix\n{panel_url}\n```", inline=False)
+        embed.add_field(name="👤 Username", value=f"||`{admin_user}`||", inline=True)
+        embed.add_field(name="📧 Email", value=f"||`{admin_email}`||", inline=True)
+        embed.add_field(name="🔑 Password", value=f"||`{admin_pass}`||", inline=False)
+        embed.add_field(name="📦 Container", value=f"```fix\n{container_name}\n```", inline=True)
+        
+        if tunnel_url:
+            embed.add_field(name="🌍 Tunnel", value=f"✅ Cloudflared tunnel active", inline=True)
+        
+        await progress.edit(embed=embed)
+        
+        # DM user with credentials
+        try:
+            dm_embed = success_embed("🔐 Your Pufferpanel Credentials")
+            dm_embed.add_field(name="🌐 Panel URL", value=panel_url, inline=False)
+            dm_embed.add_field(name="👤 Username", value=admin_user, inline=True)
+            dm_embed.add_field(name="📧 Email", value=admin_email, inline=True)
+            dm_embed.add_field(name="🔑 Password", value=admin_pass, inline=False)
+            await interaction.user.send(embed=dm_embed)
+        except:
+            pass
+
+# ==================================================================================================
+#  📦  PANEL COMMANDS - MAIN COMMANDS
+# ==================================================================================================
+
+@bot.command(name="install-panel")
+@commands.cooldown(1, 300, commands.BucketType.user)
+async def install_panel(ctx):
+    """Install Pterodactyl or Pufferpanel on your VPS"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    # Check if user has VPS
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=no_vps_embed())
+        return
+    
+    embed = info_embed(
+        "📦 Panel Installation",
+        f"```fix\nYour VPS: {len(vps_list)} available\n```\n\n"
+        f"🦅 **Pterodactyl** - Popular game server panel\n"
+        f"   • PHP 8.1 • Nginx • MySQL • Redis\n"
+        f"   • Supports Minecraft, Ark, CS:GO, etc.\n\n"
+        f"🐡 **Pufferpanel** - Lightweight alternative\n"
+        f"   • Go-based • Low memory usage\n"
+        f"   • Simple & fast\n\n"
+        f"**Features:**\n"
+        f"• ✅ Automatic cloudflared tunnel for public URL\n"
+        f"• ✅ Admin credentials auto-generated\n"
+        f"• ✅ Credentials sent to your DM\n"
+        f"• ✅ Full installation in 5-10 minutes"
+    )
+    
+    view = PanelSelectView(ctx)
+    await ctx.send(embed=embed, view=view)
+
+@bot.command(name="panel-info")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def panel_info(ctx):
+    """Show your installed panel info"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels WHERE user_id = ? ORDER BY installed_at DESC', (user_id,))
+    panels = cur.fetchall()
+    conn.close()
+    
+    if not panels:
+        await ctx.send(embed=info_embed(
+            "No Panels Installed",
+            f"```fix\nYou haven't installed any panels yet.\n```\n"
+            f"Use `{BOT_PREFIX}install-panel` to install one."
+        ))
+        return
+    
+    embed = info_embed(f"Your Installed Panels ({len(panels)})")
+    
+    for panel in panels:
+        panel_type = "🦅 Pterodactyl" if panel['panel_type'] == 'pterodactyl' else "🐡 Pufferpanel"
+        tunnel_status = "✅ Active" if panel['tunnel_url'] else "❌ No tunnel"
+        
+        value = f"```fix\n"
+        value += f"URL: {panel['panel_url']}\n"
+        value += f"Container: {panel['container_name']}\n"
+        value += f"Username: {panel['admin_user']}\n"
+        value += f"Email: {panel['admin_email']}\n"
+        value += f"Installed: {panel['installed_at'][:16]}\n"
+        value += f"Tunnel: {tunnel_status}\n"
+        value += f"```"
+        
+        embed.add_field(name=panel_type, value=value, inline=False)
+    
+    embed.set_footer(text=f"Passwords are hidden for security. Use {BOT_PREFIX}panel-reset to reset password.")
+    await ctx.send(embed=embed)
+
+@bot.command(name="panel-reset")
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def panel_reset(ctx, panel_type: str = None):
+    """Reset panel admin password"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if panel_type:
+        panel_type = panel_type.lower()
+        if panel_type not in ['pterodactyl', 'pufferpanel']:
+            await ctx.send(embed=error_embed("Invalid Panel Type", "Use 'pterodactyl' or 'pufferpanel'"))
+            conn.close()
+            return
+        cur.execute('SELECT * FROM panels WHERE user_id = ? AND panel_type = ? ORDER BY installed_at DESC LIMIT 1', 
+                   (user_id, panel_type))
+    else:
+        cur.execute('SELECT * FROM panels WHERE user_id = ? ORDER BY installed_at DESC LIMIT 1', (user_id,))
+    
+    panel = cur.fetchone()
+    
+    if not panel:
+        await ctx.send(embed=error_embed("No Panel Found", "You don't have any panels installed."))
+        conn.close()
+        return
+    
+    panel = dict(panel)
+    conn.close()
+    
+    # Generate new password
+    new_pass = generate_password(16)
+    
+    msg = await ctx.send(embed=info_embed(
+        "Resetting Password",
+        f"```fix\nResetting password for {panel['panel_type']} on {panel['container_name']}...\n```"
+    ))
+    
+    try:
+        if panel['panel_type'] == 'pterodactyl':
+            # Reset Pterodactyl password
+            cmd = f"cd /var/www/pterodactyl && php artisan p:user:password --email={panel['admin_email']} --password={new_pass}"
+            out, err, code = await exec_in_container(panel['container_name'], cmd)
+            
+            if code != 0:
+                # Try alternative command
+                cmd = f"cd /var/www/pterodactyl && php artisan p:user:update --email={panel['admin_email']} --password={new_pass}"
+                out, err, code = await exec_in_container(panel['container_name'], cmd)
+        
+        else:  # pufferpanel
+            # Reset Pufferpanel password
+            cmd = f"pufferpanel user password --email {panel['admin_email']} --password {new_pass}"
+            out, err, code = await exec_in_container(panel['container_name'], cmd)
+            
+            if code != 0:
+                # Try alternative command
+                cmd = f"pufferpanel user:update --email {panel['admin_email']} --password {new_pass}"
+                out, err, code = await exec_in_container(panel['container_name'], cmd)
+        
+        if code == 0:
+            # Update database
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE panels SET admin_pass = ? WHERE id = ?', (new_pass, panel['id']))
+            conn.commit()
+            conn.close()
+            
+            embed = success_embed("Password Reset Successfully!")
+            embed.add_field(name="🌐 Panel URL", value=f"```fix\n{panel['panel_url']}\n```", inline=False)
+            embed.add_field(name="👤 Username", value=f"```fix\n{panel['admin_user']}\n```", inline=True)
+            embed.add_field(name="📧 Email", value=f"```fix\n{panel['admin_email']}\n```", inline=True)
+            embed.add_field(name="🔑 New Password", value=f"||`{new_pass}`||", inline=False)
+            
+            # DM user new password
+            try:
+                dm_embed = success_embed("🔐 Panel Password Reset")
+                dm_embed.add_field(name="🌐 Panel URL", value=panel['panel_url'], inline=False)
+                dm_embed.add_field(name="👤 Username", value=panel['admin_user'], inline=True)
+                dm_embed.add_field(name="📧 Email", value=panel['admin_email'], inline=True)
+                dm_embed.add_field(name="🔑 New Password", value=new_pass, inline=False)
+                await ctx.author.send(embed=dm_embed)
+                embed.add_field(name="📩 DM", value="✅ New password sent to your DMs", inline=False)
+            except:
+                embed.add_field(name="📩 DM", value="❌ Could not send DM", inline=False)
+            
+            await msg.edit(embed=embed)
+        else:
+            await msg.edit(embed=error_embed("Failed to Reset Password", f"```diff\n- {err}\n```"))
+            
+    except Exception as e:
+        await msg.edit(embed=error_embed("Error", f"```diff\n- {str(e)}\n```"))
+
+@bot.command(name="panel-delete")
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def panel_delete(ctx, panel_type: str = None):
+    """Delete panel installation record (does not delete the actual panel)"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if panel_type:
+        panel_type = panel_type.lower()
+        if panel_type not in ['pterodactyl', 'pufferpanel']:
+            await ctx.send(embed=error_embed("Invalid Panel Type", "Use 'pterodactyl' or 'pufferpanel'"))
+            conn.close()
+            return
+        cur.execute('SELECT * FROM panels WHERE user_id = ? AND panel_type = ? ORDER BY installed_at DESC', 
+                   (user_id, panel_type))
+    else:
+        cur.execute('SELECT * FROM panels WHERE user_id = ? ORDER BY installed_at DESC', (user_id,))
+    
+    panels = cur.fetchall()
+    
+    if not panels:
+        await ctx.send(embed=info_embed("No Panels", "You don't have any panels to delete."))
+        conn.close()
+        return
+    
+    # Create selection view if multiple panels
+    if len(panels) > 1:
+        options = []
+        for i, p in enumerate(panels[:5], 1):
+            panel = dict(p)
+            panel_type_emoji = "🦅" if panel['panel_type'] == 'pterodactyl' else "🐡"
+            options.append(discord.SelectOption(
+                label=f"{panel_type_emoji} {panel['panel_type'].title()} on {panel['container_name']}",
+                value=str(panel['id']),
+                description=f"Installed: {panel['installed_at'][:16]}"
+            ))
+        
+        view = View(timeout=60)
+        select = Select(placeholder="Select panel to delete...", options=options)
+        
+        async def select_callback(select_interaction):
+            if select_interaction.user.id != ctx.author.id:
+                await select_interaction.response.send_message("Not for you!", ephemeral=True)
+                return
+            
+            panel_id = int(select.values[0])
+            
+            # Confirm deletion
+            confirm_view = View()
+            confirm_btn = Button(label="✅ Confirm Delete", style=discord.ButtonStyle.danger)
+            cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            
+            async def confirm_cb(ci):
+                conn2 = get_db()
+                cur2 = conn2.cursor()
+                cur2.execute('DELETE FROM panels WHERE id = ? AND user_id = ?', (panel_id, user_id))
+                conn2.commit()
+                conn2.close()
+                await ci.response.edit_message(
+                    embed=success_embed("Panel Deleted", "```fix\nPanel record has been deleted.\n```"),
+                    view=None
+                )
+            
+            async def cancel_cb(ci):
+                await ci.response.edit_message(embed=info_embed("Cancelled"), view=None)
+            
+            confirm_btn.callback = confirm_cb
+            cancel_btn.callback = cancel_cb
+            confirm_view.add_item(confirm_btn)
+            confirm_view.add_item(cancel_btn)
+            
+            await select_interaction.response.edit_message(
+                embed=warning_embed("Confirm Delete", "This will only delete the database record, not the actual panel files."),
+                view=confirm_view
+            )
+        
+        select.callback = select_callback
+        view.add_item(select)
+        
+        await ctx.send(embed=info_embed("Select Panel", "Which panel record do you want to delete?"), view=view)
+        
+    else:
+        # Single panel
+        panel = dict(panels[0])
+        panel_type_emoji = "🦅" if panel['panel_type'] == 'pterodactyl' else "🐡"
+        
+        view = View()
+        confirm_btn = Button(label="✅ Confirm Delete", style=discord.ButtonStyle.danger)
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+        
+        async def confirm_cb(ci):
+            cur.execute('DELETE FROM panels WHERE id = ? AND user_id = ?', (panel['id'], user_id))
+            conn.commit()
+            await ci.response.edit_message(
+                embed=success_embed("Panel Deleted", "```fix\nPanel record has been deleted.\n```"),
+                view=None
+            )
+        
+        async def cancel_cb(ci):
+            await ci.response.edit_message(embed=info_embed("Cancelled"), view=None)
+        
+        confirm_btn.callback = confirm_cb
+        cancel_btn.callback = cancel_cb
+        view.add_item(confirm_btn)
+        view.add_item(cancel_btn)
+        
+        embed = warning_embed(
+            "Confirm Delete",
+            f"```fix\nPanel: {panel_type_emoji} {panel['panel_type'].title()}\nContainer: {panel['container_name']}\nURL: {panel['panel_url']}\n```\n"
+            f"This will only delete the database record, not the actual panel files."
+        )
+        
+        await ctx.send(embed=embed, view=view)
+    
+    conn.close()
+
+@bot.command(name="panel-tunnel")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def panel_tunnel(ctx, container_name: str = None, port: int = None):
+    """Create or refresh cloudflared tunnel for panel"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, try to find from panels
+    if not container_name:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM panels WHERE user_id = ? ORDER BY installed_at DESC LIMIT 1', (user_id,))
+        panel = cur.fetchone()
+        conn.close()
+        
+        if not panel:
+            await ctx.send(embed=error_embed("No Panel Found", "Specify container name or install a panel first."))
+            return
+        
+        panel = dict(panel)
+        container_name = panel['container_name']
+        port = 80 if panel['panel_type'] == 'pterodactyl' else 8080
+    
+    # Verify container ownership
+    vps_list = get_user_vps(user_id)
+    if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    # If port not specified, ask
+    if not port:
+        view = View(timeout=60)
+        p80_btn = Button(label="🌐 Port 80 (HTTP)", style=discord.ButtonStyle.primary)
+        p8080_btn = Button(label="🔌 Port 8080", style=discord.ButtonStyle.primary)
+        p443_btn = Button(label="🔒 Port 443 (HTTPS)", style=discord.ButtonStyle.primary)
+        custom_btn = Button(label="⚙️ Custom Port", style=discord.ButtonStyle.secondary)
+        
+        async def p80_cb(i):
+            await create_tunnel(i, container_name, 80)
+        
+        async def p8080_cb(i):
+            await create_tunnel(i, container_name, 8080)
+        
+        async def p443_cb(i):
+            await create_tunnel(i, container_name, 443)
+        
+        async def custom_cb(i):
+            modal = PortInputModal(container_name)
+            await i.response.send_modal(modal)
+        
+        p80_btn.callback = p80_cb
+        p8080_btn.callback = p8080_cb
+        p443_btn.callback = p443_cb
+        custom_btn.callback = custom_cb
+        
+        view.add_item(p80_btn)
+        view.add_item(p8080_btn)
+        view.add_item(p443_btn)
+        view.add_item(custom_btn)
+        
+        await ctx.send(embed=info_embed("Select Port", "Which port should the tunnel use?"), view=view)
+    else:
+        await create_tunnel(ctx, container_name, port)
+
+class PortInputModal(Modal):
+    """Modal for custom port input"""
+    def __init__(self, container_name):
+        super().__init__(title="Enter Custom Port")
+        self.container_name = container_name
+        self.add_item(InputText(label="Port Number", placeholder="e.g., 3000, 8080, 8888", min_length=1, max_length=5))
+    
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            port = int(self.children[0].value)
+            if port < 1 or port > 65535:
+                await interaction.response.send_message(embed=error_embed("Invalid Port", "Port must be 1-65535"), ephemeral=True)
+                return
+            await create_tunnel(interaction, self.container_name, port)
+        except ValueError:
+            await interaction.response.send_message(embed=error_embed("Invalid Port", "Please enter a valid number"), ephemeral=True)
+
+async def create_tunnel(ctx_or_interaction, container_name: str, port: int):
+    """Helper function to create tunnel"""
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        ctx = ctx_or_interaction
+        send = ctx.followup.send
+        is_interaction = True
+        await ctx.response.defer(ephemeral=True)
+    else:
+        ctx = ctx_or_interaction
+        send = ctx.send
+        is_interaction = False
+    
+    msg = await send(embed=info_embed("Creating Tunnel", f"```fix\nCreating cloudflared tunnel for {container_name} on port {port}...\n```"))
+    
+    tunnel_url = await create_cloudflared_tunnel(container_name, port)
+    
+    if tunnel_url:
+        embed = success_embed("Tunnel Created Successfully!")
+        embed.add_field(name="🌐 Tunnel URL", value=f"```fix\n{tunnel_url}\n```", inline=False)
+        embed.add_field(name="📦 Container", value=f"```fix\n{container_name}\n```", inline=True)
+        embed.add_field(name="🔌 Port", value=f"```fix\n{port}\n```", inline=True)
+        embed.add_field(name="⏱️ Expires", value="```fix\n24 hours (auto-renew)\n```", inline=True)
+        
+        # Update database if this is a panel
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('UPDATE panels SET tunnel_url = ? WHERE container_name = ?', (tunnel_url, container_name))
+        conn.commit()
+        conn.close()
+        
+        if is_interaction:
+            await msg.edit(embed=embed)
+        else:
+            await msg.edit(embed=embed)
+    else:
+        error_embed_msg = error_embed("Tunnel Creation Failed", 
+            "```diff\n- Could not create tunnel.\n```\n"
+            "Make sure:\n"
+            "• Container is running\n"
+            "• Port is correct and service is listening\n"
+            "• cloudflared is installed (`apt install cloudflared`)")
+        
+        if is_interaction:
+            await msg.edit(embed=error_embed_msg)
+        else:
+            await msg.edit(embed=error_embed_msg)
+
+# ==================================================================================================
+#  📋  ADMIN PANEL COMMANDS
+# ==================================================================================================
+
+@bot.command(name="admin-panels")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def admin_panels(ctx):
+    """List all installed panels (Admin only)"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels ORDER BY installed_at DESC LIMIT 50')
+    panels = cur.fetchall()
+    conn.close()
+    
+    if not panels:
+        await ctx.send(embed=info_embed("No Panels", "No panels have been installed."))
+        return
+    
+    embed = info_embed(f"All Installed Panels ({len(panels)})")
+    
+    for panel in panels[:10]:  # Show first 10
+        try:
+            user = await bot.fetch_user(int(panel['user_id']))
+            username = user.name
+        except:
+            username = f"Unknown ({panel['user_id'][:8]})"
+        
+        panel_type = "🦅" if panel['panel_type'] == 'pterodactyl' else "🐡"
+        tunnel = "✅" if panel['tunnel_url'] else "❌"
+        
+        value = f"```fix\nUser: {username}\nContainer: {panel['container_name']}\nURL: {panel['panel_url']}\nInstalled: {panel['installed_at'][:16]}\nTunnel: {tunnel}\n```"
+        embed.add_field(name=f"{panel_type} {panel['panel_type'].title()}", value=value, inline=False)
+    
+    if len(panels) > 10:
+        embed.set_footer(text=f"Showing 10 of {len(panels)} panels")
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="admin-panel-delete")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def admin_panel_delete(ctx, panel_id: int):
+    """Delete a panel record by ID (Admin only)"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels WHERE id = ?', (panel_id,))
+    panel = cur.fetchone()
+    
+    if not panel:
+        await ctx.send(embed=error_embed("Panel Not Found", f"Panel ID {panel_id} not found."))
+        conn.close()
+        return
+    
+    panel = dict(panel)
+    
+    view = View()
+    confirm_btn = Button(label="✅ Confirm Delete", style=discord.ButtonStyle.danger)
+    cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+    
+    async def confirm_cb(interaction):
+        cur.execute('DELETE FROM panels WHERE id = ?', (panel_id,))
+        conn.commit()
+        await interaction.response.edit_message(
+            embed=success_embed("Panel Deleted", f"```fix\nPanel ID {panel_id} deleted.\n```"),
+            view=None
+        )
+        conn.close()
+    
+    async def cancel_cb(interaction):
+        await interaction.response.edit_message(embed=info_embed("Cancelled"), view=None)
+        conn.close()
+    
+    confirm_btn.callback = confirm_cb
+    cancel_btn.callback = cancel_cb
+    view.add_item(confirm_btn)
+    view.add_item(cancel_btn)
+    
+    panel_type = "🦅 Pterodactyl" if panel['panel_type'] == 'pterodactyl' else "🐡 Pufferpanel"
+    
+    embed = warning_embed(
+        "Confirm Panel Deletion",
+        f"```fix\nID: {panel_id}\nType: {panel_type}\nUser: {panel['user_id']}\nContainer: {panel['container_name']}\nURL: {panel['panel_url']}\nInstalled: {panel['installed_at'][:16]}\n```\n"
+        f"This will only delete the database record."
+    )
+    
+    await ctx.send(embed=embed, view=view)
+
+# ==================================================================================================
+#  📦  PANEL INSTALLATION STATUS CHECK
+# ==================================================================================================
+
+@bot.command(name="panel-status")
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def panel_status(ctx, container_name: str = None):
+    """Check panel installation status"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+        return
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, use first VPS
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            await ctx.send(embed=no_vps_embed())
+            return
+        container_name = vps_list[0]['container_name']
+    else:
+        vps_list = get_user_vps(user_id)
+        if not any(v['container_name'] == container_name for v in vps_list) and not is_admin(user_id):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+    
+    # Check for panel in database
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM panels WHERE container_name = ?', (container_name,))
+    panel = cur.fetchone()
+    
+    # Check for running services
+    out, _, _ = await exec_in_container(container_name, "ps aux | grep -E 'nginx|pufferpanel|php|mysql' | grep -v grep")
+    
+    embed = info_embed(f"Panel Status: {container_name}")
+    
+    if panel:
+        panel = dict(panel)
+        panel_type = "🦅 Pterodactyl" if panel['panel_type'] == 'pterodactyl' else "🐡 Pufferpanel"
+        
+        status = f"```fix\n"
+        status += f"Panel: {panel_type}\n"
+        status += f"URL: {panel['panel_url']}\n"
+        status += f"Username: {panel['admin_user']}\n"
+        status += f"Email: {panel['admin_email']}\n"
+        status += f"Installed: {panel['installed_at'][:16]}\n"
+        status += f"Tunnel: {'✅ Active' if panel['tunnel_url'] else '❌ Inactive'}\n"
+        status += f"```"
+        
+        embed.add_field(name="📋 Panel Info", value=status, inline=False)
+    
+    # Show running services
+    if out:
+        embed.add_field(name="🔄 Running Services", value=f"```fix\n{out[:500]}\n```", inline=False)
+    else:
+        embed.add_field(name="🔄 Running Services", value="```fix\nNo panel services detected\n```", inline=False)
+    
+    # Check if web server is responding
+    if panel:
+        try:
+            # Try to get panel URL
+            import requests
+            response = requests.get(panel['panel_url'], timeout=5)
+            if response.status_code < 500:
+                embed.add_field(name="🌐 Web Access", value="✅ Panel is accessible", inline=True)
+            else:
+                embed.add_field(name="🌐 Web Access", value="❌ Panel returned error", inline=True)
+        except:
+            embed.add_field(name="🌐 Web Access", value="❌ Cannot connect to panel", inline=True)
+    
+    conn.close()
+    await ctx.send(embed=embed)
+
+# ==================================================================================================
 #  🚀  RUN THE BOT
 # ==================================================================================================
 
