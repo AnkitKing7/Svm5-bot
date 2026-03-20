@@ -1786,155 +1786,512 @@ class PanelInstallView(View):
             await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)[:500]}\n```"))
 
 # ==================================================================================================
-#  🏠  HELP VIEW WITH SELECT MENU
+#  📚  COMPLETE HELP COMMAND - ULTIMATE UI WITH SELECT MENU & IMAGES
 # ==================================================================================================
 
+# Help Category Images
+HELP_IMAGES = {
+    'home': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'user': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'vps': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'console': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'games': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'tools': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'nodes': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'share': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'ports': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'ipv4': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'panels': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'ai': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'os': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'admin': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'owner': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+    'ip': "https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg",
+}
+
 class HelpView(View):
+    """Interactive Help Menu with Select Menu & Images"""
+    
     def __init__(self, ctx):
         super().__init__(timeout=300)
         self.ctx = ctx
-        self.current_page = 0
-        self.pages = [
-            {"title": "🏠 HOME MENU", "desc": f"```glow\nWelcome to {BOT_NAME}\n```", "fields": [
-                ("👤 USER (14)", ".help user", True), ("🖥️ VPS (8)", ".help vps", True),
-                ("📟 CONSOLE (10)", ".help console", True), ("🎮 GAMES (7)", ".help games", True),
-                ("🛠️ TOOLS (7)", ".help tools", True), ("🌐 NODES (7)", ".help nodes", True),
-                ("👥 SHARE (4)", ".help share", True), ("🔌 PORTS (6)", ".help ports", True),
-                ("🌍 IPv4 (6)", ".help ipv4", True), ("📦 PANELS (6)", ".help panels", True),
-                ("🤖 AI (3)", ".help ai", True), ("🐧 OS (70+)", ".help os", True),
-                ("🛡️ ADMIN (13)", ".help admin", True), ("👑 OWNER (9)", ".help owner", True),
-            ]},
-            {"title": "👤 USER COMMANDS (14)", "desc": "```fix\nBasic commands\n```", "fields": [
-                (f"{BOT_PREFIX}help", "Show menu", False), (f"{BOT_PREFIX}ping", "Latency", False),
-                (f"{BOT_PREFIX}uptime", "Uptime", False), (f"{BOT_PREFIX}bot-info", "Bot info", False),
-                (f"{BOT_PREFIX}server-info", "Server info", False), (f"{BOT_PREFIX}plans", "Free plans", False),
-                (f"{BOT_PREFIX}stats", "Your stats", False), (f"{BOT_PREFIX}inv", "Your invites", False),
-                (f"{BOT_PREFIX}invites-top", "Top inviters", False), (f"{BOT_PREFIX}claim-free", "Claim VPS", False),
-                (f"{BOT_PREFIX}my-acc", "Your account", False), (f"{BOT_PREFIX}gen-acc", "Generate account", False),
-                (f"{BOT_PREFIX}api-key", "API key", False), (f"{BOT_PREFIX}userinfo", "User info", False),
-            ]},
-            {"title": "🖥️ VPS COMMANDS (8)", "desc": "```fix\nManage your VPS\n```", "fields": [
-                (f"{BOT_PREFIX}myvps", "List VPS", False), (f"{BOT_PREFIX}list", "Detailed list", False),
-                (f"{BOT_PREFIX}manage [container]", "Interactive manager with buttons", False),
-                (f"{BOT_PREFIX}stats [container]", "VPS statistics", False), (f"{BOT_PREFIX}logs [container]", "View logs", False),
-                (f"{BOT_PREFIX}reboot <container>", "Reboot VPS", False), (f"{BOT_PREFIX}shutdown <container>", "Shutdown VPS", False),
-                (f"{BOT_PREFIX}rename <old> <new>", "Rename VPS", False),
-            ]},
-            {"title": "📟 CONSOLE COMMANDS (10)", "desc": "```fix\nTerminal access\n```", "fields": [
-                (f"{BOT_PREFIX}ss [container]", "Snapshot", False), (f"{BOT_PREFIX}console <container>", "Interactive console", False),
-                (f"{BOT_PREFIX}execute <container> <cmd>", "Run command", False), (f"{BOT_PREFIX}ssh-gen <container>", "Generate SSH", False),
-                (f"{BOT_PREFIX}top <container>", "Process monitor", False), (f"{BOT_PREFIX}df <container>", "Disk usage", False),
-                (f"{BOT_PREFIX}free <container>", "Memory usage", False), (f"{BOT_PREFIX}ps <container>", "Process list", False),
-                (f"{BOT_PREFIX}who <container>", "Logged users", False), (f"{BOT_PREFIX}uptime <container>", "Uptime", False),
-            ]},
-            {"title": "🎮 GAMES COMMANDS (7)", "desc": "```fix\nGame servers\n```", "fields": [
-                (f"{BOT_PREFIX}games", "List games", False), (f"{BOT_PREFIX}game-info <game>", "Game details", False),
-                (f"{BOT_PREFIX}install-game <container> <game>", "Install game", False),
-                (f"{BOT_PREFIX}my-games [container]", "Your games", False), (f"{BOT_PREFIX}start-game <container> <game>", "Start game", False),
-                (f"{BOT_PREFIX}stop-game <container> <game>", "Stop game", False), (f"{BOT_PREFIX}game-stats <container> <game>", "Game stats", False),
-            ]},
-            {"title": "🛠️ TOOLS COMMANDS (7)", "desc": "```fix\nDevelopment tools\n```", "fields": [
-                (f"{BOT_PREFIX}tools", "List tools", False), (f"{BOT_PREFIX}tool-info <tool>", "Tool details", False),
-                (f"{BOT_PREFIX}install-tool <container> <tool>", "Install tool", False),
-                (f"{BOT_PREFIX}my-tools [container]", "Your tools", False), (f"{BOT_PREFIX}start-tool <container> <tool>", "Start tool", False),
-                (f"{BOT_PREFIX}stop-tool <container> <tool>", "Stop tool", False), (f"{BOT_PREFIX}tool-port <container> <tool>", "Tool port", False),
-            ]},
-            {"title": "🌐 NODE COMMANDS (7)", "desc": "```fix\nCluster management\n```", "fields": [
-                (f"{BOT_PREFIX}node", "List nodes", False), (f"{BOT_PREFIX}node-info [name]", "Node details", False),
-                (f"{BOT_PREFIX}node-add <name> <host> <user> <pass>", "Add node", False),
-                (f"{BOT_PREFIX}node-remove <name>", "Remove node", False), (f"{BOT_PREFIX}node-check <name>", "Check node", False),
-                (f"{BOT_PREFIX}node-stats", "Cluster stats", False), (f"{BOT_PREFIX}node-connect <host> <user> [pass]", "Connect node", False),
-            ]},
-            {"title": "👥 SHARE COMMANDS (4)", "desc": "```fix\nShare VPS with users\n```", "fields": [
-                (f"{BOT_PREFIX}share <@user> <vps_num>", "Share VPS", False), (f"{BOT_PREFIX}unshare <@user> <vps_num>", "Unshare VPS", False),
-                (f"{BOT_PREFIX}shared", "List shared VPS", False), (f"{BOT_PREFIX}manage-shared <owner> <num>", "Manage shared VPS", False),
-            ]},
-            {"title": "🔌 PORT COMMANDS (6)", "desc": "```fix\nPort forwarding\n```", "fields": [
-                (f"{BOT_PREFIX}ports", "Port help", False), (f"{BOT_PREFIX}ports add <num> <port> [tcp/udp]", "Add port", False),
-                (f"{BOT_PREFIX}ports list", "List ports", False), (f"{BOT_PREFIX}ports remove <id>", "Remove port", False),
-                (f"{BOT_PREFIX}ports quota", "Port quota", False), (f"{BOT_PREFIX}ports check <port>", "Check port", False),
-            ]},
-            {"title": "🌍 IPv4 COMMANDS (6)", "desc": "```fix\nIPv4 management\n```", "fields": [
-                (f"{BOT_PREFIX}ipv4", "Your IPv4", False), (f"{BOT_PREFIX}ipv4-details <container>", "IPv4 details", False),
-                (f"{BOT_PREFIX}buy-ipv4", "Buy IPv4 with UPI QR", False), (f"{BOT_PREFIX}upi", "UPI info", False),
-                (f"{BOT_PREFIX}upi-qr [amount] [note]", "Generate QR", False), (f"{BOT_PREFIX}pay <amount> [note]", "Payment link", False),
-            ]},
-            {"title": "📦 PANEL COMMANDS (6)", "desc": "```fix\nGame panels\n```", "fields": [
-                (f"{BOT_PREFIX}install-panel", "Install with buttons", False), (f"{BOT_PREFIX}panel-info", "Panel info", False),
-                (f"{BOT_PREFIX}panel-reset [type]", "Reset password", False), (f"{BOT_PREFIX}panel-delete [type]", "Delete panel", False),
-                (f"{BOT_PREFIX}panel-tunnel [container] [port]", "Create tunnel", False), (f"{BOT_PREFIX}panel-status [container]", "Panel status", False),
-            ]},
-            {"title": "🤖 AI COMMANDS (3)", "desc": "```fix\nAI assistant\n```", "fields": [
-                (f"{BOT_PREFIX}ai <message>", "Chat with AI", False), (f"{BOT_PREFIX}ai-reset", "Reset history", False),
-                (f"{BOT_PREFIX}ai-help <topic>", "AI help", False),
-            ]},
-            {"title": "🐧 OS COMMANDS", "desc": f"```fix\n70+ Operating Systems\n```", "fields": [
-                ("Ubuntu", "15 versions", True), ("Debian", "14 versions", True), ("Fedora", "10 versions", True),
-                ("Rocky/Alma", "6 versions", True), ("CentOS", "6 versions", True), ("Alpine", "8 versions", True),
-                ("Arch/Manjaro", "3 versions", True), ("OpenSUSE", "4 versions", True), ("FreeBSD", "5 versions", True),
-                ("OpenBSD", "3 versions", True), ("Kali/Gentoo/Void", "6+ versions", True),
-            ]},
+        self.current_category = "home"
+        self.message = None
+        
+        # Category Options with Emojis
+        self.category_options = [
+            discord.SelectOption(label="🏠 Home", value="home", emoji="🏠", description="Main menu with overview"),
+            discord.SelectOption(label="👤 User Commands", value="user", emoji="👤", description="14 user commands"),
+            discord.SelectOption(label="🖥️ VPS Commands", value="vps", emoji="🖥️", description="8 VPS management commands"),
+            discord.SelectOption(label="📟 Console Commands", value="console", emoji="📟", description="10 console commands"),
+            discord.SelectOption(label="🎮 Games Commands", value="games", emoji="🎮", description="7 game server commands"),
+            discord.SelectOption(label="🛠️ Tools Commands", value="tools", emoji="🛠️", description="7 development tools"),
+            discord.SelectOption(label="🌐 Node Commands", value="nodes", emoji="🌐", description="7 cluster management commands"),
+            discord.SelectOption(label="👥 Share Commands", value="share", emoji="👥", description="4 VPS sharing commands"),
+            discord.SelectOption(label="🔌 Port Commands", value="ports", emoji="🔌", description="6 port forwarding commands"),
+            discord.SelectOption(label="🌍 IPv4 Commands", value="ipv4", emoji="🌍", description="6 IPv4 management commands"),
+            discord.SelectOption(label="📦 Panel Commands", value="panels", emoji="📦", description="6 panel installation commands"),
+            discord.SelectOption(label="🤖 AI Commands", value="ai", emoji="🤖", description="3 AI chat commands"),
+            discord.SelectOption(label="🐧 OS Commands", value="os", emoji="🐧", description="70+ operating systems"),
+            discord.SelectOption(label="🌐 IP Commands", value="ip", emoji="🌐", description="15+ IP management commands"),
+            discord.SelectOption(label="🛡️ Admin Commands", value="admin", emoji="🛡️", description="13 admin commands"),
+            discord.SelectOption(label="👑 Owner Commands", value="owner", emoji="👑", description="9 owner commands"),
         ]
         
-        if is_admin(str(ctx.author.id)):
-            self.pages.append({"title": "🛡️ ADMIN COMMANDS (13)", "desc": "```fix\nAdmin commands\n```", "fields": [
-                (f"{BOT_PREFIX}create <ram> <cpu> <disk> @user", "Create VPS", False),
-                (f"{BOT_PREFIX}delete @user <num> [reason]", "Delete VPS", False), (f"{BOT_PREFIX}suspend <container> [reason]", "Suspend VPS", False),
-                (f"{BOT_PREFIX}unsuspend <container>", "Unsuspend VPS", False), (f"{BOT_PREFIX}add-resources <container> [ram] [cpu] [disk]", "Add resources", False),
-                (f"{BOT_PREFIX}list-all", "List all VPS", False), (f"{BOT_PREFIX}add-inv @user <amount>", "Add invites", False),
-                (f"{BOT_PREFIX}remove-inv @user <amount>", "Remove invites", False), (f"{BOT_PREFIX}ports-add @user <amount>", "Add port slots", False),
-                (f"{BOT_PREFIX}serverstats", "Server stats", False), (f"{BOT_PREFIX}admin-add-ipv4 @user <container>", "Assign IPv4", False),
-                (f"{BOT_PREFIX}admin-rm-ipv4 @user [container]", "Remove IPv4", False), (f"{BOT_PREFIX}admin-pending-ipv4", "Pending IPv4", False),
-            ]})
+        self.select = Select(placeholder="📋 Select a command category...", options=self.category_options)
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
         
-        if str(ctx.author.id) in [str(a) for a in MAIN_ADMIN_IDS]:
-            self.pages.append({"title": "👑 OWNER COMMANDS (9)", "desc": "```fix\nOwner commands\n```", "fields": [
-                (f"{BOT_PREFIX}admin-add @user", "Add admin", False), (f"{BOT_PREFIX}admin-remove @user", "Remove admin", False),
-                (f"{BOT_PREFIX}admin-list", "List admins", False), (f"{BOT_PREFIX}maintenance <on/off>", "Maintenance mode", False),
-                (f"{BOT_PREFIX}purge-all", "Purge all unprotected", False), (f"{BOT_PREFIX}protect @user [num]", "Protect VPS", False),
-                (f"{BOT_PREFIX}unprotect @user [num]", "Unprotect VPS", False), (f"{BOT_PREFIX}backup-db", "Backup database", False),
-                (f"{BOT_PREFIX}restore-db <file>", "Restore database", False),
-            ]})
+        # Add refresh button
+        refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=1)
+        refresh_btn.callback = self.refresh_callback
+        self.add_item(refresh_btn)
+        
+        # Add delete button
+        delete_btn = Button(label="🗑️ Close", style=discord.ButtonStyle.danger, emoji="🗑️", row=1)
+        delete_btn.callback = self.delete_callback
+        self.add_item(delete_btn)
         
         self.update_embed()
     
     def update_embed(self):
-        page = self.pages[self.current_page]
-        embed = discord.Embed(title=glow_text(page['title']), description=page['desc'], color=COLORS['primary'])
-        embed.set_thumbnail(url=THUMBNAIL_URL)
-        for name, value, inline in page["fields"]:
+        """Update embed based on selected category"""
+        
+        # Category Data
+        categories = {
+            'home': {
+                'title': "🏠 SVM5-BOT TOOLS - ULTIMATE VPS MANAGEMENT",
+                'desc': f"```glow\nWelcome to {BOT_NAME} - Complete VPS Management Solution\n```\n"
+                        f"**Select a category from the dropdown menu to view commands.**\n\n"
+                        f"```fix\n📊 Bot Statistics:\n• Total Commands: 92+\n• OS Options: 70+\n• Games: 7\n• Tools: 7\n• Active Users: {len(get_all_vps())} VPS\n• Server IP: {SERVER_IP}\n• License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}\n```",
+                'fields': [
+                    ("👤 USER (14)", "Basic commands for all users", True),
+                    ("🖥️ VPS (8)", "Manage your VPS containers", True),
+                    ("📟 CONSOLE (10)", "Terminal access and commands", True),
+                    ("🎮 GAMES (7)", "Game server management", True),
+                    ("🛠️ TOOLS (7)", "Development tools", True),
+                    ("🌐 NODES (7)", "Cluster management", True),
+                    ("👥 SHARE (4)", "Share VPS with users", True),
+                    ("🔌 PORTS (6)", "Port forwarding", True),
+                    ("🌍 IPv4 (6)", "IPv4 management", True),
+                    ("📦 PANELS (6)", "Panel installation", True),
+                    ("🤖 AI (3)", "AI assistant", True),
+                    ("🐧 OS (70+)", "Operating systems", True),
+                    ("🌐 IP (15+)", "IP management", True),
+                    ("🛡️ ADMIN (13)", "Admin commands", True),
+                    ("👑 OWNER (9)", "Owner commands", True),
+                ]
+            },
+            'user': {
+                'title': "👤 USER COMMANDS (14)",
+                'desc': "```fix\nBasic commands available to all users\n```",
+                'fields': [
+                    (".help", "Show this interactive help menu", False),
+                    (".ping", "Check bot latency with graph", False),
+                    (".uptime", "Show bot uptime", False),
+                    (".bot-info", "Detailed bot information", False),
+                    (".server-info", "Show server hardware info", False),
+                    (".plans", "View free VPS plans", False),
+                    (".stats", "View your statistics", False),
+                    (".inv", "Check your invites", False),
+                    (".invites-top [limit]", "Show top inviters", False),
+                    (".claim-free", "Claim free VPS with invites", False),
+                    (".my-acc", "View your generated account", False),
+                    (".gen-acc", "Generate random account", False),
+                    (".api-key [regenerate]", "View or regenerate API key", False),
+                    (".userinfo [@user]", "User information", False),
+                ]
+            },
+            'vps': {
+                'title': "🖥️ VPS COMMANDS (8)",
+                'desc': "```fix\nManage your VPS containers with interactive buttons\n```",
+                'fields': [
+                    (".myvps", "List your VPS with status", False),
+                    (".list", "Detailed VPS list with IPs", False),
+                    (".manage [container]", "Interactive VPS manager with 20+ buttons", False),
+                    (".stats [container]", "View VPS statistics with graphs", False),
+                    (".logs [container] [lines]", "View VPS logs", False),
+                    (".reboot <container>", "Reboot VPS", False),
+                    (".shutdown <container>", "Shutdown VPS", False),
+                    (".rename <old> <new>", "Rename VPS container", False),
+                ]
+            },
+            'console': {
+                'title': "📟 CONSOLE COMMANDS (10)",
+                'desc': "```fix\nTerminal access and console commands\n```",
+                'fields': [
+                    (".ss [container]", "Take VPS snapshot/console output", False),
+                    (".console <container> [command]", "Interactive console with modal", False),
+                    (".execute <container> <command>", "Execute command in VPS", False),
+                    (".ssh-gen <container>", "Generate temporary SSH access", False),
+                    (".top <container>", "Show live process monitor", False),
+                    (".df <container>", "Show disk usage with graph", False),
+                    (".free <container>", "Show memory usage with graph", False),
+                    (".ps <container>", "Show process list", False),
+                    (".who <container>", "Show logged-in users", False),
+                    (".uptime <container>", "Show container uptime", False),
+                ]
+            },
+            'games': {
+                'title': "🎮 GAMES COMMANDS (7)",
+                'desc': "```fix\nInstall and manage game servers (Minecraft, CS:GO, etc.)\n```",
+                'fields': [
+                    (".games", "List all available games", False),
+                    (".game-info <game>", "Detailed game information", False),
+                    (".install-game <container> <game>", "Install game on VPS", False),
+                    (".my-games [container]", "Your installed games", False),
+                    (".start-game <container> <game>", "Start game server", False),
+                    (".stop-game <container> <game>", "Stop game server", False),
+                    (".game-stats <container> <game>", "Game server statistics", False),
+                ]
+            },
+            'tools': {
+                'title': "🛠️ TOOLS COMMANDS (7)",
+                'desc': "```fix\nInstall development tools and services (Nginx, MySQL, Docker, etc.)\n```",
+                'fields': [
+                    (".tools", "List all available tools", False),
+                    (".tool-info <tool>", "Detailed tool information", False),
+                    (".install-tool <container> <tool>", "Install tool on VPS", False),
+                    (".my-tools [container]", "Your installed tools", False),
+                    (".start-tool <container> <tool>", "Start tool service", False),
+                    (".stop-tool <container> <tool>", "Stop tool service", False),
+                    (".tool-port <container> <tool>", "Show tool service port", False),
+                ]
+            },
+            'nodes': {
+                'title': "🌐 NODE COMMANDS (7)",
+                'desc': "```fix\nManage cluster nodes (Auto-detects local node)\n```",
+                'fields': [
+                    (".node", "List all nodes in cluster", False),
+                    (".node-info [name]", "Detailed node information", False),
+                    (".node-add <name> <host> <user> <pass>", "Add new node (Admin)", False),
+                    (".node-remove <name>", "Remove node (Admin)", False),
+                    (".node-check <name>", "Check node health", False),
+                    (".node-stats", "Cluster statistics", False),
+                    (".node-connect <host> <user> [pass]", "Connect to remote node", False),
+                ]
+            },
+            'share': {
+                'title': "👥 SHARE COMMANDS (4)",
+                'desc': "```fix\nShare VPS with other users\n```",
+                'fields': [
+                    (".share <@user> <vps_num>", "Share VPS with user", False),
+                    (".unshare <@user> <vps_num>", "Remove VPS sharing", False),
+                    (".shared", "List VPS shared with you", False),
+                    (".manage-shared <owner> <num>", "Manage shared VPS", False),
+                ]
+            },
+            'ports': {
+                'title': "🔌 PORT COMMANDS (6)",
+                'desc': "```fix\nPort forwarding management\n```",
+                'fields': [
+                    (".ports", "Port forwarding help", False),
+                    (".ports add <vps_num> <port> [tcp/udp]", "Add port forward", False),
+                    (".ports list", "List your port forwards", False),
+                    (".ports remove <id>", "Remove port forward", False),
+                    (".ports quota", "Check your port quota", False),
+                    (".ports check <port>", "Check if port is available", False),
+                ]
+            },
+            'ipv4': {
+                'title': "🌍 IPv4 COMMANDS (6)",
+                'desc': "```fix\nBuy and manage IPv4 addresses\n```",
+                'fields': [
+                    (".ipv4", "View your IPv4 addresses", False),
+                    (".ipv4-details <container>", "Detailed IPv4 information", False),
+                    (".buy-ipv4", "Purchase IPv4 via UPI with QR", False),
+                    (".upi", "Show UPI payment information", False),
+                    (".upi-qr [amount] [note]", "Generate UPI QR code", False),
+                    (".pay <amount> [note]", "Generate payment link", False),
+                ]
+            },
+            'panels': {
+                'title': "📦 PANEL COMMANDS (6)",
+                'desc': "```fix\nInstall game panels on your VPS\n```",
+                'fields': [
+                    (".install-panel", "Install Pterodactyl/Pufferpanel", False),
+                    (".panel-info", "Show your installed panel info", False),
+                    (".panel-reset [type]", "Reset panel admin password", False),
+                    (".panel-delete [type]", "Delete panel record", False),
+                    (".panel-tunnel [container] [port]", "Create cloudflared tunnel", False),
+                    (".panel-status [container]", "Panel installation status", False),
+                ]
+            },
+            'ai': {
+                'title': "🤖 AI COMMANDS (3)",
+                'desc': f"```fix\nChat with AI assistant (Model: {AI_MODEL})\n```",
+                'fields': [
+                    (".ai <message>", "Chat with AI assistant", False),
+                    (".ai-reset", "Reset chat history", False),
+                    (".ai-help <topic>", "Get AI help on specific topic", False),
+                ]
+            },
+            'os': {
+                'title': "🐧 OS COMMANDS",
+                'desc': f"```fix\n70+ Operating Systems available for VPS creation\n```",
+                'fields': [
+                    (".os-list [category]", "List available OS by category", False),
+                    ("Ubuntu", "20.04, 22.04, 24.04, 18.04, 16.04... (15 versions)", True),
+                    ("Debian", "12, 11, 10, 9, 8, Sid, Testing... (14 versions)", True),
+                    ("Fedora", "40, 39, 38, 37, 36, Rawhide... (10 versions)", True),
+                    ("Rocky/Alma", "9, 8, 7 (6 versions)", True),
+                    ("CentOS", "9 Stream, 8 Stream, 7, 6, 5, 4 (6 versions)", True),
+                    ("Alpine", "3.19, 3.18, 3.17, Edge... (8 versions)", True),
+                    ("Arch/Manjaro", "Arch Linux, Manjaro (3 versions)", True),
+                    ("OpenSUSE", "Tumbleweed, Leap 15.5, 15.4, 15.3 (4 versions)", True),
+                    ("FreeBSD", "14, 13, 12, 11, 10 (5 versions)", True),
+                    ("OpenBSD", "7.4, 7.3, 7.2 (3 versions)", True),
+                    ("Kali/Gentoo/Void", "Kali Linux, Gentoo, Void Linux (6+ versions)", True),
+                ]
+            },
+            'ip': {
+                'title': "🌐 IP COMMANDS (15+)",
+                'desc': "```fix\nComplete IP management commands\n```",
+                'fields': [
+                    (".ip", "Show your IP information", False),
+                    (".ip public", "Show server public IP", False),
+                    (".ip vps", "Show all VPS IPs", False),
+                    (".ip node", "Show all node IPs", False),
+                    (".ip all", "Show all IPs", False),
+                    (".ip <container>", "Show container IP details", False),
+                    (".myip", "Your public IP", False),
+                    (".vps-ip [container]", "VPS IP details", False),
+                    (".node-ip [node]", "Node IP details", False),
+                    (".public-ip", "Server public IP with location", False),
+                    (".mac [container]", "MAC address", False),
+                    (".gateway [container]", "Gateway information", False),
+                    (".netstat [container]", "Network connections", False),
+                    (".ifconfig [container]", "Network interfaces", False),
+                    (".dns [container]", "DNS servers", False),
+                    (".ping-ip <ip>", "Ping IP address", False),
+                    (".trace-ip <ip>", "Trace route to IP", False),
+                    (".user-ip @user", "User IPs (Admin)", False),
+                    (".assign-ip @user <container> [ip]", "Assign IP (Admin)", False),
+                    (".release-ip @user <container>", "Release IP (Admin)", False),
+                    (".ip-stats", "IP statistics (Admin)", False),
+                    (".my-ip-info", "Your network info", False),
+                    (".ip-history [@user]", "IP history (Admin)", False),
+                ]
+            },
+        }
+        
+        # Add admin commands if user is admin
+        if is_admin(str(self.ctx.author.id)):
+            categories['admin'] = {
+                'title': "🛡️ ADMIN COMMANDS (13)",
+                'desc': "```fix\nAdministrator commands\n```",
+                'fields': [
+                    (".create <ram> <cpu> <disk> @user", "Create VPS for user", False),
+                    (".delete @user <num> [reason]", "Delete user's VPS", False),
+                    (".suspend <container> [reason]", "Suspend VPS", False),
+                    (".unsuspend <container>", "Unsuspend VPS", False),
+                    (".add-resources <container> [ram] [cpu] [disk]", "Add resources", False),
+                    (".list-all", "List all VPS in system", False),
+                    (".add-inv @user <amount>", "Add invites", False),
+                    (".remove-inv @user <amount>", "Remove invites", False),
+                    (".ports-add @user <amount>", "Add port slots", False),
+                    (".serverstats", "Server statistics", False),
+                    (".admin-add-ipv4 @user <container>", "Assign IPv4", False),
+                    (".admin-rm-ipv4 @user [container]", "Remove IPv4", False),
+                    (".admin-pending-ipv4", "View pending IPv4 purchases", False),
+                ]
+            }
+        
+        # Add owner commands if user is main admin
+        if str(self.ctx.author.id) in [str(a) for a in MAIN_ADMIN_IDS]:
+            categories['owner'] = {
+                'title': "👑 OWNER COMMANDS (9)",
+                'desc': "```fix\nMain owner commands\n```",
+                'fields': [
+                    (".admin-add @user", "Add new administrator", False),
+                    (".admin-remove @user", "Remove administrator", False),
+                    (".admin-list", "List all administrators", False),
+                    (".maintenance <on/off>", "Toggle maintenance mode", False),
+                    (".purge-all", "Purge all unprotected VPS", False),
+                    (".protect @user [num]", "Protect VPS from purge", False),
+                    (".unprotect @user [num]", "Remove purge protection", False),
+                    (".backup-db", "Backup database", False),
+                    (".restore-db <file>", "Restore database", False),
+                ]
+            }
+        
+        # Get current category data
+        cat_data = categories.get(self.current_category, categories['home'])
+        
+        # Create embed
+        embed = discord.Embed(
+            title=f"```glow\n{cat_data['title']}\n```",
+            description=cat_data['desc'],
+            color=COLORS['primary']
+        )
+        
+        # Set category image
+        if self.current_category in HELP_IMAGES:
+            embed.set_thumbnail(url=HELP_IMAGES[self.current_category])
+        embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+        
+        # Add fields
+        for name, value, inline in cat_data['fields']:
             embed.add_field(name=f"**{name}**", value=value, inline=inline)
-        embed.set_footer(text=f"⚡ Page {self.current_page + 1}/{len(self.pages)} • Use dropdown below ⚡")
+        
+        # Add footer
+        embed.set_footer(
+            text=f"⚡ {BOT_NAME} • {len(cat_data['fields'])} commands • Page: {self.current_category.upper()} • Use dropdown to navigate ⚡",
+            icon_url=THUMBNAIL_URL
+        )
+        
         self.embed = embed
     
-    @discord.ui.select(
-        placeholder="📋 Select command category...",
-        options=[
-            discord.SelectOption(label="🏠 Home", value="0", emoji="🏠"),
-            discord.SelectOption(label="👤 User (14)", value="1", emoji="👤"),
-            discord.SelectOption(label="🖥️ VPS (8)", value="2", emoji="🖥️"),
-            discord.SelectOption(label="📟 Console (10)", value="3", emoji="📟"),
-            discord.SelectOption(label="🎮 Games (7)", value="4", emoji="🎮"),
-            discord.SelectOption(label="🛠️ Tools (7)", value="5", emoji="🛠️"),
-            discord.SelectOption(label="🌐 Nodes (7)", value="6", emoji="🌐"),
-            discord.SelectOption(label="👥 Share (4)", value="7", emoji="👥"),
-            discord.SelectOption(label="🔌 Ports (6)", value="8", emoji="🔌"),
-            discord.SelectOption(label="🌍 IPv4 (6)", value="9", emoji="🌍"),
-            discord.SelectOption(label="📦 Panels (6)", value="10", emoji="📦"),
-            discord.SelectOption(label="🤖 AI (3)", value="11", emoji="🤖"),
-            discord.SelectOption(label="🐧 OS (70+)", value="12", emoji="🐧"),
-            discord.SelectOption(label="🛡️ Admin (13)", value="13", emoji="🛡️"),
-            discord.SelectOption(label="👑 Owner (9)", value="14", emoji="👑"),
-        ]
-    )
-    async def select_menu(self, select: Select, interaction: discord.Interaction):
+    async def select_callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.ctx.author.id:
-            await interaction.response.send_message("Not for you!", ephemeral=True)
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
             return
-        self.current_page = int(select.values[0])
+        
+        self.current_category = self.select.values[0]
         self.update_embed()
         await interaction.response.edit_message(embed=self.embed, view=self)
+    
+    async def refresh_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        
+        self.update_embed()
+        await interaction.response.edit_message(embed=self.embed, view=self)
+    
+    async def delete_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        
+        await interaction.message.delete()
 
+
+@bot.command(name="help")
+async def help_command(ctx):
+    """Show interactive help menu with select menu and images"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    view = HelpView(ctx)
+    msg = await ctx.send(embed=view.embed, view=view)
+    view.message = msg
+
+
+@bot.command(name="commands")
+async def commands_alias(ctx):
+    """Alias for help command"""
+    await help_command(ctx)
+
+
+# ==================================================================================================
+#  🆕  ADDITIONAL HELP COMMANDS FOR QUICK ACCESS
+# ==================================================================================================
+
+@bot.command(name="help-user")
+async def help_user(ctx):
+    """Quick help for user commands"""
+    embed = discord.Embed(
+        title="```glow\n👤 User Commands Quick Reference\n```",
+        description="```fix\n14 basic commands for all users\n```",
+        color=COLORS['info']
+    )
+    embed.set_thumbnail(url=HELP_IMAGES['user'])
+    
+    commands_list = [
+        ".help", ".ping", ".uptime", ".bot-info", ".server-info",
+        ".plans", ".stats", ".inv", ".invites-top", ".claim-free",
+        ".my-acc", ".gen-acc", ".api-key", ".userinfo"
+    ]
+    embed.add_field(name="📋 Commands", value="\n".join([f"• `{c}`" for c in commands_list]), inline=False)
+    embed.add_field(name="📌 Tip", value="Use `.help` for detailed information on each command", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="help-vps")
+async def help_vps(ctx):
+    """Quick help for VPS commands"""
+    embed = discord.Embed(
+        title="```glow\n🖥️ VPS Commands Quick Reference\n```",
+        description="```fix\n8 VPS management commands\n```",
+        color=COLORS['info']
+    )
+    embed.set_thumbnail(url=HELP_IMAGES['vps'])
+    
+    commands_list = [
+        ".myvps", ".list", ".manage", ".stats", ".logs", ".reboot", ".shutdown", ".rename"
+    ]
+    embed.add_field(name="📋 Commands", value="\n".join([f"• `{c}`" for c in commands_list]), inline=False)
+    embed.add_field(name="🎮 Tip", value="Use `.manage` for interactive VPS manager with 20+ buttons", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="help-ip")
+async def help_ip(ctx):
+    """Quick help for IP commands"""
+    embed = discord.Embed(
+        title="```glow\n🌐 IP Commands Quick Reference\n```",
+        description="```fix\n15+ IP management commands\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=HELP_IMAGES['ip'])
+    
+    commands_list = [
+        ".ip", ".ip public", ".ip vps", ".ip node", ".ip <container>",
+        ".myip", ".vps-ip", ".node-ip", ".public-ip", ".mac",
+        ".gateway", ".netstat", ".ifconfig", ".dns", ".ping-ip", ".trace-ip"
+    ]
+    embed.add_field(name="📋 Commands", value="\n".join([f"• `{c}`" for c in commands_list]), inline=False)
+    embed.add_field(name="📌 Tip", value="Use `.ip all` to see all IPs at once", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="help-admin")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def help_admin(ctx):
+    """Quick help for admin commands"""
+    embed = discord.Embed(
+        title="```glow\n🛡️ Admin Commands Quick Reference\n```",
+        description="```fix\n13 admin commands\n```",
+        color=COLORS['warning']
+    )
+    embed.set_thumbnail(url=HELP_IMAGES['admin'])
+    
+    commands_list = [
+        ".create", ".delete", ".suspend", ".unsuspend", ".add-resources",
+        ".list-all", ".add-inv", ".remove-inv", ".ports-add", ".serverstats",
+        ".admin-add-ipv4", ".admin-rm-ipv4", ".admin-pending-ipv4"
+    ]
+    embed.add_field(name="📋 Commands", value="\n".join([f"• `{c}`" for c in commands_list]), inline=False)
+    embed.add_field(name="⚠️ Warning", value="These commands affect other users' VPS", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="help-os")
+async def help_os(ctx):
+    """Quick help for OS options"""
+    embed = discord.Embed(
+        title="```glow\n🐧 Operating Systems Available\n```",
+        description="```fix\n70+ Operating Systems for VPS creation\n```",
+        color=COLORS['os']
+    )
+    embed.set_thumbnail(url=HELP_IMAGES['os'])
+    
+    os_list = [
+        "🐧 Ubuntu (15 versions)", "🌀 Debian (14 versions)", "🎩 Fedora (10 versions)",
+        "🦊 Rocky/Alma (6 versions)", "📦 CentOS (6 versions)", "🐧 Alpine (8 versions)",
+        "📀 Arch/Manjaro (3 versions)", "🟢 OpenSUSE (4 versions)", "🔵 FreeBSD (5 versions)",
+        "🐡 OpenBSD (3 versions)", "🐉 Kali Linux", "💻 Gentoo", "⚪ Void Linux"
+    ]
+    embed.add_field(name="📋 Available OS", value="\n".join([f"• {o}" for o in os_list]), inline=False)
+    embed.add_field(name="📌 Tip", value="Use `.os-list [category]` to see detailed list", inline=False)
+    
+    await ctx.send(embed=embed)
+           
 # ==================================================================================================
 #  ✅  ON READY
 # ==================================================================================================
