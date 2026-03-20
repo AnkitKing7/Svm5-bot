@@ -2084,7 +2084,7 @@ class HelpView(View):
                     (".serverstats", "Server statistics", False),
                     (".admin-add-ipv4 @user <container>", "Assign IPv4", False),
                     (".admin-rm-ipv4 @user [container]", "Remove IPv4", False),
-                    (".license-verfiy keyenter", "License Key Verifying", False),
+                    (".license-verify keyenter", "License Key Verifying", False),
                     (".admin-pending-ipv4", "View pending IPv4 purchases", False),
                 ]
             }
