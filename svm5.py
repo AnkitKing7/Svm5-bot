@@ -868,7 +868,7 @@ class VPSManageView(View):
         self.live_task = None
         
         # All Buttons - Row 1 (Basic Controls)
-        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0
+        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
         self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
         self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
         self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
@@ -3700,13 +3700,88 @@ async def os_list(ctx, category: str = None):
 # ==================================================================================================
 
 # ==================================================================================================
-#  🚀  COMPLETE .create COMMAND - VPS CREATION WITH OS SELECTION & DM
+#  🚀  COMPLETE .create COMMAND - WITH apply_lxc_config FIX & FULL UI
 # ==================================================================================================
 
-# OS Options - Already have in your code
-# OS_OPTIONS is already defined in your svm5.py
+import asyncio
+import random
+import string
+import time
+from datetime import datetime
 
-# Create VPS Button View
+# ==================================================================================================
+#  🔧  LXC HELPER FUNCTIONS - ADD THESE IF NOT EXISTS
+# ==================================================================================================
+
+async def apply_lxc_config(container_name: str):
+    """Apply LXC configuration for better compatibility"""
+    try:
+        # Enable nesting and privileged mode
+        await run_lxc(f"lxc config set {container_name} security.nesting true")
+        await run_lxc(f"lxc config set {container_name} security.privileged true")
+        
+        # Add kernel modules
+        await run_lxc(f"lxc config set {container_name} linux.kernel_modules overlay,br_netfilter,nf_nat,ip_tables,ip6_tables,netlink_diag,xt_conntrack,nf_conntrack")
+        
+        # Raw LXC config
+        raw_config = """
+lxc.apparmor.profile = unconfined
+lxc.cgroup.devices.allow = a
+lxc.cap.drop =
+lxc.mount.auto = proc:rw sys:rw cgroup:rw
+"""
+        await run_lxc(f"lxc config set {container_name} raw.lxc '{raw_config}'")
+        
+        logger.info(f"✅ Applied LXC config to {container_name}")
+    except Exception as e:
+        logger.error(f"Failed to apply LXC config to {container_name}: {e}")
+
+
+async def apply_internal_permissions(container_name: str):
+    """Apply internal permissions for Docker compatibility"""
+    await asyncio.sleep(3)
+    commands = [
+        "mkdir -p /etc/sysctl.d/",
+        "echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/99-custom.conf",
+        "echo 'net.ipv4.ping_group_range=0 2147483647' >> /etc/sysctl.d/99-custom.conf",
+        "echo 'fs.inotify.max_user_watches=524288' >> /etc/sysctl.d/99-custom.conf",
+        "sysctl -p /etc/sysctl.d/99-custom.conf || true",
+        "apt-get update -qq",
+        "apt-get install -y -qq curl wget sudo vim nano htop net-tools iproute2 iputils-ping dnsutils traceroute mtr tcpdump telnet ncdu tmux screen",
+    ]
+    for cmd in commands:
+        await exec_in_container(container_name, cmd)
+
+
+async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
+    """Run LXC command asynchronously"""
+    try:
+        cmd = shlex.split(command)
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return "", f"Command timed out after {timeout} seconds", -1
+    except Exception as e:
+        return "", str(e), -1
+
+
+async def exec_in_container(container_name: str, command: str, timeout: int = 30) -> Tuple[str, str, int]:
+    """Execute command inside container"""
+    return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
+
+
+# ==================================================================================================
+#  🎨  CREATE VPS VIEW WITH CONFIRMATION
+# ==================================================================================================
+
 class CreateVPSView(View):
     def __init__(self, ctx, ram, cpu, disk, user, os_version, os_name):
         super().__init__(timeout=120)
@@ -3718,7 +3793,7 @@ class CreateVPSView(View):
         self.os_version = os_version
         self.os_name = os_name
         
-        # Confirm Button
+        # Confirm Button with Rainbow Style
         confirm_btn = Button(label="✅ Confirm Create", style=discord.ButtonStyle.success, emoji="✅", row=0)
         confirm_btn.callback = self.confirm_callback
         
@@ -3747,36 +3822,68 @@ class CreateVPSView(View):
         user_id = str(self.user.id)
         container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
         
-        # Progress message
+        # Rainbow Progress Embed
         progress = await interaction.followup.send(
-            embed=info_embed("Creating VPS", "```fix\nStep 1/6: Initializing container...\n```"),
+            embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Step 1/6: Initializing container...\n```",
+                color=0xFF0000
+            ),
             ephemeral=True
         )
         
         try:
             ram_mb = self.ram * 1024
+            colors = [0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x0000FF, 0x8B00FF]
             
             # Step 1: Initialize container
-            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 2/6: Configuring resources...\n```"))
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[████░░░░░░░░░░░░░░] 16% | Step 1/6: Initializing container...\n```",
+                color=colors[0]
+            ))
             await run_lxc(f"lxc init {self.os_version} {container_name} -s {DEFAULT_STORAGE_POOL}")
             
             # Step 2: Set limits
-            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 3/6: Setting limits...\n```"))
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[████████░░░░░░░░░░] 33% | Step 2/6: Setting RAM limits...\n```",
+                color=colors[1]
+            ))
             await run_lxc(f"lxc config set {container_name} limits.memory {ram_mb}MB")
             await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
             await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
             
             # Step 3: Apply LXC config
-            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 4/6: Applying configuration...\n```"))
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[████████████░░░░░░] 50% | Step 3/6: Applying LXC configuration...\n```",
+                color=colors[2]
+            ))
             await apply_lxc_config(container_name)
             
             # Step 4: Start container
-            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 5/6: Starting container...\n```"))
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[████████████████░░] 66% | Step 4/6: Starting container...\n```",
+                color=colors[3]
+            ))
             await run_lxc(f"lxc start {container_name}")
             
             # Step 5: Apply internal permissions
-            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 6/6: Finalizing...\n```"))
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[██████████████████░░] 83% | Step 5/6: Configuring permissions...\n```",
+                color=colors[4]
+            ))
             await apply_internal_permissions(container_name)
+            
+            # Step 6: Get IP and MAC
+            await progress.edit(embed=discord.Embed(
+                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
+                description="```fix\n[████████████████████] 100% | Step 6/6: Finalizing...\n```",
+                color=colors[5]
+            ))
             
             # Get IP and MAC
             ip = "N/A"
@@ -3810,61 +3917,87 @@ class CreateVPSView(View):
                 except:
                     pass
             
-            # Success embed
-            embed = success_embed("✅ VPS Created Successfully!")
-            embed.add_field(name="👤 Owner", value=self.user.mention, inline=True)
-            embed.add_field(name="📦 Container", value=f"```fix\n{container_name}\n```", inline=True)
-            embed.add_field(name="⚙️ Resources", value=f"```fix\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```", inline=True)
-            embed.add_field(name="🌐 IP Address", value=f"```fix\n{ip}\n```", inline=True)
-            embed.add_field(name="🔌 MAC Address", value=f"```fix\n{mac}\n```", inline=True)
-            embed.add_field(name="🐧 OS", value=f"```fix\n{self.os_name}\n```", inline=True)
-            embed.add_field(name="📅 Created", value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```", inline=True)
-            embed.set_image(url=THUMBNAIL_URL)
+            # Rainbow Success Embed
+            success_embed_msg = discord.Embed(
+                title="```glow\n🌈 VPS CREATED SUCCESSFULLY! 🌈\n```",
+                description=f"🎉 VPS **{container_name}** has been created for {self.user.mention}!",
+                color=0x00FF88
+            )
+            success_embed_msg.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed_msg.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
             
-            await progress.edit(embed=embed)
+            # Resource Bar
+            ram_bar = "█" * int(self.ram / 16) + "░" * (10 - int(self.ram / 16))
+            cpu_bar = "█" * int(self.cpu / 8) + "░" * (10 - int(self.cpu / 8))
+            disk_bar = "█" * int(self.disk / 100) + "░" * (10 - int(self.disk / 100))
+            
+            success_embed_msg.add_field(
+                name="📦 CONTAINER DETAILS",
+                value=f"```fix\nName: {container_name}\nIP Address: {ip}\nMAC Address: {mac}\nOS: {self.os_name}\n```",
+                inline=False
+            )
+            
+            success_embed_msg.add_field(
+                name="⚙️ RESOURCE ALLOCATION",
+                value=f"```fix\nRAM: {self.ram}GB [{ram_bar}]\nCPU: {self.cpu} Core(s) [{cpu_bar}]\nDisk: {self.disk}GB [{disk_bar}]\n```",
+                inline=False
+            )
+            
+            success_embed_msg.add_field(
+                name="🖥️ MANAGEMENT COMMANDS",
+                value=f"```fix\n.manage {container_name} - Interactive Manager\n.stats {container_name} - Live Statistics\n.logs {container_name} - System Logs\n.ssh-gen {container_name} - SSH Access\n.reboot {container_name} - Reboot VPS\n.shutdown {container_name} - Shutdown VPS\n```",
+                inline=False
+            )
+            
+            success_embed_msg.add_field(
+                name="🔗 QUICK LINKS",
+                value=f"[📖 Documentation](https://github.com/AnkitKing7/Svm5-bot) | [💬 Support](https://discord.gg) | [🐛 Report Issue](https://github.com/AnkitKing7/Svm5-bot/issues)",
+                inline=False
+            )
+            
+            success_embed_msg.set_footer(
+                text=f"⚡ Created by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                icon_url=THUMBNAIL_URL
+            )
+            
+            await progress.edit(embed=success_embed_msg)
             
             # Send DM to user
             try:
                 dm_embed = discord.Embed(
-                    title=f"```glow\n✨ VPS Created Successfully! ✨\n```",
-                    description=f"Your VPS has been created by an admin!",
+                    title="```glow\n✨ YOUR VPS IS READY! ✨\n```",
+                    description=f"🎉 A new VPS has been created for you!",
                     color=0x57F287
                 )
                 dm_embed.set_thumbnail(url=THUMBNAIL_URL)
-                dm_embed.set_image(url=THUMBNAIL_URL)
+                dm_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
                 
                 dm_embed.add_field(
-                    name="📦 Container Details",
+                    name="📦 CONTAINER",
                     value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\n```",
                     inline=False
                 )
                 
                 dm_embed.add_field(
-                    name="⚙️ Resources",
+                    name="⚙️ RESOURCES",
                     value=f"```fix\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```",
                     inline=True
                 )
                 
                 dm_embed.add_field(
-                    name="📅 Creation Date",
+                    name="📅 CREATED",
                     value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
                     inline=True
                 )
                 
                 dm_embed.add_field(
-                    name="🖥️ Management Commands",
-                    value=f"```fix\n.manage {container_name} - Control your VPS\n.stats {container_name} - View stats\n.logs {container_name} - View logs\n.reboot {container_name} - Reboot\n.shutdown {container_name} - Shutdown\n.ssh-gen {container_name} - SSH access\n```",
-                    inline=False
-                )
-                
-                dm_embed.add_field(
-                    name="🔗 Useful Links",
-                    value=f"[SVM5-BOT Support](https://discord.gg)\n[Documentation](https://github.com/AnkitKing7/Svm5-bot)",
+                    name="🖥️ QUICK COMMANDS",
+                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n.ssh-gen {container_name}\n```",
                     inline=False
                 )
                 
                 dm_embed.set_footer(
-                    text=f"⚡ {BOT_NAME} • Created by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                    text=f"⚡ SVM5-BOT • Manage your VPS with .help ⚡",
                     icon_url=THUMBNAIL_URL
                 )
                 
@@ -3884,7 +4017,10 @@ class CreateVPSView(View):
                 pass
 
 
-# OS Selection View
+# ==================================================================================================
+#  📋  OS SELECTION VIEW
+# ==================================================================================================
+
 class OSDropdownView(View):
     def __init__(self, ctx, ram, cpu, disk, user):
         super().__init__(timeout=120)
@@ -3920,10 +4056,13 @@ class OSDropdownView(View):
         selected_os = self.select.values[0]
         os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
         
-        embed = warning_embed(
-            "⚠️ Confirm VPS Creation",
-            f"```fix\nUser: {self.user.mention}\nOS: {os_name}\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```\n\nThis action will create a new VPS."
+        embed = discord.Embed(
+            title="```glow\n⚠️ CONFIRM VPS CREATION ⚠️\n```",
+            description=f"```fix\nUser: {self.user.mention}\nOS: {os_name}\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```\n\n**Please confirm to create this VPS.**",
+            color=0xFFAA00
         )
+        embed.set_thumbnail(url=THUMBNAIL_URL)
+        embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
         
         view = CreateVPSView(self.ctx, self.ram, self.cpu, self.disk, self.user, selected_os, os_name)
         await interaction.response.edit_message(embed=embed, view=view)
@@ -3935,23 +4074,31 @@ class OSDropdownView(View):
         )
 
 
+# ==================================================================================================
+#  🚀  .create COMMAND
+# ==================================================================================================
+
 @bot.command(name="create")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
 async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member):
-    """Create a VPS for a user with OS selection"""
+    """Create a VPS for a user with full UI and OS selection"""
     if ram <= 0 or cpu <= 0 or disk <= 0:
         return await ctx.send(embed=error_embed("Invalid Specs", "```diff\n- RAM, CPU, Disk must be positive integers.\n```"))
     
-    embed = info_embed(
-        "🖥️ Create VPS",
-        f"```fix\nUser: {user.mention}\nRAM: {ram}GB\nCPU: {cpu} Core(s)\nDisk: {disk}GB\n```\n\nPlease select an operating system:"
+    embed = discord.Embed(
+        title="```glow\n🖥️ CREATE NEW VPS 🖥️\n```",
+        description=f"```fix\n👤 User: {user.mention}\n💾 RAM: {ram}GB\n⚙️ CPU: {cpu} Core(s)\n💽 Disk: {disk}GB\n```\n\n**Please select an operating system from the dropdown menu below.**",
+        color=0x5865F2
     )
     embed.set_thumbnail(url=THUMBNAIL_URL)
-    embed.set_image(url=THUMBNAIL_URL)
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+    embed.set_footer(
+        text=f"⚡ SVM5-BOT • Created by {ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+        icon_url=THUMBNAIL_URL
+    )
     
     view = OSDropdownView(ctx, ram, cpu, disk, user)
     await ctx.send(embed=embed, view=view)
-
 
 # ==================================================================================================
 #  🔐  LICENSE VERIFY COMMAND
