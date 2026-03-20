@@ -855,15 +855,6 @@ LICENSE_VERIFIED = get_setting('license_verified', 'false') == 'true'
 #  🖥️  COMPLETE VPS MANAGE VIEW - ALL BUTTONS INCLUDED
 # ==================================================================================================
 
-import discord
-from discord.ui import View, Button, Modal, InputText, Select
-import asyncio
-import random
-import string
-import subprocess
-import time
-from datetime import datetime
-
 class VPSManageView(View):
     """Complete VPS Management View with All Buttons"""
     
@@ -877,7 +868,7 @@ class VPSManageView(View):
         self.live_task = None
         
         # All Buttons - Row 1 (Basic Controls)
-        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
+        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0
         self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
         self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
         self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
@@ -2093,6 +2084,7 @@ class HelpView(View):
                     (".serverstats", "Server statistics", False),
                     (".admin-add-ipv4 @user <container>", "Assign IPv4", False),
                     (".admin-rm-ipv4 @user [container]", "Remove IPv4", False),
+                    (".license-verfiy keyenter", "License Key Verifying", False),
                     (".admin-pending-ipv4", "View pending IPv4 purchases", False),
                 ]
             }
