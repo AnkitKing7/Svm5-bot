@@ -22,7 +22,7 @@
 
 import discord
 from discord.ext import commands, tasks
-from discord.ui import Modal, InputText, View, Button, Select
+from discord.ui import Modal, TextInput, View, Button, Select
 import asyncio
 import json
 import os
@@ -2166,18 +2166,6 @@ class HelpView(View):
         
         await interaction.message.delete()
 
-
-@bot.command(name="help")
-async def help_command(ctx):
-    """Show interactive help menu with select menu and images"""
-    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
-        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
-    
-    view = HelpView(ctx)
-    msg = await ctx.send(embed=view.embed, view=view)
-    view.message = msg
-
-
 @bot.command(name="commands")
 async def commands_alias(ctx):
     """Alias for help command"""
@@ -2386,11 +2374,6 @@ async def ping(ctx):
     embed.add_field(name="⏱️ Response", value=f"```fix\n{round((end-start)*1000)}ms\n```", inline=True)
     await msg.edit(embed=embed)
 
-@bot.command(name="uptime")
-async def uptime(ctx):
-    up = datetime.utcnow() - bot.start_time
-    await ctx.send(embed=info_embed("Uptime", f"```fix\n{up.days}d {up.seconds//3600}h {(up.seconds%3600)//60}m {up.seconds%60}s\n```"))
-
 @bot.command(name="bot-info")
 async def bot_info(ctx):
     embed = info_embed("Bot Information")
@@ -2421,16 +2404,6 @@ async def plans(ctx):
     embed = info_embed("Free VPS Plans")
     for p in FREE_VPS_PLANS['invites']:
         embed.add_field(name=f"{p['emoji']} {p['name']}", value=f"```fix\nRAM: {p['ram']}GB | CPU: {p['cpu']} | Disk: {p['disk']}GB\nInvites: {p['invites']}\n```", inline=True)
-    await ctx.send(embed=embed)
-
-@bot.command(name="stats")
-async def stats(ctx):
-    s = get_user_stats(str(ctx.author.id))
-    v = get_user_vps(str(ctx.author.id))
-    embed = info_embed(f"Stats for {ctx.author.display_name}")
-    embed.add_field(name="📨 Invites", value=f"```fix\n{s.get('invites',0)}\n```", inline=True)
-    embed.add_field(name="🖥️ VPS", value=f"```fix\n{len(v)}\n```", inline=True)
-    embed.add_field(name="🗝️ API", value=f"```fix\n{s.get('api_key','None')[:16]}...\n```", inline=False)
     await ctx.send(embed=embed)
 
 @bot.command(name="inv")
@@ -3734,46 +3707,316 @@ async def os_list(ctx, category: str = None):
 #  🛡️  ADMIN COMMANDS
 # ==================================================================================================
 
+# ==================================================================================================
+#  🚀  COMPLETE .create COMMAND - VPS CREATION WITH OS SELECTION & DM
+# ==================================================================================================
+
+# OS Options - Already have in your code
+# OS_OPTIONS is already defined in your svm5.py
+
+# Create VPS Button View
+class CreateVPSView(View):
+    def __init__(self, ctx, ram, cpu, disk, user, os_version, os_name):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        self.ram = ram
+        self.cpu = cpu
+        self.disk = disk
+        self.user = user
+        self.os_version = os_version
+        self.os_name = os_name
+        
+        # Confirm Button
+        confirm_btn = Button(label="✅ Confirm Create", style=discord.ButtonStyle.success, emoji="✅", row=0)
+        confirm_btn.callback = self.confirm_callback
+        
+        # Cancel Button
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=0)
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+    
+    async def confirm_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.create_vps(interaction)
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"),
+            view=None
+        )
+    
+    async def create_vps(self, interaction):
+        await interaction.response.defer()
+        
+        user_id = str(self.user.id)
+        container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
+        
+        # Progress message
+        progress = await interaction.followup.send(
+            embed=info_embed("Creating VPS", "```fix\nStep 1/6: Initializing container...\n```"),
+            ephemeral=True
+        )
+        
+        try:
+            ram_mb = self.ram * 1024
+            
+            # Step 1: Initialize container
+            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 2/6: Configuring resources...\n```"))
+            await run_lxc(f"lxc init {self.os_version} {container_name} -s {DEFAULT_STORAGE_POOL}")
+            
+            # Step 2: Set limits
+            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 3/6: Setting limits...\n```"))
+            await run_lxc(f"lxc config set {container_name} limits.memory {ram_mb}MB")
+            await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
+            await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
+            
+            # Step 3: Apply LXC config
+            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 4/6: Applying configuration...\n```"))
+            await apply_lxc_config(container_name)
+            
+            # Step 4: Start container
+            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 5/6: Starting container...\n```"))
+            await run_lxc(f"lxc start {container_name}")
+            
+            # Step 5: Apply internal permissions
+            await progress.edit(embed=info_embed("Creating VPS", "```fix\nStep 6/6: Finalizing...\n```"))
+            await apply_internal_permissions(container_name)
+            
+            # Get IP and MAC
+            ip = "N/A"
+            mac = "N/A"
+            try:
+                out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                ip = out.strip() if out else "N/A"
+                out, _, _ = await exec_in_container(container_name, "ip link | grep ether | awk '{print $2}' | head -1")
+                mac = out.strip() if out else "N/A"
+            except:
+                pass
+            
+            # Save to database
+            add_vps(user_id, container_name, self.ram, self.cpu, self.disk, self.os_version, "Custom")
+            
+            # Update VPS with IP and MAC
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE vps SET ip_address = ?, mac_address = ? WHERE container_name = ?',
+                       (ip, mac, container_name))
+            conn.commit()
+            conn.close()
+            
+            # Assign role
+            if self.ctx.guild:
+                role = discord.utils.get(self.ctx.guild.roles, name=f"{BOT_NAME} User")
+                if not role:
+                    role = await self.ctx.guild.create_role(name=f"{BOT_NAME} User", color=discord.Color.purple())
+                try:
+                    await self.user.add_roles(role)
+                except:
+                    pass
+            
+            # Success embed
+            embed = success_embed("✅ VPS Created Successfully!")
+            embed.add_field(name="👤 Owner", value=self.user.mention, inline=True)
+            embed.add_field(name="📦 Container", value=f"```fix\n{container_name}\n```", inline=True)
+            embed.add_field(name="⚙️ Resources", value=f"```fix\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```", inline=True)
+            embed.add_field(name="🌐 IP Address", value=f"```fix\n{ip}\n```", inline=True)
+            embed.add_field(name="🔌 MAC Address", value=f"```fix\n{mac}\n```", inline=True)
+            embed.add_field(name="🐧 OS", value=f"```fix\n{self.os_name}\n```", inline=True)
+            embed.add_field(name="📅 Created", value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```", inline=True)
+            embed.set_image(url=THUMBNAIL_URL)
+            
+            await progress.edit(embed=embed)
+            
+            # Send DM to user
+            try:
+                dm_embed = discord.Embed(
+                    title=f"```glow\n✨ VPS Created Successfully! ✨\n```",
+                    description=f"Your VPS has been created by an admin!",
+                    color=0x57F287
+                )
+                dm_embed.set_thumbnail(url=THUMBNAIL_URL)
+                dm_embed.set_image(url=THUMBNAIL_URL)
+                
+                dm_embed.add_field(
+                    name="📦 Container Details",
+                    value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\n```",
+                    inline=False
+                )
+                
+                dm_embed.add_field(
+                    name="⚙️ Resources",
+                    value=f"```fix\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```",
+                    inline=True
+                )
+                
+                dm_embed.add_field(
+                    name="📅 Creation Date",
+                    value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
+                    inline=True
+                )
+                
+                dm_embed.add_field(
+                    name="🖥️ Management Commands",
+                    value=f"```fix\n.manage {container_name} - Control your VPS\n.stats {container_name} - View stats\n.logs {container_name} - View logs\n.reboot {container_name} - Reboot\n.shutdown {container_name} - Shutdown\n.ssh-gen {container_name} - SSH access\n```",
+                    inline=False
+                )
+                
+                dm_embed.add_field(
+                    name="🔗 Useful Links",
+                    value=f"[SVM5-BOT Support](https://discord.gg)\n[Documentation](https://github.com/AnkitKing7/Svm5-bot)",
+                    inline=False
+                )
+                
+                dm_embed.set_footer(
+                    text=f"⚡ {BOT_NAME} • Created by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                    icon_url=THUMBNAIL_URL
+                )
+                
+                await self.user.send(embed=dm_embed)
+                
+            except:
+                pass
+            
+            # Log
+            logger.info(f"Admin {self.ctx.author} created VPS {container_name} for {self.user}")
+            
+        except Exception as e:
+            await progress.edit(embed=error_embed("Creation Failed", f"```diff\n- {str(e)}\n```"))
+            try:
+                await run_lxc(f"lxc delete {container_name} --force")
+            except:
+                pass
+
+
+# OS Selection View
+class OSDropdownView(View):
+    def __init__(self, ctx, ram, cpu, disk, user):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        self.ram = ram
+        self.cpu = cpu
+        self.disk = disk
+        self.user = user
+        
+        # Create OS options
+        options = []
+        for os in OS_OPTIONS[:25]:
+            options.append(discord.SelectOption(
+                label=os['label'][:100],
+                value=os['value'],
+                description=os['desc'][:100] if os.get('desc') else None,
+                emoji=os.get('icon', '🐧')
+            ))
+        
+        self.select = Select(placeholder="📋 Select an operating system...", options=options)
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=1)
+        cancel_btn.callback = self.cancel_callback
+        self.add_item(cancel_btn)
+    
+    async def select_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        
+        selected_os = self.select.values[0]
+        os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
+        
+        embed = warning_embed(
+            "⚠️ Confirm VPS Creation",
+            f"```fix\nUser: {self.user.mention}\nOS: {os_name}\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```\n\nThis action will create a new VPS."
+        )
+        
+        view = CreateVPSView(self.ctx, self.ram, self.cpu, self.disk, self.user, selected_os, os_name)
+        await interaction.response.edit_message(embed=embed, view=view)
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"),
+            view=None
+        )
+
+
 @bot.command(name="create")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
 async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member):
-    if ram<=0 or cpu<=0 or disk<=0:
-        return await ctx.send(embed=error_embed("Invalid", "RAM, CPU, Disk must be positive"))
+    """Create a VPS for a user with OS selection"""
+    if ram <= 0 or cpu <= 0 or disk <= 0:
+        return await ctx.send(embed=error_embed("Invalid Specs", "```diff\n- RAM, CPU, Disk must be positive integers.\n```"))
     
-    opts = []
-    for o in OS_OPTIONS[:25]:
-        opts.append(discord.SelectOption(label=o['label'][:100], value=o['value'], description=o['desc'][:100]))
-    view = View()
-    sel = Select(placeholder="Select OS...", options=opts)
-    async def sel_cb(i):
-        if i.user.id != ctx.author.id:
-            return await i.response.send_message("Not for you!", ephemeral=True)
-        osv = sel.values[0]
-        name = f"svm5-{str(user.id)[:6]}-{random.randint(1000,9999)}"
-        msg = await i.followup.send(embed=info_embed("Creating VPS", "Step 1/4..."), ephemeral=True)
-        try:
-            ram_mb = ram * 1024
-            await run_lxc(f"lxc init {osv} {name} -s {DEFAULT_STORAGE_POOL}")
-            await msg.edit(embed=info_embed("Creating VPS", "Step 2/4..."))
-            await run_lxc(f"lxc config set {name} limits.memory {ram_mb}MB")
-            await run_lxc(f"lxc config set {name} limits.cpu {cpu}")
-            await run_lxc(f"lxc config device set {name} root size={disk}GB")
-            await msg.edit(embed=info_embed("Creating VPS", "Step 3/4..."))
-            await run_lxc(f"lxc start {name}")
-            await asyncio.sleep(3)
-            await msg.edit(embed=info_embed("Creating VPS", "Step 4/4..."))
-            add_vps(str(user.id), name, ram, cpu, disk, osv, "Custom")
-            embed = success_embed("VPS Created")
-            embed.add_field(name="👤 User", value=user.mention, inline=True)
-            embed.add_field(name="📦 Container", value=f"```fix\n{name}\n```", inline=True)
-            embed.add_field(name="⚙️ Resources", value=f"```fix\n{ram}GB RAM / {cpu} CPU / {disk}GB Disk\n```", inline=False)
-            await msg.edit(embed=embed)
-        except Exception as e:
-            await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
-    sel.callback = sel_cb
-    view.add_item(sel)
-    await ctx.send(embed=info_embed("Create VPS", f"Select OS for {user.mention}"), view=view)
+    embed = info_embed(
+        "🖥️ Create VPS",
+        f"```fix\nUser: {user.mention}\nRAM: {ram}GB\nCPU: {cpu} Core(s)\nDisk: {disk}GB\n```\n\nPlease select an operating system:"
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    embed.set_image(url=THUMBNAIL_URL)
+    
+    view = OSDropdownView(ctx, ram, cpu, disk, user)
+    await ctx.send(embed=embed, view=view)
 
+
+# ==================================================================================================
+#  🔐  LICENSE VERIFY COMMAND
+# ==================================================================================================
+
+@bot.command(name="license-verify")
+async def license_verify(ctx, key: str = None):
+    """Verify your license key"""
+    global LICENSE_VERIFIED
+    
+    if key is None:
+        if LICENSE_VERIFIED:
+            embed = success_embed("License Verified", "```fix\nYour license is active and verified.\n```")
+        else:
+            embed = warning_embed("License Not Verified", "```fix\nNo valid license found. Use .license-verify <key> to activate.\n```")
+            embed.add_field(
+                name="📌 Valid License Keys",
+                value="```fix\nAnkitDev99$@\nSVM5-PRO-2025\nSVM5-ENTERPRISE\n```",
+                inline=False
+            )
+        return await ctx.send(embed=embed)
+    
+    if key in VALID_LICENSE_KEYS:
+        set_setting('license_verified', 'true')
+        LICENSE_VERIFIED = True
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS license_info (
+            license_key TEXT, activated_by TEXT, activated_at TEXT, ip TEXT, mac TEXT
+        )''')
+        cur.execute('INSERT INTO license_info VALUES (?, ?, ?, ?, ?)',
+                   (key, str(ctx.author.id), datetime.now().isoformat(), SERVER_IP, MAC_ADDRESS))
+        conn.commit()
+        conn.close()
+        
+        embed = success_embed("✅ License Verified Successfully!")
+        embed.add_field(name="🔑 License Key", value=f"```fix\n{key}\n```", inline=True)
+        embed.add_field(name="👤 Activated By", value=ctx.author.mention, inline=True)
+        embed.set_image(url=THUMBNAIL_URL)
+        
+        await ctx.send(embed=embed)
+    else:
+        embed = error_embed("Invalid License Key", f"```diff\n- The key '{key}' is not valid.\n```")
+        await ctx.send(embed=embed)
+
+
+@bot.command(name="license-status")
+async def license_status(ctx):
+    """Show license status"""
+    if LICENSE_VERIFIED:
+        embed = success_embed("License Status", "```fix\nLicense is active.\n```")
+    else:
+        embed = warning_embed("License Status", "```fix\nNo active license found.\n```")
+        embed.add_field(name="📌 Activate", value=f"Use `{BOT_PREFIX}license-verify <key>` to activate.", inline=False)
+    await ctx.send(embed=embed)
+    
 @bot.command(name="delete")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
 async def admin_delete(ctx, user: discord.Member, num: int, *, reason: str = "No reason"):
