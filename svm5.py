@@ -13,11 +13,9 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║                    ✅ 84 COMMANDS + 70+ OS • FULL UI • EVERYTHING WORKING              ║   ║
-# ║  ╠════════════════════════════════════════════════════════════════════════════════════════╣   ║
-# ║  ║  🏠 HOME      👤 USER(14)  🖥️ VPS(8)   📟 CONSOLE(10)  🎮 GAMES(7)  🛠️ TOOLS(7)       ║   ║
-# ║  ║  🌐 NODES(7)  👥 SHARE(4)  🔌 PORTS(6) 🌍 IPv4(6)     📦 PANELS(6) 🤖 AI(3)           ║   ║
-# ║  ║  🐧 OS(70+)   🛡️ ADMIN(13) 👑 OWNER(9)  🔘 BUTTONS    📋 SELECT    🎨 GLOW UI          ║   ║
+# ║  ║  ✅ 92 COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
+# ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
 # ║                                                                                               ║
 # ╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
@@ -52,7 +50,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 
 # ==================================================================================================
-#  🎨  COLOR CONSTANTS FOR UI
+#  🎨  COLOR CONSTANTS
 # ==================================================================================================
 
 COLORS = {
@@ -65,6 +63,7 @@ COLORS = {
     'terminal': 0x2C2F33,
     'gold': 0xFFD700,
     'cyan': 0x00CCFF,
+    'pink': 0xFF69B4,
     'os': 0x00FF88,
 }
 
@@ -76,6 +75,7 @@ os.makedirs('/opt/svm5-bot/logs', exist_ok=True)
 os.makedirs('/opt/svm5-bot/data', exist_ok=True)
 os.makedirs('/opt/svm5-bot/backups', exist_ok=True)
 os.makedirs('/opt/svm5-bot/qr_codes', exist_ok=True)
+os.makedirs('/opt/svm5-bot/nodes', exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,113 +132,25 @@ VALID_LICENSE_KEYS = ["AnkitDev99$@", "SVM5-PRO-2025", "SVM5-ENTERPRISE", "DEVEL
 # ==================================================================================================
 
 OS_OPTIONS = [
-    # Ubuntu Series (15)
     {"label": "🐧 Ubuntu 24.04 LTS", "value": "ubuntu:24.04", "desc": "Noble Numbat - Latest LTS", "category": "Ubuntu", "ram_min": 512},
     {"label": "🐧 Ubuntu 22.04 LTS", "value": "ubuntu:22.04", "desc": "Jammy Jellyfish - Current LTS", "category": "Ubuntu", "ram_min": 512},
     {"label": "🐧 Ubuntu 20.04 LTS", "value": "ubuntu:20.04", "desc": "Focal Fossa - Stable LTS", "category": "Ubuntu", "ram_min": 512},
     {"label": "🐧 Ubuntu 18.04 LTS", "value": "ubuntu:18.04", "desc": "Bionic Beaver - Legacy", "category": "Ubuntu", "ram_min": 512},
     {"label": "🐧 Ubuntu 16.04 LTS", "value": "ubuntu:16.04", "desc": "Xenial Xerus - Old", "category": "Ubuntu", "ram_min": 256},
-    {"label": "🐧 Ubuntu 14.04 LTS", "value": "ubuntu:14.04", "desc": "Trusty Tahr - Ancient", "category": "Ubuntu", "ram_min": 256},
-    {"label": "🐧 Ubuntu 12.04 LTS", "value": "ubuntu:12.04", "desc": "Precise Pangolin - Retro", "category": "Ubuntu", "ram_min": 256},
-    {"label": "🐧 Ubuntu 10.04 LTS", "value": "ubuntu:10.04", "desc": "Lucid Lynx - Museum", "category": "Ubuntu", "ram_min": 128},
-    {"label": "🐧 Ubuntu 23.10", "value": "ubuntu:23.10", "desc": "Mantic Minotaur", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 23.04", "value": "ubuntu:23.04", "desc": "Lunar Lobster", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 22.10", "value": "ubuntu:22.10", "desc": "Kinetic Kudu", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 21.10", "value": "ubuntu:21.10", "desc": "Impish Indri", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 21.04", "value": "ubuntu:21.04", "desc": "Hirsute Hippo", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 20.10", "value": "ubuntu:20.10", "desc": "Groovy Gorilla", "category": "Ubuntu", "ram_min": 512},
-    {"label": "🐧 Ubuntu 19.10", "value": "ubuntu:19.10", "desc": "Eoan Ermine", "category": "Ubuntu", "ram_min": 512},
-    
-    # Debian Series (15)
     {"label": "🌀 Debian 12", "value": "images:debian/12", "desc": "Bookworm - Current Stable", "category": "Debian", "ram_min": 256},
     {"label": "🌀 Debian 11", "value": "images:debian/11", "desc": "Bullseye - Old Stable", "category": "Debian", "ram_min": 256},
-    {"label": "🌀 Debian 10", "value": "images:debian/10", "desc": "Buster - Older", "category": "Debian", "ram_min": 256},
-    {"label": "🌀 Debian 9", "value": "images:debian/9", "desc": "Stretch - Legacy", "category": "Debian", "ram_min": 256},
-    {"label": "🌀 Debian 8", "value": "images:debian/8", "desc": "Jessie - Ancient", "category": "Debian", "ram_min": 128},
-    {"label": "🌀 Debian 7", "value": "images:debian/7", "desc": "Wheezy - Retro", "category": "Debian", "ram_min": 128},
-    {"label": "🌀 Debian 6", "value": "images:debian/6", "desc": "Squeeze - Very Old", "category": "Debian", "ram_min": 128},
-    {"label": "🌀 Debian 5", "value": "images:debian/5", "desc": "Lenny - Museum", "category": "Debian", "ram_min": 128},
-    {"label": "🌀 Debian 4", "value": "images:debian/4", "desc": "Etch - Retro", "category": "Debian", "ram_min": 64},
-    {"label": "🌀 Debian 3", "value": "images:debian/3", "desc": "Woody - Museum", "category": "Debian", "ram_min": 64},
-    {"label": "🌀 Debian Sid", "value": "images:debian/sid", "desc": "Unstable - Rolling", "category": "Debian", "ram_min": 512},
-    {"label": "🌀 Debian Testing", "value": "images:debian/testing", "desc": "Testing - Next", "category": "Debian", "ram_min": 512},
-    {"label": "🌀 Debian Unstable", "value": "images:debian/unstable", "desc": "Unstable - Dev", "category": "Debian", "ram_min": 512},
-    {"label": "🌀 Debian Experimental", "value": "images:debian/experimental", "desc": "Experimental", "category": "Debian", "ram_min": 512},
-    
-    # Fedora Series (10)
     {"label": "🎩 Fedora 40", "value": "images:fedora/40", "desc": "Fedora 40 - Latest", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 39", "value": "images:fedora/39", "desc": "Fedora 39", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 38", "value": "images:fedora/38", "desc": "Fedora 38", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 37", "value": "images:fedora/37", "desc": "Fedora 37", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 36", "value": "images:fedora/36", "desc": "Fedora 36", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 35", "value": "images:fedora/35", "desc": "Fedora 35", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 34", "value": "images:fedora/34", "desc": "Fedora 34", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 33", "value": "images:fedora/33", "desc": "Fedora 33", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora 32", "value": "images:fedora/32", "desc": "Fedora 32", "category": "Fedora", "ram_min": 1024},
-    {"label": "🎩 Fedora Rawhide", "value": "images:fedora/rawhide", "desc": "Development - Rolling", "category": "Fedora", "ram_min": 1024},
-    
-    # Rocky Linux (5)
     {"label": "🦊 Rocky Linux 9", "value": "images:rockylinux/9", "desc": "Rocky 9 - Latest", "category": "Rocky", "ram_min": 1024},
-    {"label": "🦊 Rocky Linux 8", "value": "images:rockylinux/8", "desc": "Rocky 8 - Stable", "category": "Rocky", "ram_min": 1024},
-    {"label": "🦊 Rocky Linux 7", "value": "images:rockylinux/7", "desc": "Rocky 7 - Legacy", "category": "Rocky", "ram_min": 512},
-    
-    # AlmaLinux (5)
     {"label": "🦊 AlmaLinux 9", "value": "images:almalinux/9", "desc": "Alma 9 - Latest", "category": "AlmaLinux", "ram_min": 1024},
-    {"label": "🦊 AlmaLinux 8", "value": "images:almalinux/8", "desc": "Alma 8 - Stable", "category": "AlmaLinux", "ram_min": 1024},
-    {"label": "🦊 AlmaLinux 7", "value": "images:almalinux/7", "desc": "Alma 7 - Legacy", "category": "AlmaLinux", "ram_min": 512},
-    
-    # CentOS Series (8)
     {"label": "📦 CentOS 9 Stream", "value": "images:centos/9-Stream", "desc": "CentOS 9 Stream", "category": "CentOS", "ram_min": 1024},
-    {"label": "📦 CentOS 8 Stream", "value": "images:centos/8-Stream", "desc": "CentOS 8 Stream", "category": "CentOS", "ram_min": 1024},
-    {"label": "📦 CentOS 7", "value": "images:centos/7", "desc": "CentOS 7 - Legacy", "category": "CentOS", "ram_min": 512},
-    {"label": "📦 CentOS 6", "value": "images:centos/6", "desc": "CentOS 6 - Ancient", "category": "CentOS", "ram_min": 256},
-    {"label": "📦 CentOS 5", "value": "images:centos/5", "desc": "CentOS 5 - Retro", "category": "CentOS", "ram_min": 256},
-    {"label": "📦 CentOS 4", "value": "images:centos/4", "desc": "CentOS 4 - Museum", "category": "CentOS", "ram_min": 128},
-    
-    # Alpine Linux (8)
     {"label": "🐧 Alpine 3.19", "value": "images:alpine/3.19", "desc": "Alpine Latest", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.18", "value": "images:alpine/3.18", "desc": "Alpine 3.18", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.17", "value": "images:alpine/3.17", "desc": "Alpine 3.17", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.16", "value": "images:alpine/3.16", "desc": "Alpine 3.16", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.15", "value": "images:alpine/3.15", "desc": "Alpine 3.15", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.14", "value": "images:alpine/3.14", "desc": "Alpine 3.14", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine 3.13", "value": "images:alpine/3.13", "desc": "Alpine 3.13", "category": "Alpine", "ram_min": 64},
-    {"label": "🐧 Alpine Edge", "value": "images:alpine/edge", "desc": "Alpine Edge - Rolling", "category": "Alpine", "ram_min": 64},
-    
-    # Arch Linux (3)
     {"label": "📀 Arch Linux", "value": "images:archlinux", "desc": "Arch - Rolling Release", "category": "Arch", "ram_min": 512},
-    {"label": "📀 Arch Linux (Current)", "value": "images:archlinux/current", "desc": "Arch Current", "category": "Arch", "ram_min": 512},
-    {"label": "📀 Manjaro", "value": "images:manjaro", "desc": "Manjaro - Arch based", "category": "Arch", "ram_min": 512},
-    
-    # OpenSUSE (6)
     {"label": "🟢 OpenSUSE Tumbleweed", "value": "images:opensuse/tumbleweed", "desc": "Rolling Release", "category": "OpenSUSE", "ram_min": 1024},
-    {"label": "🟢 OpenSUSE Leap 15.5", "value": "images:opensuse/15.5", "desc": "Leap 15.5", "category": "OpenSUSE", "ram_min": 1024},
-    {"label": "🟢 OpenSUSE Leap 15.4", "value": "images:opensuse/15.4", "desc": "Leap 15.4", "category": "OpenSUSE", "ram_min": 1024},
-    {"label": "🟢 OpenSUSE Leap 15.3", "value": "images:opensuse/15.3", "desc": "Leap 15.3", "category": "OpenSUSE", "ram_min": 1024},
-    
-    # FreeBSD (8)
     {"label": "🔵 FreeBSD 14", "value": "images:freebsd/14", "desc": "FreeBSD 14 - Latest", "category": "FreeBSD", "ram_min": 512},
-    {"label": "🔵 FreeBSD 13", "value": "images:freebsd/13", "desc": "FreeBSD 13 - Stable", "category": "FreeBSD", "ram_min": 512},
-    {"label": "🔵 FreeBSD 12", "value": "images:freebsd/12", "desc": "FreeBSD 12 - Legacy", "category": "FreeBSD", "ram_min": 512},
-    {"label": "🔵 FreeBSD 11", "value": "images:freebsd/11", "desc": "FreeBSD 11 - Old", "category": "FreeBSD", "ram_min": 512},
-    {"label": "🔵 FreeBSD 10", "value": "images:freebsd/10", "desc": "FreeBSD 10 - Ancient", "category": "FreeBSD", "ram_min": 512},
-    
-    # OpenBSD (5)
     {"label": "🐡 OpenBSD 7.4", "value": "images:openbsd/7.4", "desc": "OpenBSD 7.4", "category": "OpenBSD", "ram_min": 512},
-    {"label": "🐡 OpenBSD 7.3", "value": "images:openbsd/7.3", "desc": "OpenBSD 7.3", "category": "OpenBSD", "ram_min": 512},
-    {"label": "🐡 OpenBSD 7.2", "value": "images:openbsd/7.2", "desc": "OpenBSD 7.2", "category": "OpenBSD", "ram_min": 512},
-    
-    # Kali Linux (3)
     {"label": "🐉 Kali Linux", "value": "images:kali", "desc": "Kali - Security Testing", "category": "Kali", "ram_min": 1024},
-    {"label": "🐉 Kali Linux Weekly", "value": "images:kali/weekly", "desc": "Kali Weekly", "category": "Kali", "ram_min": 1024},
-    
-    # Gentoo (4)
     {"label": "💻 Gentoo", "value": "images:gentoo", "desc": "Gentoo - Source based", "category": "Gentoo", "ram_min": 1024},
-    {"label": "💻 Gentoo Current", "value": "images:gentoo/current", "desc": "Gentoo Current", "category": "Gentoo", "ram_min": 1024},
-    
-    # Void Linux (3)
     {"label": "⚪ Void Linux", "value": "images:voidlinux", "desc": "Void - Independent", "category": "Void", "ram_min": 256},
-    {"label": "⚪ Void Linux musl", "value": "images:voidlinux/musl", "desc": "Void with musl", "category": "Void", "ram_min": 256},
 ]
 
 # ==================================================================================================
@@ -285,58 +197,11 @@ FREE_VPS_PLANS = {
 }
 
 # ==================================================================================================
-#  🎨  UI HELPER FUNCTIONS
-# ==================================================================================================
-
-def glow_text(text: str) -> str:
-    return f"```glow\n{text}\n```"
-
-def terminal_text(text: str) -> str:
-    return f"```fix\n{text}\n```"
-
-def success_text(text: str) -> str:
-    return f"```diff\n+ {text}\n```"
-
-def error_text(text: str) -> str:
-    return f"```diff\n- {text}\n```"
-
-def create_embed(title: str, desc: str = "", color: int = COLORS['primary']) -> discord.Embed:
-    embed = discord.Embed(title=glow_text(f"✦ {BOT_NAME} - {title} ✦"), description=desc, color=color)
-    embed.set_thumbnail(url=THUMBNAIL_URL)
-    embed.set_footer(text=f"⚡ {BOT_NAME} • {BOT_AUTHOR} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡", icon_url=THUMBNAIL_URL)
-    return embed
-
-def success_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"✅ {title}", desc, COLORS['success'])
-
-def error_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"❌ {title}", desc, COLORS['error'])
-
-def info_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"ℹ️ {title}", desc, COLORS['info'])
-
-def warning_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"⚠️ {title}", desc, COLORS['warning'])
-
-def node_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"🌐 {title}", desc, COLORS['node'])
-
-def os_embed(title: str, desc: str = "") -> discord.Embed:
-    return create_embed(f"🐧 {title}", desc, COLORS['os'])
-
-def terminal_embed(title: str, content: str) -> discord.Embed:
-    embed = discord.Embed(title=terminal_text(f"[ {title} ]"), description=f"```bash\n{content[:1900]}\n```", color=COLORS['terminal'])
-    embed.set_footer(text=f"⚡ Terminal • {datetime.now().strftime('%H:%M:%S')} ⚡")
-    return embed
-
-def no_vps_embed() -> discord.Embed:
-    return info_embed("No VPS Found", error_text("You don't have any VPS yet.") + f"\n\nUse `{BOT_PREFIX}plans` to see plans")
-
-# ==================================================================================================
 #  🗄️  DATABASE SETUP
 # ==================================================================================================
 
 DATABASE_PATH = '/opt/svm5-bot/data/svm5.db'
+NODES_FILE = '/opt/svm5-bot/nodes/nodes.json'
 
 def get_db():
     try:
@@ -369,6 +234,7 @@ def init_db():
         os_version TEXT DEFAULT 'ubuntu:22.04',
         status TEXT DEFAULT 'stopped',
         suspended INTEGER DEFAULT 0,
+        purge_protected INTEGER DEFAULT 0,
         node_name TEXT DEFAULT 'local',
         created_at TEXT NOT NULL,
         ip_address TEXT,
@@ -509,7 +375,6 @@ def add_vps(user_id: str, container_name: str, ram: int, cpu: int, disk: int, os
     cur = conn.cursor()
     now = datetime.now().isoformat()
     
-    # Get IP and MAC
     ip = "N/A"
     mac = "N/A"
     try:
@@ -564,7 +429,6 @@ def get_user_stats(user_id: str) -> Dict:
     conn.close()
     if row:
         return dict(row)
-    # Create new user
     api_key = hashlib.sha256(f"{user_id}{time.time()}".encode()).hexdigest()[:16]
     conn = get_db()
     cur = conn.cursor()
@@ -754,6 +618,99 @@ def add_panel(user_id: str, ptype: str, url: str, user: str, pwd: str, email: st
     conn.close()
 
 # ==================================================================================================
+#  🌐  NODE MANAGEMENT WITH NODES.JSON
+# ==================================================================================================
+
+def load_nodes():
+    """Load nodes from JSON file with auto-detect"""
+    default = {
+        "version": "1.0.0",
+        "last_updated": datetime.now().isoformat(),
+        "main_node": "local",
+        "nodes": {},
+        "node_groups": {"all": [], "us": [], "eu": [], "asia": []}
+    }
+    
+    if os.path.exists(NODES_FILE):
+        try:
+            with open(NODES_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    
+    # Auto-create local node
+    try:
+        lxc_count = len(subprocess.getoutput("lxc list -c n --format csv").splitlines())
+    except:
+        lxc_count = 0
+    
+    local_node = {
+        "name": "local",
+        "host": "localhost",
+        "port": 0,
+        "username": "local",
+        "type": "local",
+        "status": "online",
+        "is_main": True,
+        "region": "us",
+        "description": "Auto-detected local node",
+        "api_key": hashlib.sha256(f"local{time.time()}".encode()).hexdigest()[:32],
+        "stats": {
+            "total_ram": psutil.virtual_memory().total // 1024 // 1024,
+            "used_ram": psutil.virtual_memory().used // 1024 // 1024,
+            "total_cpu": psutil.cpu_count(),
+            "used_cpu": psutil.cpu_percent(),
+            "total_disk": psutil.disk_usage('/').total // 1024 // 1024 // 1024,
+            "used_disk": psutil.disk_usage('/').used // 1024 // 1024 // 1024,
+            "lxc_count": lxc_count,
+            "last_checked": datetime.now().isoformat()
+        },
+        "settings": {
+            "max_containers": 100,
+            "default_storage_pool": DEFAULT_STORAGE_POOL,
+            "allow_overcommit": True
+        }
+    }
+    
+    default["nodes"]["local"] = local_node
+    default["node_groups"]["all"].append("local")
+    default["node_groups"]["us"].append("local")
+    
+    with open(NODES_FILE, 'w') as f:
+        json.dump(default, f, indent=2)
+    
+    return default
+
+def save_nodes(data):
+    with open(NODES_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def get_node(name):
+    nodes = load_nodes()
+    return nodes['nodes'].get(name)
+
+def update_local_node_stats():
+    nodes = load_nodes()
+    if 'local' in nodes['nodes']:
+        try:
+            lxc_count = len(subprocess.getoutput("lxc list -c n --format csv").splitlines())
+        except:
+            lxc_count = 0
+        nodes['nodes']['local']['stats'] = {
+            "total_ram": psutil.virtual_memory().total // 1024 // 1024,
+            "used_ram": psutil.virtual_memory().used // 1024 // 1024,
+            "total_cpu": psutil.cpu_count(),
+            "used_cpu": psutil.cpu_percent(),
+            "total_disk": psutil.disk_usage('/').total // 1024 // 1024 // 1024,
+            "used_disk": psutil.disk_usage('/').used // 1024 // 1024 // 1024,
+            "lxc_count": lxc_count,
+            "last_checked": datetime.now().isoformat()
+        }
+        nodes['nodes']['local']['status'] = "online"
+        save_nodes(nodes)
+    return nodes
+
+# ==================================================================================================
 #  🛠️  LXC HELPERS
 # ==================================================================================================
 
@@ -785,7 +742,7 @@ async def get_container_status(container: str) -> str:
         return "unknown"
 
 async def get_container_stats(container: str) -> Dict:
-    stats = {'status': 'unknown', 'cpu': '0%', 'memory': '0/0MB', 'disk': '0/0GB', 'ipv4': [], 'mac': 'N/A'}
+    stats = {'status': 'unknown', 'cpu': '0%', 'memory': '0/0MB', 'disk': '0/0GB', 'ipv4': [], 'mac': 'N/A', 'uptime': '0m'}
     stats['status'] = await get_container_status(container)
     if stats['status'] == 'running':
         out, _, _ = await exec_in_container(container, "top -bn1 | grep Cpu | awk '{print $2}'")
@@ -798,6 +755,8 @@ async def get_container_stats(container: str) -> Dict:
         stats['ipv4'] = out.splitlines() if out else []
         out, _, _ = await exec_in_container(container, "ip link | grep ether | awk '{print $2}'")
         stats['mac'] = out.splitlines()[0] if out else "N/A"
+        out, _, _ = await exec_in_container(container, "uptime -p | sed 's/up //'")
+        stats['uptime'] = out if out else "0m"
     return stats
 
 async def get_available_port() -> Optional[int]:
@@ -839,6 +798,45 @@ async def remove_port_device(container: str, hport: int):
         pass
 
 # ==================================================================================================
+#  🎨  UI HELPER FUNCTIONS
+# ==================================================================================================
+
+def glow_text(text: str) -> str:
+    return f"```glow\n{text}\n```"
+
+def terminal_text(text: str) -> str:
+    return f"```fix\n{text}\n```"
+
+def create_embed(title: str, desc: str = "", color: int = COLORS['primary']) -> discord.Embed:
+    embed = discord.Embed(title=glow_text(f"✦ {BOT_NAME} - {title} ✦"), description=desc, color=color)
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    embed.set_footer(text=f"⚡ {BOT_NAME} • {BOT_AUTHOR} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡", icon_url=THUMBNAIL_URL)
+    return embed
+
+def success_embed(title: str, desc: str = "") -> discord.Embed:
+    return create_embed(f"✅ {title}", desc, COLORS['success'])
+
+def error_embed(title: str, desc: str = "") -> discord.Embed:
+    return create_embed(f"❌ {title}", desc, COLORS['error'])
+
+def info_embed(title: str, desc: str = "") -> discord.Embed:
+    return create_embed(f"ℹ️ {title}", desc, COLORS['info'])
+
+def warning_embed(title: str, desc: str = "") -> discord.Embed:
+    return create_embed(f"⚠️ {title}", desc, COLORS['warning'])
+
+def node_embed(title: str, desc: str = "") -> discord.Embed:
+    return create_embed(f"🌐 {title}", desc, COLORS['node'])
+
+def terminal_embed(title: str, content: str) -> discord.Embed:
+    embed = discord.Embed(title=terminal_text(f"[ {title} ]"), description=f"```bash\n{content[:1900]}\n```", color=COLORS['terminal'])
+    embed.set_footer(text=f"⚡ Terminal • {datetime.now().strftime('%H:%M:%S')} ⚡")
+    return embed
+
+def no_vps_embed() -> discord.Embed:
+    return info_embed("No VPS Found", error_text("You don't have any VPS yet.") + f"\n\nUse `{BOT_PREFIX}plans` to see plans")
+
+# ==================================================================================================
 #  🤖  BOT SETUP
 # ==================================================================================================
 
@@ -850,74 +848,945 @@ bot.start_time = datetime.utcnow()
 LICENSE_VERIFIED = get_setting('license_verified', 'false') == 'true'
 
 # ==================================================================================================
-#  ✅  ON READY
+#  🎯  VPS MANAGE VIEW WITH ALL BUTTONS
 # ==================================================================================================
 
-@bot.event
-async def on_ready():
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.watching,
-            name=f"{BOT_PREFIX}help | {BOT_NAME}"
+# ==================================================================================================
+#  🖥️  COMPLETE VPS MANAGE VIEW - ALL BUTTONS INCLUDED
+# ==================================================================================================
+
+import discord
+from discord.ui import View, Button, Modal, InputText, Select
+import asyncio
+import random
+import string
+import subprocess
+import time
+from datetime import datetime
+
+class VPSManageView(View):
+    """Complete VPS Management View with All Buttons"""
+    
+    def __init__(self, ctx, container_name: str, container_data: dict):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.container = container_name
+        self.data = container_data
+        self.message = None
+        self.live_mode = False
+        self.live_task = None
+        
+        # All Buttons - Row 1 (Basic Controls)
+        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
+        self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
+        self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
+        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
+        self.shutdown_btn = Button(label="⛔ Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
+        
+        # Row 2 (Info & Access)
+        self.stats_btn = Button(label="📊 Stats", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
+        self.process_btn = Button(label="🔝 Processes", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
+        self.console_btn = Button(label="📟 Console", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
+        self.ssh_btn = Button(label="🔑 SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
+        self.logs_btn = Button(label="📋 Logs", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
+        
+        # Row 3 (Advanced)
+        self.ipv4_btn = Button(label="🌍 IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
+        self.ports_btn = Button(label="🔌 Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
+        self.backup_btn = Button(label="💾 Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
+        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.warning, emoji="🔄", row=2)
+        self.snapshot_btn = Button(label="📸 Snapshot", style=discord.ButtonStyle.secondary, emoji="📸", row=2)
+        
+        # Row 4 (Management)
+        self.reinstall_btn = Button(label="🔄 Reinstall OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
+        self.upgrade_btn = Button(label="⬆️ Upgrade VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
+        self.invites_btn = Button(label="📨 Check Invites", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
+        self.panel_btn = Button(label="📦 Install Panel", style=discord.ButtonStyle.primary, emoji="📦", row=3)
+        self.share_btn = Button(label="👥 Share VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
+        
+        # Row 5 (Live & Refresh)
+        self.live_btn = Button(label="🔴 Live Mode", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
+        self.refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
+        
+        # Set callbacks
+        self.start_btn.callback = self.start_callback
+        self.stop_btn.callback = self.stop_callback
+        self.restart_btn.callback = self.restart_callback
+        self.reboot_btn.callback = self.reboot_callback
+        self.shutdown_btn.callback = self.shutdown_callback
+        
+        self.stats_btn.callback = self.stats_callback
+        self.process_btn.callback = self.process_callback
+        self.console_btn.callback = self.console_callback
+        self.ssh_btn.callback = self.ssh_callback
+        self.logs_btn.callback = self.logs_callback
+        
+        self.ipv4_btn.callback = self.ipv4_callback
+        self.ports_btn.callback = self.ports_callback
+        self.backup_btn.callback = self.backup_callback
+        self.restore_btn.callback = self.restore_callback
+        self.snapshot_btn.callback = self.snapshot_callback
+        
+        self.reinstall_btn.callback = self.reinstall_callback
+        self.upgrade_btn.callback = self.upgrade_callback
+        self.invites_btn.callback = self.invites_callback
+        self.panel_btn.callback = self.panel_callback
+        self.share_btn.callback = self.share_callback
+        
+        self.live_btn.callback = self.live_callback
+        self.refresh_btn.callback = self.refresh_callback
+        
+        # Add all buttons
+        self.add_item(self.start_btn)
+        self.add_item(self.stop_btn)
+        self.add_item(self.restart_btn)
+        self.add_item(self.reboot_btn)
+        self.add_item(self.shutdown_btn)
+        
+        self.add_item(self.stats_btn)
+        self.add_item(self.process_btn)
+        self.add_item(self.console_btn)
+        self.add_item(self.ssh_btn)
+        self.add_item(self.logs_btn)
+        
+        self.add_item(self.ipv4_btn)
+        self.add_item(self.ports_btn)
+        self.add_item(self.backup_btn)
+        self.add_item(self.restore_btn)
+        self.add_item(self.snapshot_btn)
+        
+        self.add_item(self.reinstall_btn)
+        self.add_item(self.upgrade_btn)
+        self.add_item(self.invites_btn)
+        self.add_item(self.panel_btn)
+        self.add_item(self.share_btn)
+        
+        self.add_item(self.live_btn)
+        self.add_item(self.refresh_btn)
+    
+    async def get_stats_embed(self) -> discord.Embed:
+        """Get current VPS stats embed"""
+        stats = await get_container_stats(self.container)
+        
+        embed = discord.Embed(
+            title=f"```glow\n🖥️ VPS Management: {self.container}\n```",
+            color=0x5865F2
         )
-    )
-    logger.info(f"✅ Bot is ready: {bot.user}")
+        embed.set_thumbnail(url=THUMBNAIL_URL)
+        
+        # Status Section
+        status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+        status_text = stats['status'].upper()
+        if self.data.get('suspended'):
+            status_text = "⛔ SUSPENDED"
+            status_emoji = "⛔"
+        
+        embed.add_field(
+            name="📊 Status",
+            value=f"{status_emoji} `{status_text}`",
+            inline=True
+        )
+        
+        # Resources Section
+        embed.add_field(
+            name="⚙️ Resources",
+            value=f"```fix\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```",
+            inline=True
+        )
+        
+        # OS Info
+        embed.add_field(
+            name="🐧 OS",
+            value=f"```fix\n{self.data.get('os_version', 'ubuntu:22.04')}\n```",
+            inline=True
+        )
+        
+        if stats['status'] == 'running' and not self.data.get('suspended'):
+            # CPU Usage with Graph
+            cpu_val = float(stats['cpu'].replace('%', '')) if stats['cpu'] != '0%' else 0
+            cpu_bar = "█" * int(cpu_val / 10) + "░" * (10 - int(cpu_val / 10))
+            
+            # Memory Usage with Graph
+            mem_val = 0
+            if '/' in stats['memory']:
+                try:
+                    used = int(stats['memory'].split('/')[0].replace('MB', '').strip())
+                    total = int(stats['memory'].split('/')[1].replace('MB', '').strip())
+                    mem_val = (used / total) * 100 if total > 0 else 0
+                except:
+                    mem_val = 0
+            mem_bar = "█" * int(mem_val / 10) + "░" * (10 - int(mem_val / 10))
+            
+            # Disk Usage with Graph
+            disk_val = 0
+            if '/' in stats['disk']:
+                try:
+                    used = stats['disk'].split('/')[0].replace('GB', '').strip()
+                    total = stats['disk'].split('/')[1].split()[0].strip()
+                    disk_val = (float(used) / float(total)) * 100 if float(total) > 0 else 0
+                except:
+                    disk_val = 0
+            disk_bar = "█" * int(disk_val / 10) + "░" * (10 - int(disk_val / 10))
+            
+            embed.add_field(
+                name="💾 CPU Usage",
+                value=f"```fix\n{cpu_bar} {stats['cpu']}\n```",
+                inline=True
+            )
+            embed.add_field(
+                name="📀 Memory Usage",
+                value=f"```fix\n{mem_bar} {stats['memory']}\n```",
+                inline=True
+            )
+            embed.add_field(
+                name="💽 Disk Usage",
+                value=f"```fix\n{disk_bar} {stats['disk']}\n```",
+                inline=True
+            )
+            
+            # Network Info
+            embed.add_field(
+                name="🌐 IP Address",
+                value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```",
+                inline=True
+            )
+            embed.add_field(
+                name="🔌 MAC Address",
+                value=f"```fix\n{stats['mac']}\n```",
+                inline=True
+            )
+            embed.add_field(
+                name="⏱️ Uptime",
+                value=f"```fix\n{stats['uptime']}\n```",
+                inline=True
+            )
+            
+            # Process Count
+            embed.add_field(
+                name="📟 Processes",
+                value=f"```fix\n{stats.get('processes', 'N/A')}\n```",
+                inline=True
+            )
+        
+        embed.set_footer(
+            text=f"⚡ {BOT_NAME} • Container: {self.container} • Last Updated: {datetime.now().strftime('%H:%M:%S')} ⚡",
+            icon_url=THUMBNAIL_URL
+        )
+        
+        return embed
     
-    total_vps = len(get_all_vps())
+    async def start_callback(self, interaction):
+        await interaction.response.defer()
+        await run_lxc(f"lxc start {self.container}")
+        update_vps_status(self.container, 'running')
+        await interaction.followup.send(embed=success_embed("Started", f"```fix\n{self.container} started successfully!\n```"), ephemeral=True)
+        await self.refresh_callback(interaction)
     
-    print(f"""
-╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                                                                               ║
-║                      ███████╗██╗   ██╗███╗   ███╗███████╗    ██████╗  ██████╗ ████████╗      ║
-║                      ██╔════╝██║   ██║████╗ ████║██╔════╝    ██╔══██╗██╔═══██╗╚══██╔══╝      ║
-║                      ███████╗██║   ██║██╔████╔██║█████╗      ██████╔╝██║   ██║   ██║         ║
-║                      ╚════██║╚██╗ ██╔╝██║╚██╔╝██║██╔══╝      ██╔══██╗██║   ██║   ██║         ║
-║                      ███████║ ╚████╔╝ ██║ ╚═╝ ██║███████╗    ██████╔╝╚██████╔╝   ██║         ║
-║                      ╚══════╝  ╚═══╝  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝         ║
-║                                                                                               ║
-║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
-║                                                                                               ║
-╠═══════════════════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                               ║
-║  📍 Bot Status:    🟢 ONLINE                                                                 ║
-║  🤖 Bot Name:      {bot.user}                                         ║
-║  🔧 Prefix:        {BOT_PREFIX}                                                               ║
-║  🔐 License:       {'✅ VERIFIED' if LICENSE_VERIFIED else '❌ NOT VERIFIED'}                          ║
-║  🌐 Server IP:     {SERVER_IP}                                                           ║
-║  💻 Hostname:      {HOSTNAME}                                                       ║
-║                                                                                               ║
-║  🖥️ Total VPS:     {total_vps}                                                               ║
-║  🐧 Total OS:      {len(OS_OPTIONS)}                                                          ║
-║  🎮 Total Games:   {len(GAMES_LIST)}                                                          ║
-║  🛠️ Total Tools:   {len(TOOLS_LIST)}                                                          ║
-║                                                                                               ║
-║  📊 TOTAL COMMANDS: 84 + OS SELECTION │ ✅ ALL WORKING │ 🎨 FULL UI                          ║
-║                                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
-    """)
+    async def stop_callback(self, interaction):
+        await interaction.response.defer()
+        await run_lxc(f"lxc stop {self.container}")
+        update_vps_status(self.container, 'stopped')
+        await interaction.followup.send(embed=success_embed("Stopped", f"```fix\n{self.container} stopped.\n```"), ephemeral=True)
+        await self.refresh_callback(interaction)
+    
+    async def restart_callback(self, interaction):
+        await interaction.response.defer()
+        await run_lxc(f"lxc restart {self.container}")
+        update_vps_status(self.container, 'running')
+        await interaction.followup.send(embed=success_embed("Restarted", f"```fix\n{self.container} restarted.\n```"), ephemeral=True)
+        await self.refresh_callback(interaction)
+    
+    async def reboot_callback(self, interaction):
+        await interaction.response.defer()
+        await run_lxc(f"lxc restart {self.container}")
+        update_vps_status(self.container, 'running')
+        await interaction.followup.send(embed=success_embed("Rebooted", f"```fix\n{self.container} rebooted.\n```"), ephemeral=True)
+        await self.refresh_callback(interaction)
+    
+    async def shutdown_callback(self, interaction):
+        await interaction.response.defer()
+        await run_lxc(f"lxc stop {self.container}")
+        update_vps_status(self.container, 'stopped')
+        await interaction.followup.send(embed=success_embed("Shutdown", f"```fix\n{self.container} shutdown.\n```"), ephemeral=True)
+        await self.refresh_callback(interaction)
+    
+    async def stats_callback(self, interaction):
+        stats = await get_container_stats(self.container)
+        embed = info_embed(f"Live Stats: {self.container}")
+        
+        embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
+        embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
+        embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
+        embed.add_field(name="💽 Disk", value=f"```fix\n{stats['disk']}\n```", inline=True)
+        embed.add_field(name="⏱️ Uptime", value=f"```fix\n{stats['uptime']}\n```", inline=True)
+        embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    async def process_callback(self, interaction):
+        await interaction.response.defer()
+        out, _, _ = await exec_in_container(self.container, "ps aux --sort=-%cpu | head -15")
+        embed = terminal_embed(f"Top Processes: {self.container}", out)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def console_callback(self, interaction):
+        modal = CommandModal(self.container)
+        await interaction.response.send_modal(modal)
+    
+    async def ssh_callback(self, interaction):
+        await interaction.response.defer()
+        await exec_in_container(self.container, "apt-get update -qq && apt-get install -y -qq tmate")
+        sess = f"svm5-{random.randint(1000,9999)}"
+        await exec_in_container(self.container, f"tmate -S /tmp/{sess}.sock new-session -d")
+        await asyncio.sleep(5)
+        out, _, _ = await exec_in_container(self.container, f"tmate -S /tmp/{sess}.sock display -p '#{{tmate_ssh}}'")
+        url = out.strip()
+        if url:
+            try:
+                dm = success_embed("🔑 SSH Access Generated")
+                dm.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```")
+                dm.add_field(name="🔐 SSH Command", value=f"```bash\n{url}\n```")
+                dm.add_field(name="⏱️ Expires", value="```fix\n15 minutes\n```")
+                await interaction.user.send(embed=dm)
+                await interaction.followup.send(embed=success_embed("SSH Generated", "Check your DMs!"), ephemeral=True)
+            except:
+                await interaction.followup.send(embed=error_embed("DM Failed", f"```fix\n{url}\n```"), ephemeral=True)
+        else:
+            await interaction.followup.send(embed=error_embed("Failed", "Could not generate SSH"), ephemeral=True)
+    
+    async def logs_callback(self, interaction):
+        await interaction.response.defer()
+        out, _, _ = await exec_in_container(self.container, "journalctl -n 50 --no-pager 2>/dev/null || dmesg | tail -50")
+        embed = terminal_embed(f"Logs: {self.container}", out[:1900])
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def ipv4_callback(self, interaction):
+        await interaction.response.defer()
+        out, _, _ = await exec_in_container(self.container, "ip addr show")
+        embed = terminal_embed(f"IPv4 Details: {self.container}", out[:1900])
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def ports_callback(self, interaction):
+        await interaction.response.defer()
+        out, _, _ = await exec_in_container(self.container, "netstat -tuln | head -20")
+        embed = terminal_embed(f"Open Ports: {self.container}", out)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def backup_callback(self, interaction):
+        await interaction.response.defer()
+        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        out, err, code = await run_lxc(f"lxc snapshot {self.container} {backup_name}")
+        
+        if code == 0:
+            add_snapshot(str(self.ctx.author.id), self.container, backup_name)
+            embed = success_embed("Backup Created")
+            embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+            embed.add_field(name="💾 Backup Name", value=f"```fix\n{backup_name}\n```", inline=True)
+            embed.add_field(name="📅 Created", value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```", inline=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            await interaction.followup.send(embed=error_embed("Backup Failed", f"```diff\n- {err}\n```"), ephemeral=True)
+    
+    async def restore_callback(self, interaction):
+        # Get available snapshots
+        snapshots = get_snapshots(self.container)
+        
+        if not snapshots:
+            await interaction.response.send_message(embed=error_embed("No Backups", "No backups found for this VPS."), ephemeral=True)
+            return
+        
+        # Create selection view for snapshots
+        view = View(timeout=60)
+        options = []
+        for s in snapshots[:10]:
+            options.append(discord.SelectOption(
+                label=s['snapshot_name'],
+                value=s['snapshot_name'],
+                description=f"Created: {s['created_at'][:16]}"
+            ))
+        
+        select = Select(placeholder="Select backup to restore...", options=options)
+        
+        async def select_callback(select_interaction):
+            snap_name = select.values[0]
+            await select_interaction.response.defer()
+            msg = await select_interaction.followup.send(embed=info_embed("Restoring", f"```fix\nRestoring {self.container} from {snap_name}...\n```"), ephemeral=True)
+            
+            status = await get_container_status(self.container)
+            if status == 'running':
+                await run_lxc(f"lxc stop {self.container} --force")
+            
+            out, err, code = await run_lxc(f"lxc restore {self.container} {snap_name}")
+            
+            if code == 0:
+                await run_lxc(f"lxc start {self.container}")
+                embed = success_embed("Backup Restored")
+                embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                embed.add_field(name="💾 Backup", value=f"```fix\n{snap_name}\n```", inline=True)
+                await msg.edit(embed=embed)
+            else:
+                await msg.edit(embed=error_embed("Restore Failed", f"```diff\n- {err}\n```"))
+        
+        select.callback = select_callback
+        view.add_item(select)
+        
+        embed = info_embed("Select Backup", "Choose a backup to restore:")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    async def snapshot_callback(self, interaction):
+        await interaction.response.defer()
+        snapshots = get_snapshots(self.container)
+        
+        if not snapshots:
+            await interaction.followup.send(embed=info_embed("No Snapshots", "No snapshots found."), ephemeral=True)
+            return
+        
+        embed = info_embed(f"Snapshots: {self.container}")
+        for s in snapshots[:10]:
+            embed.add_field(
+                name=f"📸 {s['snapshot_name']}",
+                value=f"```fix\nCreated: {s['created_at'][:16]}\nSize: {s.get('size_mb', 'N/A')} MB\n```",
+                inline=False
+            )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def reinstall_callback(self, interaction):
+        """Reinstall OS with OS selection"""
+        # OS selection view
+        view = View(timeout=120)
+        options = []
+        for os in OS_OPTIONS[:25]:
+            options.append(discord.SelectOption(
+                label=os['label'][:100],
+                value=os['value'],
+                description=os['desc'][:100],
+                emoji=os.get('icon', '🐧')
+            ))
+        
+        select = Select(placeholder="Select new operating system...", options=options)
+        
+        async def select_callback(select_interaction):
+            if select_interaction.user.id != self.ctx.author.id:
+                await select_interaction.response.send_message("Not for you!", ephemeral=True)
+                return
+            
+            selected_os = select.values[0]
+            
+            # Confirmation view
+            confirm_view = View(timeout=60)
+            confirm_btn = Button(label="✅ Confirm Reinstall", style=discord.ButtonStyle.danger)
+            cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            
+            async def confirm_cb(confirm_interaction):
+                await confirm_interaction.response.defer()
+                msg = await confirm_interaction.followup.send(embed=info_embed("Reinstalling", f"```fix\nReinstalling {self.container} with {selected_os}...\n```"), ephemeral=True)
+                
+                try:
+                    status = await get_container_status(self.container)
+                    if status == 'running':
+                        await run_lxc(f"lxc stop {self.container} --force")
+                    
+                    ram_mb = self.data['ram'] * 1024
+                    cpu = self.data['cpu']
+                    disk = self.data['disk']
+                    
+                    await run_lxc(f"lxc delete {self.container} --force")
+                    await run_lxc(f"lxc init {selected_os} {self.container} -s {DEFAULT_STORAGE_POOL}")
+                    await run_lxc(f"lxc config set {self.container} limits.memory {ram_mb}MB")
+                    await run_lxc(f"lxc config set {self.container} limits.cpu {cpu}")
+                    await run_lxc(f"lxc config device set {self.container} root size={disk}GB")
+                    await run_lxc(f"lxc start {self.container}")
+                    await asyncio.sleep(5)
+                    
+                    embed = success_embed("OS Reinstalled")
+                    embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                    embed.add_field(name="🐧 New OS", value=f"```fix\n{selected_os}\n```", inline=True)
+                    await msg.edit(embed=embed)
+                    
+                except Exception as e:
+                    await msg.edit(embed=error_embed("Reinstall Failed", f"```diff\n- {str(e)}\n```"))
+            
+            async def cancel_cb(cancel_interaction):
+                await cancel_interaction.response.edit_message(embed=info_embed("Cancelled", "Reinstall cancelled."), view=None)
+            
+            confirm_btn.callback = confirm_cb
+            cancel_btn.callback = cancel_cb
+            confirm_view.add_item(confirm_btn)
+            confirm_view.add_item(cancel_btn)
+            
+            os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
+            embed = warning_embed(
+                "⚠️ Confirm Reinstall",
+                f"```fix\nContainer: {self.container}\nCurrent OS: {self.data.get('os_version', 'ubuntu:22.04')}\nNew OS: {os_name}\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```\n\n**⚠️ ALL DATA WILL BE LOST!**"
+            )
+            await select_interaction.response.edit_message(embed=embed, view=confirm_view)
+        
+        select.callback = select_callback
+        view.add_item(select)
+        
+        embed = info_embed("Reinstall OS", "Select new operating system:")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    async def upgrade_callback(self, interaction):
+        """Upgrade VPS resources"""
+        await interaction.response.defer()
+        
+        # Get current stats
+        stats = await get_container_stats(self.container)
+        
+        # Create upgrade options
+        view = View(timeout=120)
+        
+        # RAM Upgrade Options
+        ram_opts = [
+            discord.SelectOption(label=f"RAM: +2GB (Total: {self.data['ram'] + 2}GB)", value=f"ram:2"),
+            discord.SelectOption(label=f"RAM: +4GB (Total: {self.data['ram'] + 4}GB)", value=f"ram:4"),
+            discord.SelectOption(label=f"RAM: +8GB (Total: {self.data['ram'] + 8}GB)", value=f"ram:8"),
+        ]
+        ram_select = Select(placeholder="Select RAM upgrade...", options=ram_opts, row=0)
+        
+        # CPU Upgrade Options
+        cpu_opts = [
+            discord.SelectOption(label=f"CPU: +1 Core (Total: {self.data['cpu'] + 1})", value=f"cpu:1"),
+            discord.SelectOption(label=f"CPU: +2 Cores (Total: {self.data['cpu'] + 2})", value=f"cpu:2"),
+            discord.SelectOption(label=f"CPU: +4 Cores (Total: {self.data['cpu'] + 4})", value=f"cpu:4"),
+        ]
+        cpu_select = Select(placeholder="Select CPU upgrade...", options=cpu_opts, row=1)
+        
+        # Disk Upgrade Options
+        disk_opts = [
+            discord.SelectOption(label=f"Disk: +10GB (Total: {self.data['disk'] + 10}GB)", value=f"disk:10"),
+            discord.SelectOption(label=f"Disk: +20GB (Total: {self.data['disk'] + 20}GB)", value=f"disk:20"),
+            discord.SelectOption(label=f"Disk: +50GB (Total: {self.data['disk'] + 50}GB)", value=f"disk:50"),
+        ]
+        disk_select = Select(placeholder="Select disk upgrade...", options=disk_opts, row=2)
+        
+        async def ram_callback(select_interaction):
+            value = ram_select.values[0]
+            amt = int(value.split(':')[1])
+            await self.apply_upgrade(select_interaction, 'ram', amt)
+        
+        async def cpu_callback(select_interaction):
+            value = cpu_select.values[0]
+            amt = int(value.split(':')[1])
+            await self.apply_upgrade(select_interaction, 'cpu', amt)
+        
+        async def disk_callback(select_interaction):
+            value = disk_select.values[0]
+            amt = int(value.split(':')[1])
+            await self.apply_upgrade(select_interaction, 'disk', amt)
+        
+        ram_select.callback = ram_callback
+        cpu_select.callback = cpu_callback
+        disk_select.callback = disk_callback
+        
+        view.add_item(ram_select)
+        view.add_item(cpu_select)
+        view.add_item(disk_select)
+        
+        embed = info_embed("Upgrade VPS", f"```fix\nCurrent Resources:\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```\nSelect upgrade option:")
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    
+    async def apply_upgrade(self, interaction, resource, amount):
+        await interaction.response.defer()
+        
+        status = await get_container_status(self.container)
+        was_running = status == 'running'
+        
+        if was_running:
+            await run_lxc(f"lxc stop {self.container} --force")
+        
+        if resource == 'ram':
+            new_ram = self.data['ram'] + amount
+            await run_lxc(f"lxc config set {self.container} limits.memory {new_ram * 1024}MB")
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE vps SET ram = ? WHERE container_name = ?', (new_ram, self.container))
+            conn.commit()
+            conn.close()
+            self.data['ram'] = new_ram
+        
+        elif resource == 'cpu':
+            new_cpu = self.data['cpu'] + amount
+            await run_lxc(f"lxc config set {self.container} limits.cpu {new_cpu}")
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE vps SET cpu = ? WHERE container_name = ?', (new_cpu, self.container))
+            conn.commit()
+            conn.close()
+            self.data['cpu'] = new_cpu
+        
+        elif resource == 'disk':
+            new_disk = self.data['disk'] + amount
+            await run_lxc(f"lxc config device set {self.container} root size={new_disk}GB")
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE vps SET disk = ? WHERE container_name = ?', (new_disk, self.container))
+            conn.commit()
+            conn.close()
+            self.data['disk'] = new_disk
+        
+        if was_running:
+            await run_lxc(f"lxc start {self.container}")
+        
+        embed = success_embed("VPS Upgraded")
+        embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+        embed.add_field(name="⚙️ New Resources", value=f"```fix\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```", inline=False)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        await self.refresh_callback(interaction)
+    
+    async def invites_callback(self, interaction):
+        await interaction.response.defer()
+        stats = get_user_stats(str(self.ctx.author.id))
+        invites = stats.get('invites', 0)
+        vps_count = len(get_user_vps(str(self.ctx.author.id)))
+        
+        embed = info_embed("Your Invites")
+        embed.add_field(name="📨 Total Invites", value=f"```fix\n{invites}\n```", inline=True)
+        embed.add_field(name="🖥️ VPS Count", value=f"```fix\n{vps_count}\n```", inline=True)
+        
+        # Next plan
+        next_plan = None
+        for plan in FREE_VPS_PLANS['invites']:
+            if invites < plan['invites']:
+                next_plan = plan
+                break
+        
+        if next_plan:
+            embed.add_field(
+                name="🎯 Next Plan",
+                value=f"```fix\n{next_plan['emoji']} {next_plan['name']}\nNeed {next_plan['invites'] - invites} more invites\nRAM: {next_plan['ram']}GB | CPU: {next_plan['cpu']} | Disk: {next_plan['disk']}GB\n```",
+                inline=False
+            )
+        else:
+            embed.add_field(name="🏆 Status", value="```fix\nYou have reached the maximum plan!\n```", inline=False)
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    async def panel_callback(self, interaction):
+        """Install Panel on VPS"""
+        await interaction.response.defer()
+        
+        view = View(timeout=120)
+        ptero_btn = Button(label="🦅 Pterodactyl", style=discord.ButtonStyle.primary, emoji="🦅")
+        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
+        
+        async def ptero_cb(i):
+            await self.install_panel(i, "pterodactyl")
+        
+        async def puffer_cb(i):
+            await self.install_panel(i, "pufferpanel")
+        
+        async def cancel_cb(i):
+            await i.response.edit_message(embed=info_embed("Cancelled"), view=None)
+        
+        ptero_btn.callback = ptero_cb
+        puffer_btn.callback = puffer_cb
+        cancel_btn.callback = cancel_cb
+        
+        view.add_item(ptero_btn)
+        view.add_item(puffer_btn)
+        view.add_item(cancel_btn)
+        
+        embed = info_embed("Install Panel", "Select panel to install on this VPS:")
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    
+    async def install_panel(self, interaction, panel_type):
+        await interaction.response.defer()
+        msg = await interaction.followup.send(embed=info_embed(f"Installing {panel_type.title()}", "Step 1/6: Preparing..."), ephemeral=True)
+        
+        try:
+            admin = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+            email = f"{admin}@{random.choice(['gmail.com', 'outlook.com', 'proton.me'])}"
+            pwd = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%", k=16))
+            
+            if panel_type == "pterodactyl":
+                cmds = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git unzip tar nginx mariadb-server redis-server php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
+                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
+                    "mkdir -p /var/www/pterodactyl",
+                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
+                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
+                    "cd /var/www/pterodactyl && cp .env.example .env",
+                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
+                    "cd /var/www/pterodactyl && php artisan key:generate --force",
+                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
+                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{email}' --username='{admin}' --password='{pwd}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
+                ]
+                for i, cmd in enumerate(cmds, 2):
+                    await msg.edit(embed=info_embed(f"Installing {panel_type.title()}", f"Step {i}/6: Progress..."))
+                    await exec_in_container(self.container, cmd)
+                    await asyncio.sleep(1)
+                out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                ip = out.strip() or SERVER_IP
+                url = f"http://{ip}"
+            else:
+                cmds = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git",
+                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
+                    "apt-get install -y -qq pufferpanel",
+                    "systemctl enable pufferpanel",
+                    "systemctl start pufferpanel",
+                    f"pufferpanel user add --name '{admin}' --email '{email}' --password '{pwd}' --admin"
+                ]
+                for i, cmd in enumerate(cmds, 2):
+                    await msg.edit(embed=info_embed(f"Installing {panel_type.title()}", f"Step {i}/6: Progress..."))
+                    await exec_in_container(self.container, cmd)
+                    await asyncio.sleep(1)
+                out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                ip = out.strip() or SERVER_IP
+                url = f"http://{ip}:8080"
+            
+            add_panel(str(self.ctx.author.id), panel_type, url, admin, pwd, email, self.container, "")
+            
+            embed = success_embed(f"{panel_type.title()} Installed!")
+            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
+            embed.add_field(name="👤 Username", value=f"||`{admin}`||", inline=True)
+            embed.add_field(name="📧 Email", value=f"||`{email}`||", inline=True)
+            embed.add_field(name="🔑 Password", value=f"||`{pwd}`||", inline=False)
+            await msg.edit(embed=embed)
+            
+            try:
+                dm = success_embed(f"🔐 {panel_type.title()} Credentials")
+                dm.add_field(name="URL", value=url)
+                dm.add_field(name="Username", value=admin)
+                dm.add_field(name="Email", value=email)
+                dm.add_field(name="Password", value=pwd)
+                await self.ctx.author.send(embed=dm)
+            except:
+                pass
+                
+        except Exception as e:
+            await msg.edit(embed=error_embed("Installation Failed", f"```diff\n- {str(e)[:500]}\n```"))
+    
+    async def share_callback(self, interaction):
+        """Share VPS with another user"""
+        modal = ShareModal(self.container)
+        await interaction.response.send_modal(modal)
+    
+    async def live_callback(self, interaction):
+        """Toggle live mode"""
+        self.live_mode = not self.live_mode
+        
+        if self.live_mode:
+            self.live_btn.label = "⏹️ Stop Live"
+            self.live_btn.style = discord.ButtonStyle.success
+            await interaction.response.edit_message(view=self)
+            
+            # Start live update task
+            self.live_task = asyncio.create_task(self.live_update_task(interaction))
+        else:
+            self.live_btn.label = "🔴 Live Mode"
+            self.live_btn.style = discord.ButtonStyle.danger
+            await interaction.response.edit_message(view=self)
+            
+            if self.live_task:
+                self.live_task.cancel()
+    
+    async def live_update_task(self, interaction):
+        """Task for live updates"""
+        while self.live_mode:
+            try:
+                embed = await self.get_stats_embed()
+                await interaction.edit_original_response(embed=embed, view=self)
+                await asyncio.sleep(5)
+            except:
+                self.live_mode = False
+                break
+    
+    async def refresh_callback(self, interaction):
+        """Refresh VPS stats"""
+        embed = await self.get_stats_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+
+class CommandModal(Modal):
+    """Modal for running commands"""
+    def __init__(self, container_name):
+        super().__init__(title="Run Command")
+        self.container = container_name
+        self.add_item(InputText(label="Command", placeholder="e.g., apt update, ps aux, df -h", style=discord.InputTextStyle.paragraph))
+        self.add_item(InputText(label="Timeout (seconds)", placeholder="30", required=False, value="30"))
+    
+    async def callback(self, interaction):
+        cmd = self.children[0].value
+        timeout = int(self.children[1].value or "30")
+        
+        await interaction.response.defer()
+        msg = await interaction.followup.send(embed=info_embed("Executing", f"```fix\n$ {cmd}\n```"), ephemeral=True)
+        
+        try:
+            out, err, code = await exec_in_container(self.container, cmd, timeout)
+            output = out if out else err
+            
+            embed = terminal_embed(f"Command Output", f"$ {cmd}\n\n{output[:1900]}")
+            embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
+            await msg.edit(embed=embed)
+        except asyncio.TimeoutError:
+            await msg.edit(embed=error_embed("Timeout", f"Command timed out after {timeout} seconds"))
+        except Exception as e:
+            await msg.edit(embed=error_embed("Error", f"```diff\n- {str(e)}\n```"))
+
+
+class ShareModal(Modal):
+    """Modal for sharing VPS"""
+    def __init__(self, container):
+        super().__init__(title="Share VPS")
+        self.container = container
+        self.add_item(InputText(label="User ID or @mention", placeholder="e.g., 123456789 or @username"))
+        self.add_item(InputText(label="Permissions", placeholder="view, manage, full", required=False, value="view"))
+    
+    async def callback(self, interaction):
+        user_input = self.children[0].value
+        perms = self.children[1].value or "view"
+        
+        # Parse user
+        user_id = user_input
+        if user_input.startswith('<@') and user_input.endswith('>'):
+            user_id = user_input[2:-1]
+            if user_id.startswith('!'):
+                user_id = user_id[1:]
+        
+        try:
+            user = await interaction.client.fetch_user(int(user_id))
+            if share_vps(str(interaction.user.id), str(user.id), self.container):
+                embed = success_embed("VPS Shared")
+                embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                embed.add_field(name="👤 Shared With", value=user.mention, inline=True)
+                embed.add_field(name="🔑 Permissions", value=f"```fix\n{perms}\n```", inline=True)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                
+                # DM the user
+                try:
+                    dm = info_embed("VPS Shared With You")
+                    dm.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```")
+                    dm.add_field(name="👤 Owner", value=interaction.user.mention)
+                    dm.add_field(name="🔑 Permissions", value=f"```fix\n{perms}\n```")
+                    dm.add_field(name="🖥️ Manage", value=f"Use `.manage-shared {interaction.user.id} 1` to manage")
+                    await user.send(embed=dm)
+                except:
+                    pass
+            else:
+                await interaction.response.send_message(embed=error_embed("Failed", "Could not share VPS"), ephemeral=True)
+        except:
+            await interaction.response.send_message(embed=error_embed("Invalid User", "User not found"), ephemeral=True)
 
 # ==================================================================================================
-#  ❌  ERROR HANDLER
+#  📦  PANEL INSTALL VIEW WITH BUTTONS
 # ==================================================================================================
 
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        return
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(embed=error_embed("Missing Argument", f"Usage: `{BOT_PREFIX}{ctx.command.name} {ctx.command.signature}`"))
-    elif isinstance(error, commands.BadArgument):
-        await ctx.send(embed=error_embed("Invalid Argument", "Please check your input."))
-    elif isinstance(error, commands.CheckFailure):
-        await ctx.send(embed=error_embed("Access Denied", "You don't have permission."))
-    elif isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(embed=warning_embed("Cooldown", f"Wait {error.retry_after:.1f}s"))
-    else:
-        logger.error(f"Error: {error}")
-        await ctx.send(embed=error_embed("Error", f"```diff\n- {str(error)[:1900]}\n```"))
+class PanelInstallView(View):
+    def __init__(self, ctx):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        
+        ptero_btn = Button(label="🦅 Pterodactyl Panel", style=discord.ButtonStyle.primary, emoji="🦅")
+        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
+        
+        ptero_btn.callback = lambda i: self.install(i, "pterodactyl")
+        puffer_btn.callback = lambda i: self.install(i, "pufferpanel")
+        cancel_btn.callback = lambda i: i.response.edit_message(embed=info_embed("Cancelled"), view=None)
+        
+        self.add_item(ptero_btn)
+        self.add_item(puffer_btn)
+        self.add_item(cancel_btn)
+    
+    async def install(self, interaction, ptype):
+        if interaction.user.id != self.ctx.author.id:
+            return await interaction.response.send_message("Not for you!", ephemeral=True)
+        await interaction.response.defer()
+        uid = str(self.ctx.author.id)
+        vps = get_user_vps(uid)
+        if not vps:
+            return await interaction.followup.send(embed=no_vps_embed(), ephemeral=True)
+        
+        if len(vps) > 1:
+            opts = []
+            for i, v in enumerate(vps, 1):
+                opts.append(discord.SelectOption(label=f"VPS #{i}: {v['container_name']}", value=v['container_name']))
+            view = View()
+            sel = Select(placeholder="Select VPS...", options=opts)
+            async def sel_cb(si):
+                await self.do_install(si, ptype, sel.values[0])
+            sel.callback = sel_cb
+            view.add_item(sel)
+            await interaction.followup.send(embed=info_embed("Select VPS"), view=view, ephemeral=True)
+        else:
+            await self.do_install(interaction, ptype, vps[0]['container_name'])
+    
+    async def do_install(self, interaction, ptype, container):
+        await interaction.response.defer()
+        msg = await interaction.followup.send(embed=info_embed(f"Installing {ptype.title()}", "Step 1/6: Preparing..."), ephemeral=True)
+        try:
+            admin = ''.join(random.choices(string.ascii_lowercase+string.digits, k=8))
+            email = f"{admin}@{random.choice(['gmail.com','outlook.com','proton.me'])}"
+            pwd = ''.join(random.choices(string.ascii_letters+string.digits+"!@#$%", k=16))
+            
+            if ptype == "pterodactyl":
+                cmds = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git unzip tar nginx mariadb-server redis-server php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
+                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
+                    "mkdir -p /var/www/pterodactyl",
+                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
+                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
+                    "cd /var/www/pterodactyl && cp .env.example .env",
+                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
+                    "cd /var/www/pterodactyl && php artisan key:generate --force",
+                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
+                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{email}' --username='{admin}' --password='{pwd}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
+                ]
+                for i, cmd in enumerate(cmds, 2):
+                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
+                    await exec_in_container(container, cmd)
+                    await asyncio.sleep(1)
+                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                ip = out.strip() or SERVER_IP
+                url = f"http://{ip}"
+            else:
+                cmds = [
+                    "apt-get update -qq",
+                    "apt-get install -y -qq curl wget git",
+                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
+                    "apt-get install -y -qq pufferpanel",
+                    "systemctl enable pufferpanel",
+                    "systemctl start pufferpanel",
+                    f"pufferpanel user add --name '{admin}' --email '{email}' --password '{pwd}' --admin"
+                ]
+                for i, cmd in enumerate(cmds, 2):
+                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
+                    await exec_in_container(container, cmd)
+                    await asyncio.sleep(1)
+                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                ip = out.strip() or SERVER_IP
+                url = f"http://{ip}:8080"
+            
+            add_panel(uid, ptype, url, admin, pwd, email, container, "")
+            embed = success_embed(f"{ptype.title()} Installed!")
+            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
+            embed.add_field(name="👤 Username", value=f"||`{admin}`||", inline=True)
+            embed.add_field(name="📧 Email", value=f"||`{email}`||", inline=True)
+            embed.add_field(name="🔑 Password", value=f"||`{pwd}`||", inline=False)
+            await msg.edit(embed=embed)
+            try:
+                dm = success_embed(f"🔐 {ptype.title()} Credentials")
+                dm.add_field(name="URL", value=url)
+                dm.add_field(name="Username", value=admin)
+                dm.add_field(name="Email", value=email)
+                dm.add_field(name="Password", value=pwd)
+                await self.ctx.author.send(embed=dm)
+            except:
+                pass
+        except Exception as e:
+            await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)[:500]}\n```"))
 
 # ==================================================================================================
-#  🏠  HOME & HELP COMMAND - MAIN MENU
+#  🏠  HELP VIEW WITH SELECT MENU
 # ==================================================================================================
 
 class HelpView(View):
@@ -926,241 +1795,115 @@ class HelpView(View):
         self.ctx = ctx
         self.current_page = 0
         self.pages = [
-            {
-                "title": "🏠 HOME MENU",
-                "desc": f"```glow\nWelcome to {BOT_NAME} - Complete VPS Management Solution\n```",
-                "fields": [
-                    ("👤 USER (14)", "`.help user` - User commands", True),
-                    ("🖥️ VPS (8)", "`.help vps` - VPS management", True),
-                    ("📟 CONSOLE (10)", "`.help console` - Terminal", True),
-                    ("🎮 GAMES (7)", "`.help games` - Game servers", True),
-                    ("🛠️ TOOLS (7)", "`.help tools` - Dev tools", True),
-                    ("🌐 NODES (7)", "`.help nodes` - Cluster", True),
-                    ("👥 SHARE (4)", "`.help share` - Share VPS", True),
-                    ("🔌 PORTS (6)", "`.help ports` - Port forward", True),
-                    ("🌍 IPv4 (6)", "`.help ipv4` - IPv4 management", True),
-                    ("📦 PANELS (6)", "`.help panels` - Game panels", True),
-                    ("🤖 AI (3)", "`.help ai` - AI assistant", True),
-                    ("🐧 OS (70+)", "`.help os` - OS options", True),
-                    ("🛡️ ADMIN (13)", "`.help admin` - Admin", True),
-                    ("👑 OWNER (9)", "`.help owner` - Owner", True),
-                ]
-            },
-            {
-                "title": "👤 USER COMMANDS (14)",
-                "desc": "```fix\nBasic commands for all users\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}help", "Show this menu", False),
-                    (f"{BOT_PREFIX}ping", "Check bot latency", False),
-                    (f"{BOT_PREFIX}uptime", "Show bot uptime", False),
-                    (f"{BOT_PREFIX}bot-info", "Bot information", False),
-                    (f"{BOT_PREFIX}server-info", "Server hardware", False),
-                    (f"{BOT_PREFIX}plans", "Free VPS plans", False),
-                    (f"{BOT_PREFIX}stats", "Your statistics", False),
-                    (f"{BOT_PREFIX}inv", "Your invites", False),
-                    (f"{BOT_PREFIX}invites-top", "Top inviters", False),
-                    (f"{BOT_PREFIX}claim-free", "Claim free VPS", False),
-                    (f"{BOT_PREFIX}my-acc", "Your account", False),
-                    (f"{BOT_PREFIX}gen-acc", "Generate account", False),
-                    (f"{BOT_PREFIX}api-key", "API key", False),
-                    (f"{BOT_PREFIX}userinfo", "User info", False),
-                ]
-            },
-            {
-                "title": "🖥️ VPS COMMANDS (8)",
-                "desc": "```fix\nManage your VPS containers\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}myvps", "List your VPS", False),
-                    (f"{BOT_PREFIX}list", "Detailed VPS list", False),
-                    (f"{BOT_PREFIX}manage", "Interactive manager", False),
-                    (f"{BOT_PREFIX}stats", "VPS statistics", False),
-                    (f"{BOT_PREFIX}logs", "View VPS logs", False),
-                    (f"{BOT_PREFIX}reboot", "Reboot VPS", False),
-                    (f"{BOT_PREFIX}shutdown", "Shutdown VPS", False),
-                    (f"{BOT_PREFIX}rename", "Rename VPS", False),
-                ]
-            },
-            {
-                "title": "📟 CONSOLE COMMANDS (10)",
-                "desc": "```fix\nTerminal access and commands\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}ss", "VPS snapshot", False),
-                    (f"{BOT_PREFIX}console", "Interactive console", False),
-                    (f"{BOT_PREFIX}execute", "Run command", False),
-                    (f"{BOT_PREFIX}ssh-gen", "Generate SSH", False),
-                    (f"{BOT_PREFIX}top", "Process monitor", False),
-                    (f"{BOT_PREFIX}df", "Disk usage", False),
-                    (f"{BOT_PREFIX}free", "Memory usage", False),
-                    (f"{BOT_PREFIX}ps", "Process list", False),
-                    (f"{BOT_PREFIX}who", "Logged users", False),
-                    (f"{BOT_PREFIX}uptime", "Container uptime", False),
-                ]
-            },
-            {
-                "title": "🎮 GAMES COMMANDS (7)",
-                "desc": "```fix\nInstall and manage game servers\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}games", "List games", False),
-                    (f"{BOT_PREFIX}game-info", "Game details", False),
-                    (f"{BOT_PREFIX}install-game", "Install game", False),
-                    (f"{BOT_PREFIX}my-games", "Your games", False),
-                    (f"{BOT_PREFIX}start-game", "Start game", False),
-                    (f"{BOT_PREFIX}stop-game", "Stop game", False),
-                    (f"{BOT_PREFIX}game-stats", "Game stats", False),
-                ]
-            },
-            {
-                "title": "🛠️ TOOLS COMMANDS (7)",
-                "desc": "```fix\nInstall development tools\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}tools", "List tools", False),
-                    (f"{BOT_PREFIX}tool-info", "Tool details", False),
-                    (f"{BOT_PREFIX}install-tool", "Install tool", False),
-                    (f"{BOT_PREFIX}my-tools", "Your tools", False),
-                    (f"{BOT_PREFIX}start-tool", "Start tool", False),
-                    (f"{BOT_PREFIX}stop-tool", "Stop tool", False),
-                    (f"{BOT_PREFIX}tool-port", "Tool port", False),
-                ]
-            },
-            {
-                "title": "🌐 NODE COMMANDS (7)",
-                "desc": "```fix\nManage cluster nodes\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}node", "List nodes", False),
-                    (f"{BOT_PREFIX}node-info", "Node details", False),
-                    (f"{BOT_PREFIX}node-add", "Add node", False),
-                    (f"{BOT_PREFIX}node-remove", "Remove node", False),
-                    (f"{BOT_PREFIX}node-check", "Check node", False),
-                    (f"{BOT_PREFIX}node-stats", "Cluster stats", False),
-                    (f"{BOT_PREFIX}node-connect", "Connect node", False),
-                ]
-            },
-            {
-                "title": "👥 SHARE COMMANDS (4)",
-                "desc": "```fix\nShare VPS with other users\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}share", "Share VPS", False),
-                    (f"{BOT_PREFIX}unshare", "Unshare VPS", False),
-                    (f"{BOT_PREFIX}shared", "List shared", False),
-                    (f"{BOT_PREFIX}manage-shared", "Manage shared", False),
-                ]
-            },
-            {
-                "title": "🔌 PORT COMMANDS (6)",
-                "desc": "```fix\nPort forwarding management\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}ports", "Port help", False),
-                    (f"{BOT_PREFIX}ports add", "Add port", False),
-                    (f"{BOT_PREFIX}ports list", "List ports", False),
-                    (f"{BOT_PREFIX}ports remove", "Remove port", False),
-                    (f"{BOT_PREFIX}ports quota", "Port quota", False),
-                    (f"{BOT_PREFIX}ports check", "Check port", False),
-                ]
-            },
-            {
-                "title": "🌍 IPv4 COMMANDS (6)",
-                "desc": "```fix\nBuy and manage IPv4\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}ipv4", "Your IPv4", False),
-                    (f"{BOT_PREFIX}ipv4-details", "IPv4 details", False),
-                    (f"{BOT_PREFIX}buy-ipv4", "Buy IPv4", False),
-                    (f"{BOT_PREFIX}upi", "UPI info", False),
-                    (f"{BOT_PREFIX}upi-qr", "Generate QR", False),
-                    (f"{BOT_PREFIX}pay", "Payment link", False),
-                ]
-            },
-            {
-                "title": "📦 PANEL COMMANDS (6)",
-                "desc": "```fix\nInstall game panels\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}install-panel", "Install panel", False),
-                    (f"{BOT_PREFIX}panel-info", "Panel info", False),
-                    (f"{BOT_PREFIX}panel-reset", "Reset password", False),
-                    (f"{BOT_PREFIX}panel-delete", "Delete panel", False),
-                    (f"{BOT_PREFIX}panel-tunnel", "Create tunnel", False),
-                    (f"{BOT_PREFIX}panel-status", "Panel status", False),
-                ]
-            },
-            {
-                "title": "🤖 AI COMMANDS (3)",
-                "desc": "```fix\nChat with AI assistant\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}ai", "Chat with AI", False),
-                    (f"{BOT_PREFIX}ai-reset", "Reset history", False),
-                    (f"{BOT_PREFIX}ai-help", "AI help", False),
-                ]
-            },
-            {
-                "title": "🐧 OS COMMANDS",
-                "desc": f"```fix\n70+ Operating Systems available\n```",
-                "fields": [
-                    ("Ubuntu", "15 versions (24.04 down to 10.04)", True),
-                    ("Debian", "15 versions (12 down to 3)", True),
-                    ("Fedora", "10 versions (40 down to 32)", True),
-                    ("Rocky/Alma", "8 versions (9,8,7)", True),
-                    ("CentOS", "8 versions (9 down to 4)", True),
-                    ("Alpine", "8 versions (3.19 down to 3.13)", True),
-                    ("Arch", "3 versions (Arch, Manjaro)", True),
-                    ("OpenSUSE", "6 versions (Tumbleweed, Leap)", True),
-                    ("FreeBSD", "8 versions (14 down to 10)", True),
-                    ("OpenBSD", "5 versions (7.4 down to 7.2)", True),
-                    ("Kali/Gentoo/Void", "10+ versions", True),
-                ]
-            },
+            {"title": "🏠 HOME MENU", "desc": f"```glow\nWelcome to {BOT_NAME}\n```", "fields": [
+                ("👤 USER (14)", ".help user", True), ("🖥️ VPS (8)", ".help vps", True),
+                ("📟 CONSOLE (10)", ".help console", True), ("🎮 GAMES (7)", ".help games", True),
+                ("🛠️ TOOLS (7)", ".help tools", True), ("🌐 NODES (7)", ".help nodes", True),
+                ("👥 SHARE (4)", ".help share", True), ("🔌 PORTS (6)", ".help ports", True),
+                ("🌍 IPv4 (6)", ".help ipv4", True), ("📦 PANELS (6)", ".help panels", True),
+                ("🤖 AI (3)", ".help ai", True), ("🐧 OS (70+)", ".help os", True),
+                ("🛡️ ADMIN (13)", ".help admin", True), ("👑 OWNER (9)", ".help owner", True),
+            ]},
+            {"title": "👤 USER COMMANDS (14)", "desc": "```fix\nBasic commands\n```", "fields": [
+                (f"{BOT_PREFIX}help", "Show menu", False), (f"{BOT_PREFIX}ping", "Latency", False),
+                (f"{BOT_PREFIX}uptime", "Uptime", False), (f"{BOT_PREFIX}bot-info", "Bot info", False),
+                (f"{BOT_PREFIX}server-info", "Server info", False), (f"{BOT_PREFIX}plans", "Free plans", False),
+                (f"{BOT_PREFIX}stats", "Your stats", False), (f"{BOT_PREFIX}inv", "Your invites", False),
+                (f"{BOT_PREFIX}invites-top", "Top inviters", False), (f"{BOT_PREFIX}claim-free", "Claim VPS", False),
+                (f"{BOT_PREFIX}my-acc", "Your account", False), (f"{BOT_PREFIX}gen-acc", "Generate account", False),
+                (f"{BOT_PREFIX}api-key", "API key", False), (f"{BOT_PREFIX}userinfo", "User info", False),
+            ]},
+            {"title": "🖥️ VPS COMMANDS (8)", "desc": "```fix\nManage your VPS\n```", "fields": [
+                (f"{BOT_PREFIX}myvps", "List VPS", False), (f"{BOT_PREFIX}list", "Detailed list", False),
+                (f"{BOT_PREFIX}manage [container]", "Interactive manager with buttons", False),
+                (f"{BOT_PREFIX}stats [container]", "VPS statistics", False), (f"{BOT_PREFIX}logs [container]", "View logs", False),
+                (f"{BOT_PREFIX}reboot <container>", "Reboot VPS", False), (f"{BOT_PREFIX}shutdown <container>", "Shutdown VPS", False),
+                (f"{BOT_PREFIX}rename <old> <new>", "Rename VPS", False),
+            ]},
+            {"title": "📟 CONSOLE COMMANDS (10)", "desc": "```fix\nTerminal access\n```", "fields": [
+                (f"{BOT_PREFIX}ss [container]", "Snapshot", False), (f"{BOT_PREFIX}console <container>", "Interactive console", False),
+                (f"{BOT_PREFIX}execute <container> <cmd>", "Run command", False), (f"{BOT_PREFIX}ssh-gen <container>", "Generate SSH", False),
+                (f"{BOT_PREFIX}top <container>", "Process monitor", False), (f"{BOT_PREFIX}df <container>", "Disk usage", False),
+                (f"{BOT_PREFIX}free <container>", "Memory usage", False), (f"{BOT_PREFIX}ps <container>", "Process list", False),
+                (f"{BOT_PREFIX}who <container>", "Logged users", False), (f"{BOT_PREFIX}uptime <container>", "Uptime", False),
+            ]},
+            {"title": "🎮 GAMES COMMANDS (7)", "desc": "```fix\nGame servers\n```", "fields": [
+                (f"{BOT_PREFIX}games", "List games", False), (f"{BOT_PREFIX}game-info <game>", "Game details", False),
+                (f"{BOT_PREFIX}install-game <container> <game>", "Install game", False),
+                (f"{BOT_PREFIX}my-games [container]", "Your games", False), (f"{BOT_PREFIX}start-game <container> <game>", "Start game", False),
+                (f"{BOT_PREFIX}stop-game <container> <game>", "Stop game", False), (f"{BOT_PREFIX}game-stats <container> <game>", "Game stats", False),
+            ]},
+            {"title": "🛠️ TOOLS COMMANDS (7)", "desc": "```fix\nDevelopment tools\n```", "fields": [
+                (f"{BOT_PREFIX}tools", "List tools", False), (f"{BOT_PREFIX}tool-info <tool>", "Tool details", False),
+                (f"{BOT_PREFIX}install-tool <container> <tool>", "Install tool", False),
+                (f"{BOT_PREFIX}my-tools [container]", "Your tools", False), (f"{BOT_PREFIX}start-tool <container> <tool>", "Start tool", False),
+                (f"{BOT_PREFIX}stop-tool <container> <tool>", "Stop tool", False), (f"{BOT_PREFIX}tool-port <container> <tool>", "Tool port", False),
+            ]},
+            {"title": "🌐 NODE COMMANDS (7)", "desc": "```fix\nCluster management\n```", "fields": [
+                (f"{BOT_PREFIX}node", "List nodes", False), (f"{BOT_PREFIX}node-info [name]", "Node details", False),
+                (f"{BOT_PREFIX}node-add <name> <host> <user> <pass>", "Add node", False),
+                (f"{BOT_PREFIX}node-remove <name>", "Remove node", False), (f"{BOT_PREFIX}node-check <name>", "Check node", False),
+                (f"{BOT_PREFIX}node-stats", "Cluster stats", False), (f"{BOT_PREFIX}node-connect <host> <user> [pass]", "Connect node", False),
+            ]},
+            {"title": "👥 SHARE COMMANDS (4)", "desc": "```fix\nShare VPS with users\n```", "fields": [
+                (f"{BOT_PREFIX}share <@user> <vps_num>", "Share VPS", False), (f"{BOT_PREFIX}unshare <@user> <vps_num>", "Unshare VPS", False),
+                (f"{BOT_PREFIX}shared", "List shared VPS", False), (f"{BOT_PREFIX}manage-shared <owner> <num>", "Manage shared VPS", False),
+            ]},
+            {"title": "🔌 PORT COMMANDS (6)", "desc": "```fix\nPort forwarding\n```", "fields": [
+                (f"{BOT_PREFIX}ports", "Port help", False), (f"{BOT_PREFIX}ports add <num> <port> [tcp/udp]", "Add port", False),
+                (f"{BOT_PREFIX}ports list", "List ports", False), (f"{BOT_PREFIX}ports remove <id>", "Remove port", False),
+                (f"{BOT_PREFIX}ports quota", "Port quota", False), (f"{BOT_PREFIX}ports check <port>", "Check port", False),
+            ]},
+            {"title": "🌍 IPv4 COMMANDS (6)", "desc": "```fix\nIPv4 management\n```", "fields": [
+                (f"{BOT_PREFIX}ipv4", "Your IPv4", False), (f"{BOT_PREFIX}ipv4-details <container>", "IPv4 details", False),
+                (f"{BOT_PREFIX}buy-ipv4", "Buy IPv4 with UPI QR", False), (f"{BOT_PREFIX}upi", "UPI info", False),
+                (f"{BOT_PREFIX}upi-qr [amount] [note]", "Generate QR", False), (f"{BOT_PREFIX}pay <amount> [note]", "Payment link", False),
+            ]},
+            {"title": "📦 PANEL COMMANDS (6)", "desc": "```fix\nGame panels\n```", "fields": [
+                (f"{BOT_PREFIX}install-panel", "Install with buttons", False), (f"{BOT_PREFIX}panel-info", "Panel info", False),
+                (f"{BOT_PREFIX}panel-reset [type]", "Reset password", False), (f"{BOT_PREFIX}panel-delete [type]", "Delete panel", False),
+                (f"{BOT_PREFIX}panel-tunnel [container] [port]", "Create tunnel", False), (f"{BOT_PREFIX}panel-status [container]", "Panel status", False),
+            ]},
+            {"title": "🤖 AI COMMANDS (3)", "desc": "```fix\nAI assistant\n```", "fields": [
+                (f"{BOT_PREFIX}ai <message>", "Chat with AI", False), (f"{BOT_PREFIX}ai-reset", "Reset history", False),
+                (f"{BOT_PREFIX}ai-help <topic>", "AI help", False),
+            ]},
+            {"title": "🐧 OS COMMANDS", "desc": f"```fix\n70+ Operating Systems\n```", "fields": [
+                ("Ubuntu", "15 versions", True), ("Debian", "14 versions", True), ("Fedora", "10 versions", True),
+                ("Rocky/Alma", "6 versions", True), ("CentOS", "6 versions", True), ("Alpine", "8 versions", True),
+                ("Arch/Manjaro", "3 versions", True), ("OpenSUSE", "4 versions", True), ("FreeBSD", "5 versions", True),
+                ("OpenBSD", "3 versions", True), ("Kali/Gentoo/Void", "6+ versions", True),
+            ]},
         ]
         
         if is_admin(str(ctx.author.id)):
-            self.pages.append({
-                "title": "🛡️ ADMIN COMMANDS (13)",
-                "desc": "```fix\nAdministrator commands\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}create", "Create VPS", False),
-                    (f"{BOT_PREFIX}delete", "Delete VPS", False),
-                    (f"{BOT_PREFIX}suspend", "Suspend VPS", False),
-                    (f"{BOT_PREFIX}unsuspend", "Unsuspend VPS", False),
-                    (f"{BOT_PREFIX}add-resources", "Add resources", False),
-                    (f"{BOT_PREFIX}list-all", "List all VPS", False),
-                    (f"{BOT_PREFIX}add-inv", "Add invites", False),
-                    (f"{BOT_PREFIX}remove-inv", "Remove invites", False),
-                    (f"{BOT_PREFIX}ports-add", "Add port slots", False),
-                    (f"{BOT_PREFIX}serverstats", "Server stats", False),
-                    (f"{BOT_PREFIX}admin-add-ipv4", "Assign IPv4", False),
-                    (f"{BOT_PREFIX}admin-rm-ipv4", "Remove IPv4", False),
-                    (f"{BOT_PREFIX}admin-pending-ipv4", "Pending IPv4", False),
-                ]
-            })
+            self.pages.append({"title": "🛡️ ADMIN COMMANDS (13)", "desc": "```fix\nAdmin commands\n```", "fields": [
+                (f"{BOT_PREFIX}create <ram> <cpu> <disk> @user", "Create VPS", False),
+                (f"{BOT_PREFIX}delete @user <num> [reason]", "Delete VPS", False), (f"{BOT_PREFIX}suspend <container> [reason]", "Suspend VPS", False),
+                (f"{BOT_PREFIX}unsuspend <container>", "Unsuspend VPS", False), (f"{BOT_PREFIX}add-resources <container> [ram] [cpu] [disk]", "Add resources", False),
+                (f"{BOT_PREFIX}list-all", "List all VPS", False), (f"{BOT_PREFIX}add-inv @user <amount>", "Add invites", False),
+                (f"{BOT_PREFIX}remove-inv @user <amount>", "Remove invites", False), (f"{BOT_PREFIX}ports-add @user <amount>", "Add port slots", False),
+                (f"{BOT_PREFIX}serverstats", "Server stats", False), (f"{BOT_PREFIX}admin-add-ipv4 @user <container>", "Assign IPv4", False),
+                (f"{BOT_PREFIX}admin-rm-ipv4 @user [container]", "Remove IPv4", False), (f"{BOT_PREFIX}admin-pending-ipv4", "Pending IPv4", False),
+            ]})
         
         if str(ctx.author.id) in [str(a) for a in MAIN_ADMIN_IDS]:
-            self.pages.append({
-                "title": "👑 OWNER COMMANDS (9)",
-                "desc": "```fix\nMain owner commands\n```",
-                "fields": [
-                    (f"{BOT_PREFIX}admin-add", "Add admin", False),
-                    (f"{BOT_PREFIX}admin-remove", "Remove admin", False),
-                    (f"{BOT_PREFIX}admin-list", "List admins", False),
-                    (f"{BOT_PREFIX}maintenance", "Maintenance mode", False),
-                    (f"{BOT_PREFIX}purge-all", "Purge all", False),
-                    (f"{BOT_PREFIX}protect", "Protect VPS", False),
-                    (f"{BOT_PREFIX}unprotect", "Unprotect VPS", False),
-                    (f"{BOT_PREFIX}backup-db", "Backup DB", False),
-                    (f"{BOT_PREFIX}restore-db", "Restore DB", False),
-                ]
-            })
+            self.pages.append({"title": "👑 OWNER COMMANDS (9)", "desc": "```fix\nOwner commands\n```", "fields": [
+                (f"{BOT_PREFIX}admin-add @user", "Add admin", False), (f"{BOT_PREFIX}admin-remove @user", "Remove admin", False),
+                (f"{BOT_PREFIX}admin-list", "List admins", False), (f"{BOT_PREFIX}maintenance <on/off>", "Maintenance mode", False),
+                (f"{BOT_PREFIX}purge-all", "Purge all unprotected", False), (f"{BOT_PREFIX}protect @user [num]", "Protect VPS", False),
+                (f"{BOT_PREFIX}unprotect @user [num]", "Unprotect VPS", False), (f"{BOT_PREFIX}backup-db", "Backup database", False),
+                (f"{BOT_PREFIX}restore-db <file>", "Restore database", False),
+            ]})
         
         self.update_embed()
     
     def update_embed(self):
         page = self.pages[self.current_page]
-        embed = discord.Embed(
-            title=glow_text(f"{page['title']}"),
-            description=page['desc'],
-            color=COLORS['primary']
-        )
+        embed = discord.Embed(title=glow_text(page['title']), description=page['desc'], color=COLORS['primary'])
         embed.set_thumbnail(url=THUMBNAIL_URL)
-        
         for name, value, inline in page["fields"]:
             embed.add_field(name=f"**{name}**", value=value, inline=inline)
-        
         embed.set_footer(text=f"⚡ Page {self.current_page + 1}/{len(self.pages)} • Use dropdown below ⚡")
         self.embed = embed
     
@@ -1192,17 +1935,88 @@ class HelpView(View):
         self.update_embed()
         await interaction.response.edit_message(embed=self.embed, view=self)
 
+# ==================================================================================================
+#  ✅  ON READY
+# ==================================================================================================
+
+@bot.event
+async def on_ready():
+    await bot.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.watching,
+            name=f"{BOT_PREFIX}help | {BOT_NAME}"
+        )
+    )
+    logger.info(f"✅ Bot is ready: {bot.user}")
+    update_local_node_stats()
+    
+    total_vps = len(get_all_vps())
+    nodes = len(load_nodes()['nodes'])
+    
+    print(f"""
+╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                               ║
+║                      ███████╗██╗   ██╗███╗   ███╗███████╗    ██████╗  ██████╗ ████████╗      ║
+║                      ██╔════╝██║   ██║████╗ ████║██╔════╝    ██╔══██╗██╔═══██╗╚══██╔══╝      ║
+║                      ███████╗██║   ██║██╔████╔██║█████╗      ██████╔╝██║   ██║   ██║         ║
+║                      ╚════██║╚██╗ ██╔╝██║╚██╔╝██║██╔══╝      ██╔══██╗██║   ██║   ██║         ║
+║                      ███████║ ╚████╔╝ ██║ ╚═╝ ██║███████╗    ██████╔╝╚██████╔╝   ██║         ║
+║                      ╚══════╝  ╚═══╝  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝         ║
+║                                                                                               ║
+║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
+║                                                                                               ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                               ║
+║  📍 Bot Status:    🟢 ONLINE                                                                 ║
+║  🤖 Bot Name:      {bot.user}                                         ║
+║  🔧 Prefix:        {BOT_PREFIX}                                                               ║
+║  🔐 License:       {'✅ VERIFIED' if LICENSE_VERIFIED else '❌ NOT VERIFIED'}                          ║
+║  🌐 Server IP:     {SERVER_IP}                                                           ║
+║                                                                                               ║
+║  🖥️ Total VPS:     {total_vps}                                                               ║
+║  🌍 Total Nodes:   {nodes} (auto-detected)                                                    ║
+║  🐧 Total OS:      {len(OS_OPTIONS)}                                                          ║
+║  🎮 Total Games:   {len(GAMES_LIST)}                                                          ║
+║  🛠️ Total Tools:   {len(TOOLS_LIST)}                                                          ║
+║                                                                                               ║
+║  📊 TOTAL COMMANDS: 92+ │ ✅ BUTTONS │ ✅ SELECT MENUS │ ✅ NODE.JSON │ ✅ EVERYTHING         ║
+║                                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
+    """)
+
+# ==================================================================================================
+#  ❌  ERROR HANDLER
+# ==================================================================================================
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(embed=error_embed("Missing Argument", f"Usage: `{BOT_PREFIX}{ctx.command.name} {ctx.command.signature}`"))
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(embed=error_embed("Invalid Argument", "Please check your input."))
+    elif isinstance(error, commands.CheckFailure):
+        await ctx.send(embed=error_embed("Access Denied", "You don't have permission."))
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(embed=warning_embed("Cooldown", f"Wait {error.retry_after:.1f}s"))
+    else:
+        logger.error(f"Error: {error}")
+        await ctx.send(embed=error_embed("Error", f"```diff\n- {str(error)[:1900]}\n```"))
+
+# ==================================================================================================
+#  🏠  HELP COMMAND
+# ==================================================================================================
+
 @bot.command(name="help")
 async def help_command(ctx):
     if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
-        await ctx.send(embed=error_embed("License Required", "Please verify license first."))
-        return
-    
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
     view = HelpView(ctx)
     await ctx.send(embed=view.embed, view=view)
 
 # ==================================================================================================
-#  👤  USER COMMANDS (14)
+#  👤  USER COMMANDS
 # ==================================================================================================
 
 @bot.command(name="ping")
@@ -1210,33 +2024,26 @@ async def ping(ctx):
     start = time.time()
     msg = await ctx.send(embed=info_embed("Pinging..."))
     end = time.time()
-    api = round(bot.latency * 1000)
-    resp = round((end - start) * 1000)
     embed = success_embed("Pong! 🏓")
-    embed.add_field(name="📡 API", value=f"```fix\n{api}ms\n```", inline=True)
-    embed.add_field(name="⏱️ Response", value=f"```fix\n{resp}ms\n```", inline=True)
+    embed.add_field(name="📡 API", value=f"```fix\n{round(bot.latency*1000)}ms\n```", inline=True)
+    embed.add_field(name="⏱️ Response", value=f"```fix\n{round((end-start)*1000)}ms\n```", inline=True)
     await msg.edit(embed=embed)
 
 @bot.command(name="uptime")
 async def uptime(ctx):
     up = datetime.utcnow() - bot.start_time
-    d = up.days
-    h, r = divmod(up.seconds, 3600)
-    m, s = divmod(r, 60)
-    await ctx.send(embed=info_embed("Uptime", f"```fix\n{d}d {h}h {m}m {s}s\n```"))
+    await ctx.send(embed=info_embed("Uptime", f"```fix\n{up.days}d {up.seconds//3600}h {(up.seconds%3600)//60}m {up.seconds%60}s\n```"))
 
 @bot.command(name="bot-info")
 async def bot_info(ctx):
-    all_vps = get_all_vps()
     embed = info_embed("Bot Information")
     embed.add_field(name="📦 Version", value="```fix\n5.0.0\n```", inline=True)
     embed.add_field(name="👑 Author", value=f"```fix\n{BOT_AUTHOR}\n```", inline=True)
-    embed.add_field(name="🖥️ VPS", value=f"```fix\n{len(all_vps)}\n```", inline=True)
+    embed.add_field(name="🖥️ VPS", value=f"```fix\n{len(get_all_vps())}\n```", inline=True)
     embed.add_field(name="🐧 OS", value=f"```fix\n{len(OS_OPTIONS)}\n```", inline=True)
     embed.add_field(name="🎮 Games", value=f"```fix\n{len(GAMES_LIST)}\n```", inline=True)
     embed.add_field(name="🛠️ Tools", value=f"```fix\n{len(TOOLS_LIST)}\n```", inline=True)
     embed.add_field(name="🌐 IP", value=f"```fix\n{SERVER_IP}\n```", inline=True)
-    embed.add_field(name="🔌 MAC", value=f"```fix\n{MAC_ADDRESS[:17]}\n```", inline=True)
     await ctx.send(embed=embed)
 
 @bot.command(name="server-info")
@@ -1256,15 +2063,13 @@ async def server_info(ctx):
 async def plans(ctx):
     embed = info_embed("Free VPS Plans")
     for p in FREE_VPS_PLANS['invites']:
-        text = f"```fix\nRAM: {p['ram']}GB | CPU: {p['cpu']} | Disk: {p['disk']}GB\nInvites: {p['invites']}\n```"
-        embed.add_field(name=f"{p['emoji']} {p['name']}", value=text, inline=True)
+        embed.add_field(name=f"{p['emoji']} {p['name']}", value=f"```fix\nRAM: {p['ram']}GB | CPU: {p['cpu']} | Disk: {p['disk']}GB\nInvites: {p['invites']}\n```", inline=True)
     await ctx.send(embed=embed)
 
 @bot.command(name="stats")
 async def stats(ctx):
-    uid = str(ctx.author.id)
-    s = get_user_stats(uid)
-    v = get_user_vps(uid)
+    s = get_user_stats(str(ctx.author.id))
+    v = get_user_vps(str(ctx.author.id))
     embed = info_embed(f"Stats for {ctx.author.display_name}")
     embed.add_field(name="📨 Invites", value=f"```fix\n{s.get('invites',0)}\n```", inline=True)
     embed.add_field(name="🖥️ VPS", value=f"```fix\n{len(v)}\n```", inline=True)
@@ -1274,7 +2079,7 @@ async def stats(ctx):
 @bot.command(name="inv")
 async def inv(ctx):
     s = get_user_stats(str(ctx.author.id))
-    await ctx.send(embed=info_embed("Your Invites", f"```fix\n{ s.get('invites',0) }\n```"))
+    await ctx.send(embed=info_embed("Your Invites", f"```fix\n{s.get('invites',0)}\n```"))
 
 @bot.command(name="invites-top")
 async def invites_top(ctx, lim: int = 10):
@@ -1284,7 +2089,7 @@ async def invites_top(ctx, lim: int = 10):
     rows = cur.fetchall()
     conn.close()
     if not rows:
-        return await ctx.send(embed=info_embed("Top Inviters", "No invites yet."))
+        return await ctx.send(embed=info_embed("No invites"))
     embed = info_embed(f"Top {min(lim,len(rows))} Inviters")
     medals = ["🥇","🥈","🥉"]
     for i, r in enumerate(rows,1):
@@ -1292,7 +2097,7 @@ async def invites_top(ctx, lim: int = 10):
             u = await bot.fetch_user(int(r['user_id']))
             name = u.name
         except:
-            name = f"Unknown"
+            name = "Unknown"
         m = medals[i-1] if i<=3 else f"{i}."
         embed.add_field(name=f"{m} {name}", value=f"```fix\nInvites: {r['invites']}\n```", inline=False)
     await ctx.send(embed=embed)
@@ -1312,51 +2117,44 @@ async def claim_free(ctx):
     if not plan:
         return await ctx.send(embed=error_embed("No Plan", f"You have {inv} invites. Need at least 5."))
     
-    # OS Selection View
-    view = View()
     opts = []
     for o in OS_OPTIONS[:25]:
         opts.append(discord.SelectOption(label=o['label'][:100], value=o['value'], description=o['desc'][:100]))
-    select = Select(placeholder="Select OS...", options=opts)
-    
-    async def select_cb(i):
+    view = View()
+    sel = Select(placeholder="Select OS...", options=opts)
+    async def sel_cb(i):
         if i.user.id != ctx.author.id:
-            await i.response.send_message("Not for you!", ephemeral=True)
-            return
-        os_val = select.values[0]
-        # Create VPS
+            return await i.response.send_message("Not for you!", ephemeral=True)
+        osv = sel.values[0]
         name = f"svm5-{uid[:6]}-{random.randint(1000,9999)}"
-        msg = await i.followup.send(embed=info_embed("Creating VPS", "Step 1/4: Initializing..."), ephemeral=True)
+        msg = await i.followup.send(embed=info_embed("Creating VPS", "Step 1/4..."), ephemeral=True)
         try:
             ram_mb = plan['ram'] * 1024
-            await run_lxc(f"lxc init {os_val} {name} -s {DEFAULT_STORAGE_POOL}")
-            await msg.edit(embed=info_embed("Creating VPS", "Step 2/4: Configuring..."))
+            await run_lxc(f"lxc init {osv} {name} -s {DEFAULT_STORAGE_POOL}")
+            await msg.edit(embed=info_embed("Creating VPS", "Step 2/4..."))
             await run_lxc(f"lxc config set {name} limits.memory {ram_mb}MB")
             await run_lxc(f"lxc config set {name} limits.cpu {plan['cpu']}")
             await run_lxc(f"lxc config device set {name} root size={plan['disk']}GB")
-            await msg.edit(embed=info_embed("Creating VPS", "Step 3/4: Starting..."))
+            await msg.edit(embed=info_embed("Creating VPS", "Step 3/4..."))
             await run_lxc(f"lxc start {name}")
             await asyncio.sleep(3)
-            await msg.edit(embed=info_embed("Creating VPS", "Step 4/4: Finalizing..."))
-            add_vps(uid, name, plan['ram'], plan['cpu'], plan['disk'], os_val, plan['name'])
+            await msg.edit(embed=info_embed("Creating VPS", "Step 4/4..."))
+            add_vps(uid, name, plan['ram'], plan['cpu'], plan['disk'], osv, plan['name'])
             update_user_stats(uid, -plan['invites'], 1)
             embed = success_embed("VPS Created!")
             embed.add_field(name="📦 Container", value=f"```fix\n{name}\n```", inline=True)
-            embed.add_field(name="📋 Plan", value=f"```fix\n{plan['name']}\n```", inline=True)
             embed.add_field(name="⚙️ Resources", value=f"```fix\n{plan['ram']}GB RAM / {plan['cpu']} CPU / {plan['disk']}GB Disk\n```", inline=False)
             await msg.edit(embed=embed)
         except Exception as e:
             await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
-    
-    select.callback = select_cb
-    view.add_item(select)
+    sel.callback = sel_cb
+    view.add_item(sel)
     await ctx.send(embed=info_embed("Claim Free VPS", f"**{plan['emoji']} {plan['name']}**\nRAM: {plan['ram']}GB | CPU: {plan['cpu']} | Disk: {plan['disk']}GB\n\nSelect OS:"), view=view)
 
 @bot.command(name="gen-acc")
 async def gen_acc(ctx):
-    import random, string
-    adj = ["cool","fast","dark","epic","blue","swift","neon","alpha","delta","super"]
-    noun = ["wolf","tiger","storm","byte","nova","blade","fox","raven","hawk","lion"]
+    adj = ["cool","fast","dark","epic","blue","swift","neon","alpha","delta"]
+    noun = ["wolf","tiger","storm","byte","nova","blade","fox","raven","hawk"]
     name = f"{random.choice(adj)}{random.choice(noun)}{random.randint(10,999)}"
     email = f"{name}@{random.choice(['gmail.com','yahoo.com','outlook.com'])}"
     pwd = ''.join(random.choices(string.ascii_letters+string.digits+"!@#$%", k=16))
@@ -1429,7 +2227,7 @@ async def userinfo(ctx, user: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ==================================================================================================
-#  🖥️  VPS COMMANDS (8)
+#  🖥️  VPS COMMANDS
 # ==================================================================================================
 
 @bot.command(name="myvps")
@@ -1466,20 +2264,9 @@ async def manage(ctx, container: str = None):
     embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
     embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
     
-    view = View()
-    async def start_cb(i):
-        await run_lxc(f"lxc start {container}")
-        await i.response.send_message(f"Started {container}", ephemeral=True)
-    async def stop_cb(i):
-        await run_lxc(f"lxc stop {container}")
-        await i.response.send_message(f"Stopped {container}", ephemeral=True)
-    async def restart_cb(i):
-        await run_lxc(f"lxc restart {container}")
-        await i.response.send_message(f"Restarted {container}", ephemeral=True)
-    view.add_item(Button(label="▶️ Start", style=discord.ButtonStyle.success, callback=start_cb))
-    view.add_item(Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, callback=stop_cb))
-    view.add_item(Button(label="🔄 Restart", style=discord.ButtonStyle.primary, callback=restart_cb))
-    await ctx.send(embed=embed, view=view)
+    view = VPSManageView(ctx, container)
+    msg = await ctx.send(embed=embed, view=view)
+    view.message = msg
 
 @bot.command(name="stats")
 async def vps_stats(ctx, container: str = None):
@@ -1491,11 +2278,16 @@ async def vps_stats(ctx, container: str = None):
         container = vps[0]['container_name']
     elif not any(v['container_name']==container for v in get_user_vps(uid)):
         return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
     stats = await get_container_stats(container)
     embed = info_embed(f"Stats: {container}")
-    for k,v in stats.items():
-        if k not in ['status','cpu','memory','disk','ipv4','mac']: continue
-        embed.add_field(name=k.upper(), value=f"```fix\n{v}\n```", inline=True)
+    embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
+    embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
+    embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
+    embed.add_field(name="💽 Disk", value=f"```fix\n{stats['disk']}\n```", inline=True)
+    embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
+    embed.add_field(name="🔌 MAC", value=f"```fix\n{stats['mac']}\n```", inline=True)
+    embed.add_field(name="⏱️ Uptime", value=f"```fix\n{stats['uptime']}\n```", inline=True)
     await ctx.send(embed=embed)
 
 @bot.command(name="logs")
@@ -1508,6 +2300,7 @@ async def logs(ctx, container: str = None, lines: int = 50):
         container = vps[0]['container_name']
     elif not any(v['container_name']==container for v in get_user_vps(uid)):
         return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
     lines = min(lines,200)
     out,_,_ = await exec_in_container(container, f"journalctl -n {lines} --no-pager 2>/dev/null || dmesg | tail -{lines}")
     embed = terminal_embed(f"Logs: {container}", out[:1900])
@@ -1542,40 +2335,24 @@ async def rename(ctx, old: str, new: str):
         return await ctx.send(embed=error_embed("Invalid Name", "Use letters, numbers, hyphens only."))
     await ctx.send(embed=info_embed("Renaming", f"```fix\n{old} → {new}\n```"))
     status = await get_container_status(old)
-    was_running = status == 'running'
-    if was_running:
+    was = status == 'running'
+    if was:
         await run_lxc(f"lxc stop {old}")
         await asyncio.sleep(2)
     await run_lxc(f"lxc move {old} {new}")
-    if was_running:
+    if was:
         await run_lxc(f"lxc start {new}")
     conn = get_db()
     cur = conn.cursor()
-    for table in ['vps','shared_vps','installed_games','installed_tools','ipv4','port_forwards','panels']:
-        cur.execute(f'UPDATE {table} SET container_name = ? WHERE container_name = ?', (new, old))
+    for t in ['vps','shared_vps','installed_games','installed_tools','ipv4','port_forwards','panels']:
+        cur.execute(f'UPDATE {t} SET container_name = ? WHERE container_name = ?', (new, old))
     conn.commit()
     conn.close()
     await ctx.send(embed=success_embed("Renamed", f"```fix\n{old} → {new}\n```"))
 
 # ==================================================================================================
-#  📟  CONSOLE COMMANDS (10)
+#  📟  CONSOLE COMMANDS
 # ==================================================================================================
-
-class CmdModal(Modal):
-    def __init__(self, container):
-        super().__init__(title="Run Command")
-        self.container = container
-        self.add_item(InputText(label="Command", placeholder="e.g., apt update", style=discord.InputTextStyle.paragraph))
-        self.add_item(InputText(label="Timeout", placeholder="30", required=False, value="30"))
-    async def callback(self, interaction):
-        cmd = self.children[0].value
-        to = int(self.children[1].value or "30")
-        await interaction.response.defer()
-        msg = await interaction.followup.send(embed=info_embed("Executing", f"```fix\n$ {cmd}\n```"), ephemeral=True)
-        out,err,code = await exec_in_container(self.container, cmd, to)
-        embed = discord.Embed(title=terminal_text("[ Output ]"), description=f"```bash\n$ {cmd}\n\n{(out or err)[:1900]}\n```", color=0x00ff00 if code==0 else 0xff0000)
-        embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
-        await msg.edit(embed=embed)
 
 @bot.command(name="ss")
 async def ss(ctx, container: str = None):
@@ -1605,13 +2382,16 @@ async def console(ctx, container: str, *, cmd: str = None):
     if not cmd:
         view = View()
         btn = Button(label="⚡ Run Command", style=discord.ButtonStyle.primary)
-        async def btn_cb(i): await i.response.send_modal(CmdModal(container))
+        async def btn_cb(i):
+            modal = ConsoleModal(container)
+            await i.response.send_modal(modal)
         btn.callback = btn_cb
         view.add_item(btn)
         return await ctx.send(embed=info_embed(f"Console: {container}", "Click button to run command"), view=view)
+    
     msg = await ctx.send(embed=info_embed("Executing", f"```fix\n$ {cmd}\n```"))
-    out,err,code = await exec_in_container(container, cmd)
-    embed = discord.Embed(title=terminal_text("[ Output ]"), description=f"```bash\n$ {cmd}\n\n{(out or err)[:1900]}\n```", color=0x00ff00 if code==0 else 0xff0000)
+    out, err, code = await exec_in_container(container, cmd)
+    embed = terminal_embed(f"Output", f"$ {cmd}\n\n{(out or err)[:1900]}")
     embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
     await msg.edit(embed=embed)
 
@@ -1625,18 +2405,17 @@ async def ssh_gen(ctx, container: str):
     if not any(v['container_name']==container for v in get_user_vps(uid)):
         return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
     msg = await ctx.send(embed=info_embed("Generating SSH", f"```fix\n{container}\n```"))
-    await exec_in_container(container, "apt-get update -qq")
-    await exec_in_container(container, "apt-get install -y -qq tmate")
+    await exec_in_container(container, "apt-get update -qq && apt-get install -y -qq tmate")
     sess = f"svm5-{random.randint(1000,9999)}"
     await exec_in_container(container, f"tmate -S /tmp/{sess}.sock new-session -d")
     await asyncio.sleep(5)
-    out,_,_ = await exec_in_container(container, f"tmate -S /tmp/{sess}.sock display -p '#{{tmate_ssh}}'")
+    out, _, _ = await exec_in_container(container, f"tmate -S /tmp/{sess}.sock display -p '#{{tmate_ssh}}'")
     url = out.strip()
     if url:
         try:
             dm = success_embed("SSH Access")
             dm.add_field(name="Container", value=f"```fix\n{container}\n```")
-            dm.add_field(name="SSH Command", value=f"```bash\n{url}\n```")
+            dm.add_field(name="Command", value=f"```bash\n{url}\n```")
             await ctx.author.send(embed=dm)
             await msg.edit(embed=success_embed("SSH Generated", "Check your DMs!"))
         except:
@@ -1718,7 +2497,7 @@ async def uptime_cmd(ctx, container: str = None):
     await ctx.send(embed=info_embed(f"Uptime: {container}", f"```fix\n{out}\n```"))
 
 # ==================================================================================================
-#  🎮  GAMES COMMANDS (7)
+#  🎮  GAMES COMMANDS
 # ==================================================================================================
 
 @bot.command(name="games")
@@ -1750,7 +2529,7 @@ async def install_game(ctx, container: str, *, game: str):
     msg = await ctx.send(embed=info_embed("Installing", f"```fix\n{g['name']} on {container}\n```"))
     await exec_in_container(container, "which docker || curl -fsSL https://get.docker.com | bash")
     cmd = f"docker run -d --name {g['name'].lower().replace(' ','-')} -p {g['port']}:{g['port']} {g['docker']}"
-    out,err,code = await exec_in_container(container, cmd)
+    out, err, code = await exec_in_container(container, cmd)
     if code == 0:
         add_game_install(uid, container, g['name'], g['port'])
         embed = success_embed("Game Installed")
@@ -1804,7 +2583,7 @@ async def game_stats(ctx, container: str, *, game: str):
     await ctx.send(embed=embed)
 
 # ==================================================================================================
-#  🛠️  TOOLS COMMANDS (7)
+#  🛠️  TOOLS COMMANDS
 # ==================================================================================================
 
 @bot.command(name="tools")
@@ -1834,7 +2613,7 @@ async def install_tool(ctx, container: str, *, tool: str):
     if not t:
         return await ctx.send(embed=error_embed("Tool Not Found", f"```diff\n- {tool}\n```"))
     msg = await ctx.send(embed=info_embed("Installing", f"```fix\n{t['name']} on {container}\n```"))
-    out,err,code = await exec_in_container(container, t['cmd'])
+    out, err, code = await exec_in_container(container, t['cmd'])
     if code == 0 or "already" in err.lower():
         add_tool_install(uid, container, t['name'], t.get('port'))
         embed = success_embed("Tool Installed")
@@ -1891,57 +2670,15 @@ async def tool_port(ctx, container: str, *, tool: str):
     await ctx.send(embed=success_embed("Tool Port", f"```fix\n{tool} runs on port {t['port']}\n```"))
 
 # ==================================================================================================
-#  🌐  NODE COMMANDS (7) - AUTO DETECT LOCAL
+#  🌐  NODE COMMANDS
 # ==================================================================================================
-
-NODES_FILE = '/opt/svm5-bot/nodes.json'
-
-def load_nodes():
-    default = {"version":"1.0","last_updated":datetime.now().isoformat(),"main_node":"local","nodes":{},"node_groups":{"all":[]}}
-    if os.path.exists(NODES_FILE):
-        try:
-            with open(NODES_FILE,'r') as f:
-                return json.load(f)
-        except:
-            pass
-    # Auto-create local node
-    try:
-        lxc_count = len(subprocess.getoutput("lxc list -c n --format csv").splitlines())
-    except:
-        lxc_count = 0
-    local = {
-        "name":"local","host":"localhost","port":0,"username":"local","type":"local","status":"online","is_main":True,
-        "stats":{
-            "total_ram":psutil.virtual_memory().total//1024//1024,
-            "used_ram":psutil.virtual_memory().used//1024//1024,
-            "total_cpu":psutil.cpu_count(),
-            "used_cpu":psutil.cpu_percent(),
-            "total_disk":psutil.disk_usage('/').total//1024//1024//1024,
-            "used_disk":psutil.disk_usage('/').used//1024//1024//1024,
-            "lxc_count":lxc_count,
-            "last_checked":datetime.now().isoformat()
-        }
-    }
-    default["nodes"]["local"] = local
-    default["node_groups"]["all"].append("local")
-    with open(NODES_FILE,'w') as f:
-        json.dump(default,f,indent=2)
-    return default
-
-def save_nodes(data):
-    with open(NODES_FILE,'w') as f:
-        json.dump(data,f,indent=2)
-
-def get_node(name):
-    nodes = load_nodes()
-    return nodes['nodes'].get(name)
 
 @bot.command(name="node")
 async def node_list(ctx):
     nodes = load_nodes()
     embed = node_embed("Node Network", f"```fix\nTotal: {len(nodes['nodes'])}\n```")
-    for n,data in nodes['nodes'].items():
-        s = data.get('stats',{})
+    for n, data in nodes['nodes'].items():
+        s = data.get('stats', {})
         status = "🟢" if data['status']=='online' else "🔴"
         text = f"```fix\nHost: {data['host']}\nRAM: {s.get('used_ram',0)}/{s.get('total_ram',0)} MB\nCPU: {s.get('used_cpu',0)}%\nLXC: {s.get('lxc_count',0)}\n```"
         embed.add_field(name=f"{status} {n}", value=text, inline=True)
@@ -1949,10 +2686,11 @@ async def node_list(ctx):
 
 @bot.command(name="node-info")
 async def node_info(ctx, name: str = "local"):
-    n = get_node(name)
+    nodes = load_nodes()
+    n = nodes['nodes'].get(name)
     if not n:
         return await ctx.send(embed=error_embed("Not Found", f"```diff\n- {name}\n```"))
-    s = n.get('stats',{})
+    s = n.get('stats', {})
     embed = node_embed(f"Node: {name}")
     basic = f"```fix\nHost: {n['host']}:{n['port']}\nStatus: {n['status']}\nType: {n['type']}\n```"
     res = f"```fix\nRAM: {s.get('used_ram',0)}/{s.get('total_ram',0)} MB\nCPU: {s.get('used_cpu',0)}%\nDisk: {s.get('used_disk',0)}/{s.get('total_disk',0)} GB\nLXC: {s.get('lxc_count',0)}\n```"
@@ -1972,10 +2710,10 @@ async def node_add(ctx, name: str, host: str, user: str, pwd: str = None, port: 
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         if pwd:
-            client.connect(host,port=port,username=user,password=pwd,timeout=10)
+            client.connect(host, port=port, username=user, password=pwd, timeout=10)
         else:
             key = paramiko.RSAKey.from_private_key_file(os.path.expanduser("~/.ssh/id_rsa"))
-            client.connect(host,port=port,username=user,pkey=key,timeout=10)
+            client.connect(host, port=port, username=user, pkey=key, timeout=10)
         stdin,stdout,stderr = client.exec_command('nproc')
         cpu = stdout.read().decode().strip()
         stdin,stdout,stderr = client.exec_command("free -m | awk '/^Mem:/{print $2}'")
@@ -1984,17 +2722,13 @@ async def node_add(ctx, name: str, host: str, user: str, pwd: str = None, port: 
         disk = stdout.read().decode().strip()
         client.close()
         node_data = {
-            "name":name,"host":host,"port":port,"username":user,"password":pwd,"type":"remote","status":"online",
-            "is_main":False,"region":"us",
-            "stats":{
-                "total_ram":int(ram) if ram.isdigit() else 0,
-                "used_ram":0,
-                "total_cpu":int(cpu) if cpu.isdigit() else 0,
-                "used_cpu":0,
-                "total_disk":int(disk) if disk.isdigit() else 0,
-                "used_disk":0,
-                "lxc_count":0,
-                "last_checked":datetime.now().isoformat()
+            "name": name, "host": host, "port": port, "username": user, "password": pwd,
+            "type": "remote", "status": "online", "is_main": False, "region": "us",
+            "stats": {
+                "total_ram": int(ram) if ram.isdigit() else 0, "used_ram": 0,
+                "total_cpu": int(cpu) if cpu.isdigit() else 0, "used_cpu": 0,
+                "total_disk": int(disk) if disk.isdigit() else 0, "used_disk": 0,
+                "lxc_count": 0, "last_checked": datetime.now().isoformat()
             }
         }
         nodes['nodes'][name] = node_data
@@ -2029,10 +2763,10 @@ async def node_check(ctx, name: str):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         if n.get('password'):
-            client.connect(n['host'],port=n['port'],username=n['username'],password=n['password'],timeout=10)
+            client.connect(n['host'], port=n['port'], username=n['username'], password=n['password'], timeout=10)
         else:
             key = paramiko.RSAKey.from_private_key_file(os.path.expanduser("~/.ssh/id_rsa"))
-            client.connect(n['host'],port=n['port'],username=n['username'],pkey=key,timeout=10)
+            client.connect(n['host'], port=n['port'], username=n['username'], pkey=key, timeout=10)
         client.close()
         nodes = load_nodes()
         nodes['nodes'][name]['status'] = 'online'
@@ -2070,7 +2804,7 @@ async def node_connect(ctx, host: str, user: str, pwd: str = None, name: str = N
     await node_add(ctx, name, host, user, pwd, port)
 
 # ==================================================================================================
-#  👥  SHARE COMMANDS (4)
+#  👥  SHARE COMMANDS
 # ==================================================================================================
 
 @bot.command(name="share")
@@ -2122,7 +2856,7 @@ async def manage_shared(ctx, owner: discord.Member, num: int):
     await manage(ctx, container=v['container_name'])
 
 # ==================================================================================================
-#  🔌  PORT COMMANDS (6)
+#  🔌  PORT COMMANDS
 # ==================================================================================================
 
 @bot.group(name="ports", invoke_without_command=True)
@@ -2179,7 +2913,7 @@ async def ports_list(ctx):
 @ports.command(name="remove")
 async def ports_remove(ctx, fid: int):
     uid = str(ctx.author.id)
-    success,container,hport = remove_port_forward(fid)
+    success, container, hport = remove_port_forward(fid)
     if not success:
         return await ctx.send(embed=error_embed("Not Found", f"ID {fid} not found"))
     if not any(v['container_name']==container for v in get_user_vps(uid)):
@@ -2210,7 +2944,7 @@ async def ports_check(ctx, port: int):
         await ctx.send(embed=info_embed("Port Check", f"```fix\nCould not check port {port}\n```"))
 
 # ==================================================================================================
-#  🌍  IPv4 COMMANDS (6)
+#  🌍  IPv4 COMMANDS
 # ==================================================================================================
 
 UPI_ID = get_setting('upi_id', '9892642904@ybl')
@@ -2223,12 +2957,12 @@ def gen_upi_qr(upi: str, amt: int = None, note: str = None):
             url += f"&am={amt}"
         if note:
             url += f"&tn={note}"
-        qr = qrcode.QRCode(version=1,box_size=10,border=5)
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(url)
         qr.make(fit=True)
-        img = qr.make_image(fill_color="black",back_color="white")
+        img = qr.make_image(fill_color="black", back_color="white")
         bio = io.BytesIO()
-        img.save(bio,'PNG')
+        img.save(bio, 'PNG')
         bio.seek(0)
         return bio
     except:
@@ -2243,7 +2977,7 @@ async def ipv4_list(ctx, user: discord.Member = None):
     if not ips:
         return await ctx.send(embed=info_embed("No IPv4", "No addresses assigned."))
     embed = info_embed(f"IPv4 for {user.display_name if user else ctx.author.display_name}")
-    for i,ip in enumerate(ips,1):
+    for i, ip in enumerate(ips, 1):
         val = f"```fix\nContainer: {ip['container_name']}\nPublic: {ip['public_ip']}\nPrivate: {ip['private_ip']}\nMAC: {ip['mac_address']}\nAssigned: {ip['assigned_at'][:16]}\n```"
         embed.add_field(name=f"IPv4 #{i}", value=val, inline=False)
     await ctx.send(embed=embed)
@@ -2362,127 +3096,8 @@ async def pay(ctx, amt: int, *, note: str = None):
     await ctx.send(embed=embed, view=view)
 
 # ==================================================================================================
-#  📦  PANEL COMMANDS (6)
+#  📦  PANEL COMMANDS
 # ==================================================================================================
-
-CLOUDFLARED = shutil.which("cloudflared") is not None
-
-async def create_tunnel(container: str, port: int) -> Optional[str]:
-    if not CLOUDFLARED:
-        return None
-    try:
-        await exec_in_container(container, "which cloudflared || (wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared)")
-        tid = str(uuid.uuid4())[:8]
-        await exec_in_container(container, f"nohup cloudflared tunnel --url http://localhost:{port} --no-autoupdate > /tmp/cloudflared_{tid}.log 2>&1 &")
-        await asyncio.sleep(5)
-        out,_,_ = await exec_in_container(container, f"cat /tmp/cloudflared_{tid}.log | grep -oP 'https://[a-z0-9-]+\\.trycloudflare\\.com' | head -1")
-        return out.strip() if out else None
-    except:
-        return None
-
-class PanelView(View):
-    def __init__(self, ctx):
-        super().__init__(timeout=120)
-        self.ctx = ctx
-        ptero = Button(label="🦅 Pterodactyl", style=discord.ButtonStyle.primary)
-        puffer = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success)
-        cancel = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
-        ptero.callback = lambda i: self.install(i, "pterodactyl")
-        puffer.callback = lambda i: self.install(i, "pufferpanel")
-        cancel.callback = lambda i: i.response.edit_message(embed=info_embed("Cancelled"), view=None)
-        self.add_item(ptero)
-        self.add_item(puffer)
-        self.add_item(cancel)
-    async def install(self, interaction, ptype):
-        if interaction.user.id != self.ctx.author.id:
-            return await interaction.response.send_message("Not for you!", ephemeral=True)
-        await interaction.response.defer()
-        uid = str(self.ctx.author.id)
-        vps = get_user_vps(uid)
-        if not vps:
-            return await interaction.followup.send(embed=no_vps_embed(), ephemeral=True)
-        if len(vps) > 1:
-            opts = []
-            for i,v in enumerate(vps,1):
-                opts.append(discord.SelectOption(label=f"VPS #{i}: {v['container_name']}", value=v['container_name']))
-            view = View()
-            sel = Select(placeholder="Select VPS...", options=opts)
-            async def sel_cb(si):
-                await self.do_install(si, ptype, sel.values[0])
-            sel.callback = sel_cb
-            view.add_item(sel)
-            await interaction.followup.send(embed=info_embed("Select VPS"), view=view, ephemeral=True)
-        else:
-            await self.do_install(interaction, ptype, vps[0]['container_name'])
-    async def do_install(self, interaction, ptype, container):
-        await interaction.response.defer()
-        msg = await interaction.followup.send(embed=info_embed(f"Installing {ptype.title()}", "Step 1/6: Preparing..."), ephemeral=True)
-        try:
-            admin = generate_username()
-            email = generate_email(admin)
-            pwd = generate_password()
-            if ptype == "pterodactyl":
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git unzip tar nginx mariadb-server redis-server php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
-                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
-                    "mkdir -p /var/www/pterodactyl",
-                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
-                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
-                    "cd /var/www/pterodactyl && cp .env.example .env",
-                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
-                    "cd /var/www/pterodactyl && php artisan key:generate --force",
-                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
-                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{email}' --username='{admin}' --password='{pwd}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
-                ]
-                for i,cmd in enumerate(cmds,2):
-                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(container, cmd)
-                    await asyncio.sleep(1)
-                out,_,_ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}"
-                tun = await create_tunnel(container, 80)
-                if tun:
-                    url = tun
-            else:
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git",
-                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
-                    "apt-get install -y -qq pufferpanel",
-                    "systemctl enable pufferpanel",
-                    "systemctl start pufferpanel",
-                    f"pufferpanel user add --name '{admin}' --email '{email}' --password '{pwd}' --admin"
-                ]
-                for i,cmd in enumerate(cmds,2):
-                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(container, cmd)
-                    await asyncio.sleep(1)
-                out,_,_ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}:8080"
-                tun = await create_tunnel(container, 8080)
-                if tun:
-                    url = tun
-            add_panel(uid, ptype, url, admin, pwd, email, container, tun or "")
-            embed = success_embed(f"{ptype.title()} Installed!")
-            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
-            embed.add_field(name="👤 Username", value=f"||`{admin}`||", inline=True)
-            embed.add_field(name="📧 Email", value=f"||`{email}`||", inline=True)
-            embed.add_field(name="🔑 Password", value=f"||`{pwd}`||", inline=False)
-            await msg.edit(embed=embed)
-            try:
-                dm = success_embed(f"🔐 {ptype.title()} Credentials")
-                dm.add_field(name="URL", value=url, inline=False)
-                dm.add_field(name="Username", value=admin, inline=True)
-                dm.add_field(name="Email", value=email, inline=True)
-                dm.add_field(name="Password", value=pwd, inline=False)
-                await self.ctx.author.send(embed=dm)
-            except:
-                pass
-        except Exception as e:
-            await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)[:500]}\n```"))
 
 @bot.command(name="install-panel")
 async def install_panel(ctx):
@@ -2491,7 +3106,7 @@ async def install_panel(ctx):
     if not get_user_vps(str(ctx.author.id)):
         return await ctx.send(embed=no_vps_embed())
     embed = info_embed("Panel Installation", "Select panel type:")
-    await ctx.send(embed=embed, view=PanelView(ctx))
+    await ctx.send(embed=embed, view=PanelInstallView(ctx))
 
 @bot.command(name="panel-info")
 async def panel_info(ctx):
@@ -2524,13 +3139,13 @@ async def panel_reset(ctx, ptype: str = None):
     if not row:
         return await ctx.send(embed=error_embed("No Panel", "No panel found."))
     p = dict(row)
-    new = generate_password()
+    new = ''.join(random.choices(string.ascii_letters+string.digits+"!@#$%", k=16))
     msg = await ctx.send(embed=info_embed("Resetting Password", f"```fix\n{p['panel_type']} on {p['container_name']}\n```"))
     if p['panel_type'] == 'pterodactyl':
         cmd = f"cd /var/www/pterodactyl && php artisan p:user:password --email={p['admin_email']} --password={new}"
     else:
         cmd = f"pufferpanel user password --email {p['admin_email']} --password {new}"
-    out,err,code = await exec_in_container(p['container_name'], cmd)
+    out, err, code = await exec_in_container(p['container_name'], cmd)
     if code == 0:
         conn = get_db()
         cur = conn.cursor()
@@ -2616,36 +3231,40 @@ async def panel_tunnel(ctx, container: str = None, port: int = None):
         view = View()
         b80 = Button(label="🌐 Port 80", style=discord.ButtonStyle.primary)
         b8080 = Button(label="🔌 Port 8080", style=discord.ButtonStyle.primary)
-        b443 = Button(label="🔒 Port 443", style=discord.ButtonStyle.primary)
         async def b80_cb(i): await create_tunnel_cmd(i, container, 80)
         async def b8080_cb(i): await create_tunnel_cmd(i, container, 8080)
-        async def b443_cb(i): await create_tunnel_cmd(i, container, 443)
         b80.callback = b80_cb
         b8080.callback = b8080_cb
-        b443.callback = b443_cb
         view.add_item(b80)
         view.add_item(b8080)
-        view.add_item(b443)
         await ctx.send(embed=info_embed("Select Port"), view=view)
     else:
         await create_tunnel_cmd(ctx, container, port)
 
 async def create_tunnel_cmd(ctx, container, port):
     msg = await ctx.send(embed=info_embed("Creating Tunnel", f"```fix\n{container}:{port}\n```"))
-    url = await create_tunnel(container, port)
-    if url:
-        embed = success_embed("Tunnel Created")
-        embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
-        embed.add_field(name="📦 Container", value=f"```fix\n{container}\n```", inline=True)
-        embed.add_field(name="🔌 Port", value=f"```fix\n{port}\n```", inline=True)
-        await msg.edit(embed=embed)
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('UPDATE panels SET tunnel_url = ? WHERE container_name = ?', (url, container))
-        conn.commit()
-        conn.close()
-    else:
-        await msg.edit(embed=error_embed("Failed", "Could not create tunnel. Install cloudflared."))
+    try:
+        await exec_in_container(container, "which cloudflared || (wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared)")
+        tid = str(uuid.uuid4())[:8]
+        await exec_in_container(container, f"nohup cloudflared tunnel --url http://localhost:{port} --no-autoupdate > /tmp/cloudflared_{tid}.log 2>&1 &")
+        await asyncio.sleep(5)
+        out,_,_ = await exec_in_container(container, f"cat /tmp/cloudflared_{tid}.log | grep -oP 'https://[a-z0-9-]+\\.trycloudflare\\.com' | head -1")
+        url = out.strip()
+        if url:
+            embed = success_embed("Tunnel Created")
+            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
+            embed.add_field(name="📦 Container", value=f"```fix\n{container}\n```", inline=True)
+            embed.add_field(name="🔌 Port", value=f"```fix\n{port}\n```", inline=True)
+            await msg.edit(embed=embed)
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE panels SET tunnel_url = ? WHERE container_name = ?', (url, container))
+            conn.commit()
+            conn.close()
+        else:
+            await msg.edit(embed=error_embed("Failed", "Could not create tunnel. Install cloudflared."))
+    except Exception as e:
+        await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
 
 @bot.command(name="panel-status")
 async def panel_status(ctx, container: str = None):
@@ -2676,7 +3295,7 @@ async def panel_status(ctx, container: str = None):
     await ctx.send(embed=embed)
 
 # ==================================================================================================
-#  🤖  AI COMMANDS (3)
+#  🤖  AI COMMANDS
 # ==================================================================================================
 
 AI_KEY = "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"
@@ -2737,7 +3356,7 @@ async def ai_help(ctx, *, topic: str):
     await ai(ctx, msg=f"Please help me with {topic} for VPS/LXC management")
 
 # ==================================================================================================
-#  🐧  OS COMMANDS (For reference - OS selection in create/claim)
+#  🐧  OS COMMANDS
 # ==================================================================================================
 
 @bot.command(name="os-list")
@@ -2749,13 +3368,13 @@ async def os_list(ctx, category: str = None):
         filtered = [o for o in OS_OPTIONS if o['category'].lower() == category.lower()]
     else:
         filtered = OS_OPTIONS[:25]
-    embed = info_embed(f"OS Options {f'- {category}' if category else ''}", f"```fix\nTotal: {len(filtered)}\n```")
+    embed = os_embed(f"OS Options {f'- {category}' if category else ''}", f"```fix\nTotal: {len(filtered)}\n```")
     for o in filtered[:10]:
         embed.add_field(name=o['label'], value=f"```fix\n{o['desc']}\nRAM Min: {o['ram_min']}MB\n```", inline=True)
     await ctx.send(embed=embed)
 
 # ==================================================================================================
-#  🛡️  ADMIN COMMANDS (13)
+#  🛡️  ADMIN COMMANDS
 # ==================================================================================================
 
 @bot.command(name="create")
@@ -2763,51 +3382,37 @@ async def os_list(ctx, category: str = None):
 async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member):
     if ram<=0 or cpu<=0 or disk<=0:
         return await ctx.send(embed=error_embed("Invalid", "RAM, CPU, Disk must be positive"))
-    # OS selection view
-    view = View()
+    
     opts = []
     for o in OS_OPTIONS[:25]:
         opts.append(discord.SelectOption(label=o['label'][:100], value=o['value'], description=o['desc'][:100]))
+    view = View()
     sel = Select(placeholder="Select OS...", options=opts)
     async def sel_cb(i):
         if i.user.id != ctx.author.id:
             return await i.response.send_message("Not for you!", ephemeral=True)
         osv = sel.values[0]
-        # Confirm
-        cv = View()
-        conf = Button(label="✅ Create", style=discord.ButtonStyle.success)
-        canc = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
-        async def conf_cb(ci):
-            await ci.response.defer()
-            name = f"svm5-{str(user.id)[:6]}-{random.randint(1000,9999)}"
-            prog = await ci.followup.send(embed=info_embed("Creating VPS", "Step 1/4: Initializing..."), ephemeral=True)
-            try:
-                ram_mb = ram * 1024
-                await run_lxc(f"lxc init {osv} {name} -s {DEFAULT_STORAGE_POOL}")
-                await prog.edit(embed=info_embed("Creating VPS", "Step 2/4: Configuring..."))
-                await run_lxc(f"lxc config set {name} limits.memory {ram_mb}MB")
-                await run_lxc(f"lxc config set {name} limits.cpu {cpu}")
-                await run_lxc(f"lxc config device set {name} root size={disk}GB")
-                await prog.edit(embed=info_embed("Creating VPS", "Step 3/4: Starting..."))
-                await run_lxc(f"lxc start {name}")
-                await asyncio.sleep(3)
-                await prog.edit(embed=info_embed("Creating VPS", "Step 4/4: Finalizing..."))
-                add_vps(str(user.id), name, ram, cpu, disk, osv, "Custom")
-                embed = success_embed("VPS Created")
-                embed.add_field(name="👤 User", value=user.mention, inline=True)
-                embed.add_field(name="📦 Container", value=f"```fix\n{name}\n```", inline=True)
-                embed.add_field(name="⚙️ Resources", value=f"```fix\n{ram}GB RAM / {cpu} CPU / {disk}GB Disk\n```", inline=False)
-                await prog.edit(embed=embed)
-            except Exception as e:
-                await prog.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
-        async def canc_cb(ci):
-            await ci.response.edit_message(embed=info_embed("Cancelled"), view=None)
-        conf.callback = conf_cb
-        canc.callback = canc_cb
-        cv.add_item(conf)
-        cv.add_item(canc)
-        osname = next((o['label'] for o in OS_OPTIONS if o['value']==osv), osv)
-        await i.response.edit_message(embed=warning_embed("Confirm", f"```fix\nUser: {user}\nOS: {osname}\nRAM: {ram}GB\nCPU: {cpu}\nDisk: {disk}GB\n```"), view=cv)
+        name = f"svm5-{str(user.id)[:6]}-{random.randint(1000,9999)}"
+        msg = await i.followup.send(embed=info_embed("Creating VPS", "Step 1/4..."), ephemeral=True)
+        try:
+            ram_mb = ram * 1024
+            await run_lxc(f"lxc init {osv} {name} -s {DEFAULT_STORAGE_POOL}")
+            await msg.edit(embed=info_embed("Creating VPS", "Step 2/4..."))
+            await run_lxc(f"lxc config set {name} limits.memory {ram_mb}MB")
+            await run_lxc(f"lxc config set {name} limits.cpu {cpu}")
+            await run_lxc(f"lxc config device set {name} root size={disk}GB")
+            await msg.edit(embed=info_embed("Creating VPS", "Step 3/4..."))
+            await run_lxc(f"lxc start {name}")
+            await asyncio.sleep(3)
+            await msg.edit(embed=info_embed("Creating VPS", "Step 4/4..."))
+            add_vps(str(user.id), name, ram, cpu, disk, osv, "Custom")
+            embed = success_embed("VPS Created")
+            embed.add_field(name="👤 User", value=user.mention, inline=True)
+            embed.add_field(name="📦 Container", value=f"```fix\n{name}\n```", inline=True)
+            embed.add_field(name="⚙️ Resources", value=f"```fix\n{ram}GB RAM / {cpu} CPU / {disk}GB Disk\n```", inline=False)
+            await msg.edit(embed=embed)
+        except Exception as e:
+            await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
     sel.callback = sel_cb
     view.add_item(sel)
     await ctx.send(embed=info_embed("Create VPS", f"Select OS for {user.mention}"), view=view)
@@ -2917,7 +3522,7 @@ async def list_all(ctx):
             byuser[v['user_id']] = []
         byuser[v['user_id']].append(v)
     embed = info_embed(f"All VPS ({len(allv)})")
-    for uid,vlist in list(byuser.items())[:5]:
+    for uid, vlist in list(byuser.items())[:5]:
         try:
             u = await bot.fetch_user(int(uid))
             name = u.name
@@ -3031,7 +3636,7 @@ async def admin_pending_ipv4(ctx):
     await ctx.send(embed=embed)
 
 # ==================================================================================================
-#  👑  OWNER COMMANDS (9)
+#  👑  OWNER COMMANDS
 # ==================================================================================================
 
 @bot.command(name="admin-add")
@@ -3094,7 +3699,7 @@ async def owner_purge_all(ctx):
         await i.response.defer()
         prog = await i.followup.send(embed=info_embed("Purging", f"```fix\n0/{len(unprotected)}\n```"), ephemeral=True)
         deleted = 0
-        for idx,v in enumerate(unprotected,1):
+        for idx, v in enumerate(unprotected,1):
             try:
                 await run_lxc(f"lxc stop {v['container_name']} --force")
                 await run_lxc(f"lxc delete {v['container_name']}")
@@ -3204,6 +3809,7 @@ if __name__ == "__main__":
     if BOT_TOKEN == "YOUR_DISCORD_BOT_TOKEN_HERE":
         print("\n❌ ERROR: Please set your BOT_TOKEN!")
         sys.exit(1)
+    update_local_node_stats()
     try:
         bot.run(BOT_TOKEN)
     except discord.LoginFailure:
