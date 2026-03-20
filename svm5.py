@@ -2246,25 +2246,25 @@ async def myvps(ctx):
 async def list_cmd(ctx):
     await myvps(ctx)
 
+# In your manage command, replace the old view with:
 @bot.command(name="manage")
 async def manage(ctx, container: str = None):
     uid = str(ctx.author.id)
+    
     if not container:
         vps = get_user_vps(uid)
         if not vps:
             return await ctx.send(embed=no_vps_embed())
         container = vps[0]['container_name']
-    elif not any(v['container_name']==container for v in get_user_vps(uid)):
+        container_data = vps[0]
+    elif not any(v['container_name'] == container for v in get_user_vps(uid)):
         return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    else:
+        vps = get_user_vps(uid)
+        container_data = next((v for v in vps if v['container_name'] == container), None)
     
-    stats = await get_container_stats(container)
-    embed = info_embed(f"Managing: {container}")
-    embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
-    embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
-    embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
-    embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
-    
-    view = VPSManageView(ctx, container)
+    view = VPSManageView(ctx, container, container_data)
+    embed = await view.get_stats_embed()
     msg = await ctx.send(embed=embed, view=view)
     view.message = msg
 
@@ -3800,6 +3800,873 @@ async def owner_restore_db(ctx, name: str):
     view.add_item(conf)
     view.add_item(canc)
     await ctx.send(embed=warning_embed("Confirm Restore", f"```fix\nRestore {name}?\nCurrent DB will be overwritten!\n```"), view=view)
+# ==================================================================================================
+#  🌐  COMPLETE IP COMMANDS - USER IP, VPS IP, NODE IP, ALL DETAILS
+# ==================================================================================================
+
+@bot.command(name="ip")
+async def ip_cmd(ctx, target: str = None):
+    """Main IP command - show your IP, VPS IP, or node IP"""
+    if not target:
+        # Show user's own IP
+        await show_my_ip(ctx)
+    elif target.lower() == "public":
+        # Show public IP of server
+        await show_public_ip(ctx)
+    elif target.lower() == "vps" or target.lower() == "container":
+        # Show all VPS IPs
+        await show_vps_ips(ctx)
+    elif target.lower() == "node":
+        # Show node IPs
+        await show_node_ips(ctx)
+    elif target.lower() == "all":
+        # Show all IPs
+        await show_all_ips(ctx)
+    elif target.lower() == "mac":
+        # Show MAC address
+        await show_mac_address(ctx)
+    elif target.lower() == "dns":
+        # Show DNS servers
+        await show_dns_servers(ctx)
+    elif target.lower() == "route" or target.lower() == "gateway":
+        # Show routing table
+        await show_routing_table(ctx)
+    elif target.lower() == "interface" or target.lower() == "ifconfig":
+        # Show network interfaces
+        await show_network_interfaces(ctx)
+    else:
+        # Show specific container IP
+        await show_container_ip(ctx, target)
+
+
+@bot.command(name="myip")
+async def my_ip(ctx):
+    """Show your own public IP"""
+    await show_my_ip(ctx)
+
+
+@bot.command(name="vps-ip")
+async def vps_ip(ctx, container: str = None):
+    """Show VPS container IP details"""
+    if container:
+        await show_container_ip(ctx, container)
+    else:
+        await show_vps_ips(ctx)
+
+
+@bot.command(name="node-ip")
+async def node_ip(ctx, node_name: str = None):
+    """Show node IP details"""
+    if node_name:
+        await show_node_ip_detail(ctx, node_name)
+    else:
+        await show_node_ips(ctx)
+
+
+@bot.command(name="public-ip")
+async def public_ip(ctx):
+    """Show server public IP"""
+    await show_public_ip(ctx)
+
+
+@bot.command(name="mac")
+async def mac_address(ctx, container: str = None):
+    """Show MAC address of server or container"""
+    if container:
+        await show_container_mac(ctx, container)
+    else:
+        await show_mac_address(ctx)
+
+
+@bot.command(name="gateway")
+async def gateway_cmd(ctx, container: str = None):
+    """Show gateway information"""
+    if container:
+        await show_container_gateway(ctx, container)
+    else:
+        await show_routing_table(ctx)
+
+
+@bot.command(name="netstat")
+async def netstat_cmd(ctx, container: str = None):
+    """Show network connections"""
+    if container:
+        await show_container_netstat(ctx, container)
+    else:
+        await show_server_netstat(ctx)
+
+
+@bot.command(name="ifconfig")
+async def ifconfig_cmd(ctx, container: str = None):
+    """Show network interfaces"""
+    if container:
+        await show_container_interfaces(ctx, container)
+    else:
+        await show_network_interfaces(ctx)
+
+
+@bot.command(name="dns")
+async def dns_cmd(ctx, container: str = None):
+    """Show DNS servers"""
+    if container:
+        await show_container_dns(ctx, container)
+    else:
+        await show_dns_servers(ctx)
+
+
+@bot.command(name="ping-ip")
+async def ping_ip(ctx, ip: str):
+    """Ping an IP address"""
+    await ping_target(ctx, ip)
+
+
+@bot.command(name="trace-ip")
+async def trace_ip(ctx, ip: str):
+    """Trace route to IP address"""
+    await trace_target(ctx, ip)
+
+
+# ==================================================================================================
+#  📡  IP COMMAND IMPLEMENTATIONS
+# ==================================================================================================
+
+async def show_my_ip(ctx):
+    """Show user's own public IP"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.ipify.org', timeout=5) as resp:
+                public_ip = await resp.text()
+    except:
+        try:
+            public_ip = subprocess.getoutput("curl -s ifconfig.me")
+        except:
+            public_ip = "Could not detect"
+    
+    embed = discord.Embed(
+        title="```glow\n🌐 Your IP Information\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    # Get local IPs
+    local_ips = []
+    try:
+        interfaces = netifaces.interfaces()
+        for iface in interfaces:
+            if iface != 'lo':
+                addr = netifaces.ifaddresses(iface)
+                if netifaces.AF_INET in addr:
+                    for ip in addr[netifaces.AF_INET]:
+                        if ip['addr'] != '127.0.0.1':
+                            local_ips.append(f"{iface}: {ip['addr']}")
+    except:
+        local_ips = ["Could not detect"]
+    
+    embed.add_field(
+        name="🌍 Public IP",
+        value=f"```fix\n{public_ip}\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🏠 Local IPs",
+        value=f"```fix\n" + "\n".join(local_ips[:5]) + "\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🖥️ Hostname",
+        value=f"```fix\n{HOSTNAME}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🔌 MAC Address",
+        value=f"```fix\n{MAC_ADDRESS}\n```",
+        inline=True
+    )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Your IP Information • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_public_ip(ctx):
+    """Show server public IP"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.ipify.org', timeout=5) as resp:
+                public_ip = await resp.text()
+    except:
+        try:
+            public_ip = subprocess.getoutput("curl -s ifconfig.me")
+        except:
+            public_ip = "Could not detect"
+    
+    # Get additional IP info
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'http://ip-api.com/json/{public_ip}', timeout=5) as resp:
+                ip_info = await resp.json()
+                location = f"{ip_info.get('city', 'Unknown')}, {ip_info.get('country', 'Unknown')}"
+                isp = ip_info.get('isp', 'Unknown')
+    except:
+        location = "Unknown"
+        isp = "Unknown"
+    
+    embed = discord.Embed(
+        title="```glow\n🌍 Public IP Information\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    embed.add_field(
+        name="🌐 IP Address",
+        value=f"```fix\n{public_ip}\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📍 Location",
+        value=f"```fix\n{location}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🏢 ISP",
+        value=f"```fix\n{isp}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🖥️ Hostname",
+        value=f"```fix\n{HOSTNAME}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🔌 MAC",
+        value=f"```fix\n{MAC_ADDRESS}\n```",
+        inline=True
+    )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Public IP Information • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_vps_ips(ctx):
+    """Show all VPS containers IPs"""
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=no_vps_embed())
+        return
+    
+    embed = discord.Embed(
+        title="```glow\n🖥️ Your VPS IP Addresses\n```",
+        color=COLORS['info']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    for vps in vps_list:
+        container = vps['container_name']
+        stats = await get_container_stats(container)
+        
+        status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+        
+        ip_text = f"{status_emoji} **`{container}`**\n"
+        ip_text += f"```fix\n"
+        
+        if stats['ipv4']:
+            for i, ip in enumerate(stats['ipv4'][:3], 1):
+                ip_text += f"IPv4 #{i}: {ip}\n"
+        else:
+            ip_text += f"IPv4: Not assigned\n"
+        
+        ip_text += f"MAC: {stats['mac']}\n"
+        ip_text += f"Status: {stats['status'].upper()}\n"
+        ip_text += f"```"
+        
+        embed.add_field(name=f"📦 {container}", value=ip_text, inline=False)
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Use .ip <container> for details • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_container_ip(ctx, container_name: str):
+    """Show detailed IP information for a container"""
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not any(v['container_name'] == container_name for v in vps_list):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    stats = await get_container_stats(container_name)
+    
+    # Get more details from container
+    ip_addr, _, _ = await exec_in_container(container_name, "ip addr show")
+    route, _, _ = await exec_in_container(container_name, "ip route show")
+    
+    embed = discord.Embed(
+        title=f"```glow\n🌐 IP Details: {container_name}\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    # IPv4 Addresses
+    ipv4_text = ""
+    for ip in stats['ipv4']:
+        ipv4_text += f"• {ip}\n"
+    embed.add_field(
+        name="🌍 IPv4 Addresses",
+        value=f"```fix\n{ipv4_text if ipv4_text else 'No IPv4 assigned'}\n```",
+        inline=True
+    )
+    
+    # MAC Address
+    embed.add_field(
+        name="🔌 MAC Address",
+        value=f"```fix\n{stats['mac']}\n```",
+        inline=True
+    )
+    
+    # Status
+    embed.add_field(
+        name="📊 Status",
+        value=f"```fix\n{stats['status'].upper()}\n```",
+        inline=True
+    )
+    
+    # Full IP Configuration
+    embed.add_field(
+        name="📋 Full IP Configuration",
+        value=f"```bash\n{ip_addr[:500]}\n```",
+        inline=False
+    )
+    
+    # Routing Table
+    embed.add_field(
+        name="🗺️ Routing Table",
+        value=f"```bash\n{route[:500]}\n```",
+        inline=False
+    )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • {container_name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_node_ips(ctx):
+    """Show all node IPs"""
+    nodes = load_nodes()
+    
+    if not nodes['nodes']:
+        await ctx.send(embed=info_embed("No Nodes", "No nodes configured."))
+        return
+    
+    embed = discord.Embed(
+        title="```glow\n🌐 Node IP Addresses\n```",
+        color=COLORS['node']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    for name, node in nodes['nodes'].items():
+        status_emoji = "🟢" if node['status'] == 'online' else "🔴"
+        is_main = " 👑 MAIN" if node.get('is_main') else ""
+        
+        ip_text = f"{status_emoji} **`{name}`**{is_main}\n"
+        ip_text += f"```fix\n"
+        ip_text += f"Host: {node['host']}\n"
+        ip_text += f"Port: {node['port']}\n"
+        ip_text += f"Status: {node['status'].upper()}\n"
+        ip_text += f"Region: {node.get('region', 'us')}\n"
+        ip_text += f"```"
+        
+        embed.add_field(name=f"🌍 {name}", value=ip_text, inline=False)
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Use .node-info <name> for details • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_node_ip_detail(ctx, node_name: str):
+    """Show detailed IP for a specific node"""
+    node = get_node(node_name)
+    
+    if not node:
+        await ctx.send(embed=error_embed("Node Not Found", f"```diff\n- {node_name}\n```"))
+        return
+    
+    embed = discord.Embed(
+        title=f"```glow\n🌐 Node IP Details: {node_name}\n```",
+        color=COLORS['node']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    embed.add_field(
+        name="🌐 Host",
+        value=f"```fix\n{node['host']}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🔌 Port",
+        value=f"```fix\n{node['port']}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="📊 Status",
+        value=f"```fix\n{node['status'].upper()}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="👤 Username",
+        value=f"```fix\n{node['username']}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="📍 Region",
+        value=f"```fix\n{node.get('region', 'us')}\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="🗝️ API Key",
+        value=f"```fix\n{node.get('api_key', 'N/A')[:16]}...\n```",
+        inline=True
+    )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Node IP Information • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_all_ips(ctx):
+    """Show all IPs (user, VPS, node)"""
+    embed = discord.Embed(
+        title="```glow\n🌐 Complete IP Overview\n```",
+        color=COLORS['gold']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    # Server IP
+    try:
+        public_ip = requests.get('https://api.ipify.org', timeout=5).text.strip()
+    except:
+        public_ip = subprocess.getoutput("curl -s ifconfig.me")
+    
+    embed.add_field(
+        name="🖥️ Server IP",
+        value=f"```fix\nPublic: {public_ip}\nLocal: {SERVER_IP}\nHostname: {HOSTNAME}\nMAC: {MAC_ADDRESS}\n```",
+        inline=False
+    )
+    
+    # VPS IPs
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    if vps_list:
+        vps_text = ""
+        for vps in vps_list[:5]:
+            stats = await get_container_stats(vps['container_name'])
+            vps_text += f"• {vps['container_name']}: {stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n"
+        embed.add_field(
+            name="🖥️ Your VPS IPs",
+            value=f"```fix\n{vps_text if vps_text else 'No VPS'}\n```",
+            inline=False
+        )
+    
+    # Node IPs
+    nodes = load_nodes()
+    if nodes['nodes']:
+        node_text = ""
+        for name, node in nodes['nodes'].items():
+            node_text += f"• {name}: {node['host']} ({node['status']})\n"
+        embed.add_field(
+            name="🌐 Node IPs",
+            value=f"```fix\n{node_text[:500]}\n```",
+            inline=False
+        )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Complete IP Overview • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+async def show_mac_address(ctx, container: str = None):
+    """Show MAC address"""
+    if container:
+        # Show container MAC
+        user_id = str(ctx.author.id)
+        if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+        
+        stats = await get_container_stats(container)
+        mac = stats['mac']
+        
+        embed = info_embed(f"🔌 MAC Address: {container}")
+        embed.add_field(name="MAC Address", value=f"```fix\n{mac}\n```", inline=False)
+        embed.add_field(name="Container", value=f"```fix\n{container}\n```", inline=True)
+        await ctx.send(embed=embed)
+    else:
+        # Show server MAC
+        embed = info_embed("🔌 Server MAC Address")
+        embed.add_field(name="MAC Address", value=f"```fix\n{MAC_ADDRESS}\n```", inline=False)
+        embed.add_field(name="Hostname", value=f"```fix\n{HOSTNAME}\n```", inline=True)
+        await ctx.send(embed=embed)
+
+
+async def show_routing_table(ctx, container: str = None):
+    """Show routing table / gateway"""
+    if container:
+        user_id = str(ctx.author.id)
+        if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+        
+        route, _, _ = await exec_in_container(container, "ip route show")
+        
+        embed = terminal_embed(f"Routing Table: {container}", route)
+        await ctx.send(embed=embed)
+    else:
+        route = subprocess.getoutput("ip route show")
+        embed = terminal_embed("Routing Table", route)
+        await ctx.send(embed=embed)
+
+
+async def show_container_gateway(ctx, container: str):
+    """Show container gateway"""
+    user_id = str(ctx.author.id)
+    if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    route, _, _ = await exec_in_container(container, "ip route show | grep default")
+    gateway = route.split()[2] if route else "N/A"
+    
+    embed = info_embed(f"🚪 Gateway: {container}")
+    embed.add_field(name="Gateway", value=f"```fix\n{gateway}\n```", inline=False)
+    embed.add_field(name="Container", value=f"```fix\n{container}\n```", inline=True)
+    await ctx.send(embed=embed)
+
+
+async def show_network_interfaces(ctx, container: str = None):
+    """Show network interfaces"""
+    if container:
+        user_id = str(ctx.author.id)
+        if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+        
+        interfaces, _, _ = await exec_in_container(container, "ip link show")
+        
+        embed = terminal_embed(f"Network Interfaces: {container}", interfaces)
+        await ctx.send(embed=embed)
+    else:
+        interfaces = subprocess.getoutput("ip link show")
+        embed = terminal_embed("Network Interfaces", interfaces)
+        await ctx.send(embed=embed)
+
+
+async def show_container_interfaces(ctx, container: str):
+    """Show container network interfaces"""
+    await show_network_interfaces(ctx, container)
+
+
+async def show_dns_servers(ctx, container: str = None):
+    """Show DNS servers"""
+    if container:
+        user_id = str(ctx.author.id)
+        if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+            await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+            return
+        
+        dns, _, _ = await exec_in_container(container, "cat /etc/resolv.conf | grep nameserver")
+        
+        embed = terminal_embed(f"DNS Servers: {container}", dns)
+        await ctx.send(embed=embed)
+    else:
+        dns = subprocess.getoutput("cat /etc/resolv.conf | grep nameserver")
+        embed = terminal_embed("DNS Servers", dns)
+        await ctx.send(embed=embed)
+
+
+async def show_container_dns(ctx, container: str):
+    """Show container DNS servers"""
+    await show_dns_servers(ctx, container)
+
+
+async def show_server_netstat(ctx):
+    """Show server network connections"""
+    netstat = subprocess.getoutput("ss -tuln | head -30")
+    embed = terminal_embed("Server Network Connections", netstat)
+    await ctx.send(embed=embed)
+
+
+async def show_container_netstat(ctx, container: str):
+    """Show container network connections"""
+    user_id = str(ctx.author.id)
+    if not any(v['container_name'] == container for v in get_user_vps(user_id)):
+        await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+        return
+    
+    netstat, _, _ = await exec_in_container(container, "netstat -tuln | head -30")
+    embed = terminal_embed(f"Network Connections: {container}", netstat)
+    await ctx.send(embed=embed)
+
+
+async def ping_target(ctx, ip: str):
+    """Ping an IP address"""
+    msg = await ctx.send(embed=info_embed("Pinging...", f"```fix\n{ip}\n```"))
+    
+    try:
+        result = subprocess.getoutput(f"ping -c 4 {ip}")
+        
+        # Parse ping results
+        lines = result.splitlines()
+        loss = "100%"
+        avg = "N/A"
+        
+        for line in lines:
+            if "packet loss" in line:
+                loss = line.split(',')[2].strip()
+            if "avg" in line:
+                parts = line.split('/')
+                if len(parts) >= 5:
+                    avg = f"{parts[4]}ms"
+        
+        embed = info_embed(f"Ping Results: {ip}")
+        embed.add_field(name="📡 Target", value=f"```fix\n{ip}\n```", inline=True)
+        embed.add_field(name="📊 Packet Loss", value=f"```fix\n{loss}\n```", inline=True)
+        embed.add_field(name="⏱️ Avg Latency", value=f"```fix\n{avg}\n```", inline=True)
+        embed.add_field(name="📋 Full Output", value=f"```bash\n{result[:500]}\n```", inline=False)
+        
+        await msg.edit(embed=embed)
+    except Exception as e:
+        await msg.edit(embed=error_embed("Ping Failed", f"```diff\n- {str(e)}\n```"))
+
+
+async def trace_target(ctx, ip: str):
+    """Trace route to IP address"""
+    msg = await ctx.send(embed=info_embed("Tracing Route...", f"```fix\n{ip}\n```"))
+    
+    try:
+        result = subprocess.getoutput(f"traceroute -n {ip} 2>/dev/null || tracepath {ip} 2>/dev/null")
+        
+        embed = terminal_embed(f"Trace Route to {ip}", result[:1900])
+        await msg.edit(embed=embed)
+    except Exception as e:
+        await msg.edit(embed=error_embed("Trace Failed", f"```diff\n- {str(e)}\n```"))
+
+
+# ==================================================================================================
+#  🆕  NEW IP COMMANDS FOR USER MANAGEMENT
+# ==================================================================================================
+
+@bot.command(name="user-ip")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def user_ip(ctx, user: discord.Member):
+    """Show IP information for a user (Admin only)"""
+    user_id = str(user.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not vps_list:
+        await ctx.send(embed=info_embed(f"No VPS", f"{user.mention} has no VPS."))
+        return
+    
+    embed = discord.Embed(
+        title=f"```glow\n🌐 IP Information for {user.display_name}\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=user.avatar.url if user.avatar else THUMBNAIL_URL)
+    
+    for vps in vps_list:
+        stats = await get_container_stats(vps['container_name'])
+        
+        ip_text = f"```fix\n"
+        ip_text += f"Container: {vps['container_name']}\n"
+        if stats['ipv4']:
+            ip_text += f"IPv4: {stats['ipv4'][0]}\n"
+        ip_text += f"MAC: {stats['mac']}\n"
+        ip_text += f"Status: {stats['status'].upper()}\n"
+        ip_text += f"RAM: {vps['ram']}GB | CPU: {vps['cpu']}\n"
+        ip_text += f"```"
+        
+        embed.add_field(name=f"📦 {vps['container_name']}", value=ip_text, inline=False)
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Admin View • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="assign-ip")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def assign_ip(ctx, user: discord.Member, container: str, ip_address: str = None):
+    """Assign a static IP to a container (Admin only)"""
+    user_id = str(user.id)
+    vps_list = get_user_vps(user_id)
+    
+    if not any(v['container_name'] == container for v in vps_list):
+        await ctx.send(embed=error_embed("Not Found", f"Container {container} not found for {user.mention}"))
+        return
+    
+    if not ip_address:
+        # Auto-assign IP
+        ip_address = f"10.10.10.{random.randint(100, 250)}"
+    
+    # Get MAC address
+    stats = await get_container_stats(container)
+    mac = stats['mac']
+    
+    # Apply static IP
+    cmd = f"ip addr add {ip_address}/24 dev eth0"
+    await exec_in_container(container, cmd)
+    
+    # Save to database
+    add_ipv4(user_id, container, ip_address, ip_address, mac)
+    
+    embed = success_embed("IP Assigned")
+    embed.add_field(name="👤 User", value=user.mention, inline=True)
+    embed.add_field(name="📦 Container", value=f"```fix\n{container}\n```", inline=True)
+    embed.add_field(name="🌐 IP Address", value=f"```fix\n{ip_address}\n```", inline=True)
+    embed.add_field(name="🔌 MAC", value=f"```fix\n{mac}\n```", inline=True)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="release-ip")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def release_ip(ctx, user: discord.Member, container: str):
+    """Release IP from a container (Admin only)"""
+    user_id = str(user.id)
+    
+    # Remove from database
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM ipv4 WHERE user_id = ? AND container_name = ?', (user_id, container))
+    conn.commit()
+    conn.close()
+    
+    embed = success_embed("IP Released")
+    embed.add_field(name="👤 User", value=user.mention, inline=True)
+    embed.add_field(name="📦 Container", value=f"```fix\n{container}\n```", inline=True)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="ip-stats")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def ip_stats(ctx):
+    """Show IP statistics (Admin only)"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(*) FROM ipv4')
+    total_ips = cur.fetchone()[0] or 0
+    
+    cur.execute('SELECT COUNT(DISTINCT user_id) FROM ipv4')
+    users_with_ips = cur.fetchone()[0] or 0
+    
+    cur.execute('SELECT user_id, COUNT(*) as count FROM ipv4 GROUP BY user_id ORDER BY count DESC LIMIT 5')
+    top_users = cur.fetchall()
+    conn.close()
+    
+    embed = info_embed("IP Statistics")
+    embed.add_field(name="📊 Total IPs Assigned", value=f"```fix\n{total_ips}\n```", inline=True)
+    embed.add_field(name="👥 Users with IPs", value=f"```fix\n{users_with_ips}\n```", inline=True)
+    
+    if top_users:
+        top_text = ""
+        for row in top_users:
+            try:
+                user = await bot.fetch_user(int(row['user_id']))
+                top_text += f"• {user.name}: {row['count']} IPs\n"
+            except:
+                top_text += f"• Unknown: {row['count']} IPs\n"
+        embed.add_field(name="🏆 Top Users", value=f"```fix\n{top_text}\n```", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="my-ip-info")
+async def my_ip_info(ctx):
+    """Show your IP information and network details"""
+    user_id = str(ctx.author.id)
+    vps_list = get_user_vps(user_id)
+    
+    embed = discord.Embed(
+        title="```glow\n🌐 Your Network Information\n```",
+        color=COLORS['cyan']
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    # User info
+    embed.add_field(
+        name="👤 User",
+        value=f"```fix\n{ctx.author.display_name}\nID: {ctx.author.id}\n```",
+        inline=True
+    )
+    
+    # Server info
+    embed.add_field(
+        name="🖥️ Server",
+        value=f"```fix\nPublic: {SERVER_IP}\nHostname: {HOSTNAME}\nMAC: {MAC_ADDRESS}\n```",
+        inline=True
+    )
+    
+    # VPS Info
+    if vps_list:
+        vps_text = ""
+        for vps in vps_list[:5]:
+            stats = await get_container_stats(vps['container_name'])
+            vps_text += f"• {vps['container_name']}: {stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n"
+        embed.add_field(
+            name="🖥️ Your VPS IPs",
+            value=f"```fix\n{vps_text}\n```",
+            inline=False
+        )
+    
+    embed.set_footer(text=f"⚡ {BOT_NAME} • Your Network Info • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+    await ctx.send(embed=embed)
+
+
+@bot.command(name="ip-history")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def ip_history(ctx, user: discord.Member = None):
+    """Show IP assignment history (Admin only)"""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if user:
+        cur.execute('SELECT * FROM ipv4 WHERE user_id = ? ORDER BY assigned_at DESC', (str(user.id),))
+    else:
+        cur.execute('SELECT * FROM ipv4 ORDER BY assigned_at DESC LIMIT 20')
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    if not rows:
+        await ctx.send(embed=info_embed("No IP History", "No IP assignments found."))
+        return
+    
+    embed = info_embed(f"IP Assignment History ({len(rows)})")
+    
+    for row in rows[:10]:
+        try:
+            u = await bot.fetch_user(int(row['user_id']))
+            username = u.name
+        except:
+            username = f"Unknown ({row['user_id'][:8]})"
+        
+        value = f"```fix\n"
+        value += f"Container: {row['container_name']}\n"
+        value += f"IP: {row['public_ip']}\n"
+        value += f"MAC: {row['mac_address']}\n"
+        value += f"Assigned: {row['assigned_at'][:16]}\n"
+        value += f"```"
+        
+        embed.add_field(name=f"👤 {username}", value=value, inline=False)
+    
+    await ctx.send(embed=embed)
 
 # ==================================================================================================
 #  🚀  RUN THE BOT
