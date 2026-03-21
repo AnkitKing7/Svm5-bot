@@ -13,7 +13,7 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║   100+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
 # ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
 # ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
@@ -2085,7 +2085,7 @@ async def on_ready():
 ║  🎮 Total Games:   {len(GAMES_LIST)}                                                          ║
 ║  🛠️ Total Tools:   {len(TOOLS_LIST)}                                                          ║
 ║                                                                                               ║
-║  📊 TOTAL COMMANDS: 97+│ ✅ BUTTONS │ ✅ SELECT MENUS │ ✅ NODE.JSON │ ✅ EVERYTHING         ║
+║  📊 TOTAL COMMANDS: 100+│ ✅ BUTTONS │ ✅ SELECT MENUS │ ✅ NODE.JSON │ ✅ EVERYTHING         ║
 ║                                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
     """)
@@ -2124,7 +2124,478 @@ async def help_command(ctx):
 # ==================================================================================================
 #  👤  USER COMMANDS
 # ==================================================================================================
+# ==================================================================================================
+#  🖥️  COMPLETE .vmopen COMMAND - REAL VPS TERMINAL WITH LIVE INPUT
+# ==================================================================================================
 
+import asyncio
+import io
+import time
+from datetime import datetime
+
+class TerminalView(View):
+    def __init__(self, ctx, container_name):
+        super().__init__(timeout=600)
+        self.ctx = ctx
+        self.container = container_name
+        self.command_history = []
+        self.history_index = -1
+        self.current_output = ""
+        self.message = None
+        
+        # Input Modal Button
+        input_btn = Button(label="📟 Enter Command", style=discord.ButtonStyle.primary, emoji="📟", row=0)
+        input_btn.callback = self.input_callback
+        
+        # Clear Button
+        clear_btn = Button(label="🗑️ Clear Screen", style=discord.ButtonStyle.secondary, emoji="🗑️", row=0)
+        clear_btn.callback = self.clear_callback
+        
+        # Refresh Button
+        refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=0)
+        refresh_btn.callback = self.refresh_callback
+        
+        # Close Button
+        close_btn = Button(label="❌ Close", style=discord.ButtonStyle.danger, emoji="❌", row=1)
+        close_btn.callback = self.close_callback
+        
+        self.add_item(input_btn)
+        self.add_item(clear_btn)
+        self.add_item(refresh_btn)
+        self.add_item(close_btn)
+    
+    async def get_terminal_embed(self):
+        """Get current terminal embed with output"""
+        embed = discord.Embed(
+            title=f"```glow\n🖥️ VPS TERMINAL - {self.container.upper()}\n```",
+            description=f"```bash\n{self.current_output[:1900] if self.current_output else 'Welcome to SVM5-BOT Terminal!\nType a command using the button below.\n\n$ '}\n```",
+            color=0x2C2F33
+        )
+        embed.set_footer(text=f"⚡ SVM5-BOT • Terminal • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
+        return embed
+    
+    async def input_callback(self, interaction):
+        modal = TerminalModal(self.container, self)
+        await interaction.response.send_modal(modal)
+    
+    async def clear_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        self.current_output = ""
+        embed = await self.get_terminal_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    async def refresh_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        embed = await self.get_terminal_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    async def close_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        await interaction.message.delete()
+    
+    async def execute_command(self, interaction, command):
+        await interaction.response.defer()
+        
+        # Add command to output
+        self.current_output += f"$ {command}\n"
+        
+        # Show executing status
+        embed = await self.get_terminal_embed()
+        await interaction.edit_original_response(embed=embed, view=self)
+        
+        # Execute command
+        try:
+            out, err, code = await exec_in_container(self.container, command, timeout=60)
+            
+            # Add output
+            if out:
+                self.current_output += f"{out}\n"
+            if err:
+                self.current_output += f"Error: {err}\n"
+            
+            # Add exit code
+            if code != 0:
+                self.current_output += f"Exit Code: {code}\n"
+            
+            self.current_output += "\n"
+            
+            # Keep only last 5000 characters
+            if len(self.current_output) > 5000:
+                self.current_output = self.current_output[-4500:]
+            
+            # Add to history
+            self.command_history.append(command)
+            self.history_index = len(self.command_history)
+            
+        except asyncio.TimeoutError:
+            self.current_output += f"Error: Command timed out after 60 seconds\n\n"
+        except Exception as e:
+            self.current_output += f"Error: {str(e)}\n\n"
+        
+        # Update embed
+        embed = await self.get_terminal_embed()
+        await interaction.edit_original_response(embed=embed, view=self)
+
+
+class TerminalModal(Modal):
+    def __init__(self, container, terminal_view):
+        super().__init__(title=f"Terminal: {container}")
+        self.container = container
+        self.terminal_view = terminal_view
+        
+        self.add_item(InputText(
+            label="Command",
+            placeholder="e.g., apt update, ls -la, ps aux, df -h",
+            style=discord.InputTextStyle.paragraph,
+            required=True
+        ))
+        
+        self.add_item(InputText(
+            label="Timeout (seconds)",
+            placeholder="30",
+            required=False,
+            value="30"
+        ))
+    
+    async def callback(self, interaction):
+        command = self.children[0].value
+        timeout = int(self.children[1].value or "30")
+        
+        # Check if container is running
+        status = await get_container_status(self.container)
+        if status != 'running':
+            await interaction.response.send_message(
+                embed=error_embed("Container Not Running", f"```diff\n- {self.container} is not running.\n```"),
+                ephemeral=True
+            )
+            return
+        
+        # Execute command
+        await self.terminal_view.execute_command(interaction, command)
+
+
+@bot.command(name="vmopen")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def vm_open(ctx, container_name: str = None):
+    """Open real VPS terminal with live command input"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, use first VPS
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+    
+    # Verify ownership
+    if not any(v['container_name'] == container_name for v in get_user_vps(user_id)):
+        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    # Check if container is running
+    status = await get_container_status(container_name)
+    if status != 'running':
+        return await ctx.send(embed=error_embed("Container Not Running", f"```diff\n- {container_name} is not running.\n```"))
+    
+    # Get welcome message
+    out, _, _ = await exec_in_container(container_name, "echo '=== SVM5-BOT TERMINAL ===' && uname -a && whoami && pwd")
+    
+    view = TerminalView(ctx, container_name)
+    view.current_output = f"{out}\n\n"
+    
+    embed = await view.get_terminal_embed()
+    msg = await ctx.send(embed=embed, view=view)
+    view.message = msg
+
+# ==================================================================================================
+#  🌐  COMPLETE .ipv4generate COMMAND - CONVERT LXC PRIVATE IP TO PUBLIC IPv4
+# ==================================================================================================
+
+@bot.command(name="ipv4generate")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def ipv4_generate(ctx, container_name: str = None):
+    """Generate public IPv4 for your VPS (port forwarding + tunnel)"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, use first VPS
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+    
+    # Verify ownership
+    if not any(v['container_name'] == container_name for v in get_user_vps(user_id)):
+        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    # Check if container is running
+    status = await get_container_status(container_name)
+    if status != 'running':
+        return await ctx.send(embed=error_embed("Container Not Running", f"```diff\n- {container_name} is not running.\n```"))
+    
+    msg = await ctx.send(embed=info_embed("🌍 Generating IPv4", f"```fix\nContainer: {container_name}\nStep 1/5: Getting container info...\n```"))
+    
+    try:
+        # Get container private IP
+        private_ip = "N/A"
+        mac = "N/A"
+        out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+        if out:
+            private_ip = out.strip()
+        
+        out, _, _ = await exec_in_container(container_name, "ip link | grep ether | awk '{print $2}' | head -1")
+        if out:
+            mac = out.strip()
+        
+        await msg.edit(embed=info_embed("🌍 Generating IPv4", f"```fix\nContainer: {container_name}\nPrivate IP: {private_ip}\nMAC: {mac}\nStep 2/5: Checking port availability...\n```"))
+        
+        # Get available port
+        port = await get_available_port()
+        if not port:
+            await msg.edit(embed=error_embed("Failed", "```diff\n- No available ports. Try again later.\n```"))
+            return
+        
+        await msg.edit(embed=info_embed("🌍 Generating IPv4", f"```fix\nContainer: {container_name}\nPrivate IP: {private_ip}\nMAC: {mac}\nHost Port: {port}\nStep 3/5: Creating port forward...\n```"))
+        
+        # Create port forward (SSH port 22)
+        hport = await create_port_forward(user_id, container_name, 22, "tcp")
+        
+        if hport:
+            await msg.edit(embed=info_embed("🌍 Generating IPv4", f"```fix\nContainer: {container_name}\nPrivate IP: {private_ip}\nMAC: {mac}\nHost Port: {hport}\nStep 4/5: Creating cloudflared tunnel...\n```"))
+            
+            # Create cloudflared tunnel for web access
+            tunnel_url = await create_cloudflared_tunnel(container_name, 80)
+            
+            await msg.edit(embed=info_embed("🌍 Generating IPv4", f"```fix\nContainer: {container_name}\nPrivate IP: {private_ip}\nMAC: {mac}\nHost Port: {hport}\nStep 5/5: Finalizing...\n```"))
+            
+            # Save to database
+            add_ipv4(user_id, container_name, SERVER_IP, private_ip, mac)
+            
+            # Success Embed
+            embed = success_embed("🌍 IPv4 Generated Successfully!")
+            embed.set_thumbnail(url=THUMBNAIL_URL)
+            
+            embed.add_field(
+                name="📦 CONTAINER",
+                value=f"```fix\nName: {container_name}\nPrivate IP: {private_ip}\nMAC: {mac}\n```",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="🌐 PUBLIC IPv4",
+                value=f"```fix\n{SERVER_IP}:{hport}\n```",
+                inline=True
+            )
+            
+            if tunnel_url:
+                embed.add_field(
+                    name="🌍 CLOUDFLARED TUNNEL",
+                    value=f"```fix\n{tunnel_url}\n```",
+                    inline=False
+                )
+            
+            embed.add_field(
+                name="🔌 ACCESS METHODS",
+                value=f"```fix\nSSH: ssh root@{SERVER_IP} -p {hport}\nWeb: {tunnel_url if tunnel_url else f'http://{SERVER_IP}:{hport}'}\n```",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="📋 COMMANDS",
+                value=f"```fix\n.manage {container_name} - Manage VPS\n.stats {container_name} - View Stats\n.logs {container_name} - View Logs\n```",
+                inline=False
+            )
+            
+            await msg.edit(embed=embed)
+            
+            # DM user
+            try:
+                dm_embed = success_embed("🌍 Your IPv4 is Ready!")
+                dm_embed.add_field(name="Container", value=f"```fix\n{container_name}\n```", inline=True)
+                dm_embed.add_field(name="Public IPv4", value=f"```fix\n{SERVER_IP}:{hport}\n```", inline=True)
+                if tunnel_url:
+                    dm_embed.add_field(name="Tunnel URL", value=f"```fix\n{tunnel_url}\n```", inline=True)
+                await ctx.author.send(embed=dm_embed)
+            except:
+                pass
+            
+        else:
+            await msg.edit(embed=error_embed("Failed", "```diff\n- Could not create port forward.\n```"))
+            
+    except Exception as e:
+        await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
+
+# ==================================================================================================
+#  🤖  COMPLETE .aichat COMMAND - OPENAI API WITH AUTO-FIX
+# ==================================================================================================
+
+import aiohttp
+import json
+from datetime import datetime
+
+# OpenAI Configuration
+OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"  # Add your OpenAI API key
+OPENAI_MODEL = "gpt-3.5-turbo"  # or "gpt-4"
+
+class AIView(View):
+    def __init__(self, ctx):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.message = None
+        
+        # Clear History Button
+        clear_btn = Button(label="🗑️ Clear History", style=discord.ButtonStyle.secondary, emoji="🗑️", row=0)
+        clear_btn.callback = self.clear_callback
+        
+        # Close Button
+        close_btn = Button(label="❌ Close", style=discord.ButtonStyle.danger, emoji="❌", row=0)
+        close_btn.callback = self.close_callback
+        
+        self.add_item(clear_btn)
+        self.add_item(close_btn)
+    
+    async def clear_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        
+        # Clear AI history
+        clear_ai_history(str(self.ctx.author.id))
+        embed = info_embed("AI Chat", "```fix\nChat history cleared! You can start a new conversation.\n```")
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    async def close_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("Not for you!", ephemeral=True)
+            return
+        await interaction.message.delete()
+
+
+@bot.command(name="aichat")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def ai_chat(ctx, *, message: str = None):
+    """Chat with AI assistant (OpenAI)"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    if OPENAI_API_KEY == "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":
+        return await ctx.send(embed=error_embed("API Key Required", "Please set your OpenAI API key in the code."))
+    
+    user_id = str(ctx.author.id)
+    
+    # If no message, show chat interface
+    if not message:
+        view = AIView(ctx)
+        
+        # Load history
+        history = load_ai_history(user_id)
+        if history:
+            last_messages = history[-3:] if len(history) > 3 else history
+            history_text = ""
+            for msg in last_messages:
+                if msg['role'] == 'user':
+                    history_text += f"👤 You: {msg['content'][:100]}\n"
+                elif msg['role'] == 'assistant':
+                    history_text += f"🤖 AI: {msg['content'][:100]}\n"
+            
+            embed = info_embed("AI Chat", f"```fix\nRecent Messages:\n{history_text if history_text else 'No recent messages'}\n```\nUse `.aichat <message>` to chat with AI.")
+        else:
+            embed = info_embed("AI Chat", "```fix\nWelcome to SVM5-BOT AI Assistant!\nUse .aichat <message> to chat.\n\nExample: .aichat How to install Docker?\n```")
+        
+        embed.set_thumbnail(url=THUMBNAIL_URL)
+        embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+        
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
+        return
+    
+    # Process message
+    msg = await ctx.send(embed=info_embed("🤖 AI is thinking...", "```fix\nProcessing your request...\n```"))
+    
+    try:
+        # Load history
+        history = load_ai_history(user_id)
+        if not history:
+            history = [{
+                "role": "system",
+                "content": f"You are {BOT_NAME} AI Assistant, a helpful VPS management bot made by {BOT_AUTHOR}. You help with Linux, LXC containers, Docker, server management, and general questions. Keep responses concise, friendly, and helpful. Server IP: {SERVER_IP}"
+            }]
+        
+        # Add user message
+        history.append({"role": "user", "content": message})
+        
+        # Keep last 20 messages + system
+        if len(history) > 21:
+            history = [history[0]] + history[-20:]
+        
+        # Call OpenAI API
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": OPENAI_MODEL,
+                    "messages": history,
+                    "max_tokens": 1024,
+                    "temperature": 0.7
+                },
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    reply = data["choices"][0]["message"]["content"]
+                    
+                    # Add to history
+                    history.append({"role": "assistant", "content": reply})
+                    save_ai_history(user_id, history)
+                    
+                    # Send response
+                    chunks = [reply[i:i:1900] for i in range(0, len(reply), 1900)]
+                    embed = info_embed("🤖 AI Response", chunks[0])
+                    await msg.edit(embed=embed)
+                    
+                    for chunk in chunks[1:]:
+                        await ctx.send(embed=info_embed("", chunk))
+                    
+                elif resp.status == 429:
+                    await msg.edit(embed=error_embed("Rate Limited", "```diff\n- Too many requests. Please wait a moment.\n```"))
+                elif resp.status == 401:
+                    await msg.edit(embed=error_embed("Invalid API Key", "```diff\n- Please check your OpenAI API key.\n```"))
+                else:
+                    error_text = await resp.text()
+                    await msg.edit(embed=error_embed("API Error", f"```diff\n- Status {resp.status}: {error_text[:200]}\n```"))
+                    
+    except asyncio.TimeoutError:
+        await msg.edit(embed=error_embed("Timeout", "```diff\n- Request timed out. Please try again.\n```"))
+    except Exception as e:
+        await msg.edit(embed=error_embed("Error", f"```diff\n- {str(e)[:1900]}\n```"))
+
+
+@bot.command(name="ais")
+async def ai_short(ctx, *, message: str):
+    """Shortcut for .aichat"""
+    await ai_chat(ctx, message=message)
+
+
+@bot.command(name="chat")
+async def chat(ctx, *, message: str):
+    """Shortcut for .aichat"""
+    await ai_chat(ctx, message=message)
+    
 @bot.command(name="ping")
 async def ping(ctx):
     start = time.time()
