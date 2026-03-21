@@ -13,7 +13,7 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║ qrcode # |   |   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
 # ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
 # ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
@@ -2423,7 +2423,7 @@ async def on_ready():
 ║  🎮 Total Games:   {len(GAMES_LIST)}                                                          ║
 ║  🛠️ Total Tools:   {len(TOOLS_LIST)}                                                          ║
 ║                                                                                               ║
-║  📊 TOTAL COMMANDS: 92+ │ ✅ BUTTONS │ ✅ SELECT MENUS │ ✅ NODE.JSON │ ✅ EVERYTHING         ║
+║  📊 TOTAL COMMANDS: 97+│ ✅ BUTTONS │ ✅ SELECT MENUS │ ✅ NODE.JSON │ ✅ EVERYTHING         ║
 ║                                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
     """)
@@ -2534,64 +2534,7 @@ async def invites_top(ctx, lim: int = 10):
 # ==================================================================================================
 #  🚀  COMPLETE .claim-free COMMAND - WITH RAINBOW PROGRESS & FULL UI
 # ==================================================================================================
-# ==================================================================================================
-                        dm_embed.add_field(
-                    name="📦 CONTAINER",
-                    value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\nPlan: {self.plan['emoji']} {self.plan['name']}\n```",
-                    inline=False
-                )
-                
-                dm_embed.add_field(
-                    name="⚙️ RESOURCES",
-                    value=f"```fix\nRAM: {self.plan['ram']}GB\nCPU: {self.plan['cpu']} Core(s)\nDisk: {self.plan['disk']}GB\n```",
-                    inline=True
-                )
-                
-                dm_embed.add_field(
-                    name="📅 CREATED",
-                    value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
-                    inline=True
-                )
-                
-                dm_embed.add_field(
-                    name="🖥️ QUICK COMMANDS",
-                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n.ssh-gen {container_name}\n```",
-                    inline=False
-                )
-                
-                dm_embed.set_footer(
-                    text=f"⚡ SVM5-BOT • Manage your VPS with .help ⚡",
-                    icon_url=THUMBNAIL_URL
-                )
-                
-                await self.ctx.author.send(embed=dm_embed)
-                
-            except:
-                pass
-            
-            logger.info(f"User {self.ctx.author} claimed VPS {container_name} with plan {self.plan['name']}")
-            
-        except Exception as e:
-            await progress_msg.edit(embed=error_embed("Creation Failed", f"```diff\n- {str(e)}\n```"))
-            try:
-                await run_lxc(f"lxc delete {container_name} --force")
-            except:
-                pass
-
-
-# ==================================================================================================
-#  🚀  .claim-free COMMAND
-# ==================================================================================================
-
-# ==================================================================================================
-#  🚀  COMPLETE .claim-free COMMAND - FIXED WITH FULL DETAILS
-# ==================================================================================================
-
-import asyncio
-import random
-import string
-import time
-from datetime import datetime
+# =================================================================================================
 
 # ==================================================================================================
 #  🎨  RAINBOW COLORS FOR PROGRESS
