@@ -7284,6 +7284,24 @@ async def trace_target(ctx, ip: str):
 # ==================================================================================================
 #  🆕  NEW IP COMMANDS FOR USER MANAGEMENT
 # ==================================================================================================
+# ==================================================================================================
+#  🔧  ADD THIS TO YOUR EXISTING BLOCK - apply_internal_permissions
+# ==================================================================================================
+
+async def apply_internal_permissions(container_name: str):
+    """Apply internal permissions for Docker compatibility"""
+    await asyncio.sleep(3)  # Wait for container to start
+    commands = [
+        "mkdir -p /etc/sysctl.d/",
+        "echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/99-custom.conf",
+        "echo 'net.ipv4.ping_group_range=0 2147483647' >> /etc/sysctl.d/99-custom.conf",
+        "echo 'fs.inotify.max_user_watches=524288' >> /etc/sysctl.d/99-custom.conf",
+        "sysctl -p /etc/sysctl.d/99-custom.conf || true",
+        "apt-get update -qq",
+        "apt-get install -y -qq curl wget sudo vim nano htop net-tools iproute2 iputils-ping dnsutils traceroute mtr tcpdump telnet ncdu tmux screen",
+    ]
+    for cmd in commands:
+        await exec_in_container(container_name, cmd)
 
 @bot.command(name="user-ip")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
