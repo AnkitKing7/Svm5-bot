@@ -13,7 +13,7 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║  ✅ 94 COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║  ✅ 96 COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
 # ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
 # ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
@@ -4919,10 +4919,22 @@ async def exec_in_container(container_name: str, command: str, timeout: int = 30
     """Execute command inside container"""
     return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
 
+# ==================================================================================================
+#  🚀  COMPLETE .create COMMAND - WITH PUBLIC STATISTICS & RAINBOW PROGRESS
+# ==================================================================================================
 
-# ==================================================================================================
-#  🎨  CREATE VPS VIEW WITH CONFIRMATION
-# ==================================================================================================
+# Rainbow colors for progress
+RAINBOW_COLORS = [
+    0xFF0000,  # Red
+    0xFF7700,  # Orange
+    0xFFFF00,  # Yellow
+    0x00FF00,  # Green
+    0x00CCFF,  # Cyan
+    0x3366FF,  # Blue
+    0x8B00FF,  # Violet
+    0xFF00CC,  # Pink
+]
+
 
 class CreateVPSView(View):
     def __init__(self, ctx, ram, cpu, disk, user, os_version, os_name):
@@ -4935,11 +4947,9 @@ class CreateVPSView(View):
         self.os_version = os_version
         self.os_name = os_name
         
-        # Confirm Button with Rainbow Style
         confirm_btn = Button(label="✅ Confirm Create", style=discord.ButtonStyle.success, emoji="✅", row=0)
         confirm_btn.callback = self.confirm_callback
         
-        # Cancel Button
         cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=0)
         cancel_btn.callback = self.cancel_callback
         
@@ -4964,67 +4974,91 @@ class CreateVPSView(View):
         user_id = str(self.user.id)
         container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
         
-        # Rainbow Progress Embed
-        progress = await interaction.followup.send(
+        # Rainbow progress
+        progress_msg = await interaction.followup.send(
             embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Step 1/6: Initializing container...\n```",
-                color=0xFF0000
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Initializing container...\n```",
+                color=RAINBOW_COLORS[0]
             ),
             ephemeral=True
         )
         
+        def get_progress_bar(percent):
+            filled = int(percent / 5)
+            return "█" * filled + "░" * (20 - filled)
+        
         try:
             ram_mb = self.ram * 1024
-            colors = [0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x0000FF, 0x8B00FF]
             
             # Step 1: Initialize container
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[████░░░░░░░░░░░░░░] 16% | Step 1/6: Initializing container...\n```",
-                color=colors[0]
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(10)}] 10% | 🔧 Initializing container...\n```",
+                color=RAINBOW_COLORS[0]
             ))
             await run_lxc(f"lxc init {self.os_version} {container_name} -s {DEFAULT_STORAGE_POOL}")
+            await asyncio.sleep(1)
             
-            # Step 2: Set limits
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[████████░░░░░░░░░░] 33% | Step 2/6: Setting RAM limits...\n```",
-                color=colors[1]
+            # Step 2: Set RAM limits
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(25)}] 25% | 💾 Setting RAM limits ({self.ram}GB)...\n```",
+                color=RAINBOW_COLORS[1]
             ))
             await run_lxc(f"lxc config set {container_name} limits.memory {ram_mb}MB")
-            await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
-            await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
+            await asyncio.sleep(1)
             
-            # Step 3: Apply LXC config
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[████████████░░░░░░] 50% | Step 3/6: Applying LXC configuration...\n```",
-                color=colors[2]
+            # Step 3: Set CPU limits
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(40)}] 40% | ⚡ Setting CPU limits ({self.cpu} cores)...\n```",
+                color=RAINBOW_COLORS[2]
+            ))
+            await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
+            await asyncio.sleep(1)
+            
+            # Step 4: Set Disk limits
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(55)}] 55% | 💽 Setting Disk limits ({self.disk}GB)...\n```",
+                color=RAINBOW_COLORS[3]
+            ))
+            await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
+            await asyncio.sleep(1)
+            
+            # Step 5: Apply LXC config
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(70)}] 70% | 🔨 Applying LXC configuration...\n```",
+                color=RAINBOW_COLORS[4]
             ))
             await apply_lxc_config(container_name)
+            await asyncio.sleep(1)
             
-            # Step 4: Start container
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[████████████████░░] 66% | Step 4/6: Starting container...\n```",
-                color=colors[3]
+            # Step 6: Start container
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(85)}] 85% | ▶️ Starting container...\n```",
+                color=RAINBOW_COLORS[5]
             ))
             await run_lxc(f"lxc start {container_name}")
+            await asyncio.sleep(2)
             
-            # Step 5: Apply internal permissions
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[██████████████████░░] 83% | Step 5/6: Configuring permissions...\n```",
-                color=colors[4]
+            # Step 7: Apply permissions
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(95)}] 95% | 🔧 Configuring permissions...\n```",
+                color=RAINBOW_COLORS[6]
             ))
             await apply_internal_permissions(container_name)
+            await asyncio.sleep(2)
             
-            # Step 6: Get IP and MAC
-            await progress.edit(embed=discord.Embed(
-                title="```glow\n🌈 CREATING VPS - PROGRESS 🌈\n```",
-                description="```fix\n[████████████████████] 100% | Step 6/6: Finalizing...\n```",
-                color=colors[5]
+            # Step 8: Get IP and MAC
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(100)}] 100% | 🎉 Finalizing...\n```",
+                color=RAINBOW_COLORS[7]
             ))
             
             # Get IP and MAC
@@ -5059,109 +5093,108 @@ class CreateVPSView(View):
                 except:
                     pass
             
-            # Rainbow Success Embed
-            success_embed_msg = discord.Embed(
-                title="```glow\n🌈 VPS CREATED SUCCESSFULLY! 🌈\n```",
-                description=f"🎉 VPS **{container_name}** has been created for {self.user.mention}!",
-                color=0x00FF88
-            )
-            success_embed_msg.set_thumbnail(url=THUMBNAIL_URL)
-            success_embed_msg.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            # Get public statistics
+            all_vps = get_all_vps()
+            total_vps = len(all_vps)
+            total_users = len(set([v['user_id'] for v in all_vps]))
+            active_vps = len([v for v in all_vps if v['status'] == 'running'])
+            total_ram = sum([v['ram'] for v in all_vps])
+            total_cpu = sum([v['cpu'] for v in all_vps])
+            total_disk = sum([v['disk'] for v in all_vps])
             
-            # Resource Bar
+            # Resource Bars
             ram_bar = "█" * int(self.ram / 16) + "░" * (10 - int(self.ram / 16))
             cpu_bar = "█" * int(self.cpu / 8) + "░" * (10 - int(self.cpu / 8))
             disk_bar = "█" * int(self.disk / 100) + "░" * (10 - int(self.disk / 100))
             
-            success_embed_msg.add_field(
+            # Success Embed
+            success_embed = discord.Embed(
+                title="```glow\n🌟✨ SVM5-BOT - VPS CREATED SUCCESSFULLY! ✨🌟\n```",
+                description=f"🎉 **VPS created for {self.user.mention} by {self.ctx.author.mention}!**\n\n"
+                            f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+                color=0x00FF88
+            )
+            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            
+            # Container Details
+            success_embed.add_field(
                 name="📦 CONTAINER DETAILS",
-                value=f"```fix\nName: {container_name}\nIP Address: {ip}\nMAC Address: {mac}\nOS: {self.os_name}\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Name      : {container_name}\n│ IP Address: {ip}\n│ MAC Address: {mac}\n│ OS        : {self.os_name}\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            success_embed_msg.add_field(
+            # Resource Allocation
+            success_embed.add_field(
                 name="⚙️ RESOURCE ALLOCATION",
-                value=f"```fix\nRAM: {self.ram}GB [{ram_bar}]\nCPU: {self.cpu} Core(s) [{cpu_bar}]\nDisk: {self.disk}GB [{disk_bar}]\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {self.ram}GB  [{ram_bar}]\n│ CPU  : {self.cpu} Core(s) [{cpu_bar}]\n│ Disk : {self.disk}GB [{disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            success_embed_msg.add_field(
+            # Management Commands
+            success_embed.add_field(
                 name="🖥️ MANAGEMENT COMMANDS",
-                value=f"```fix\n.manage {container_name} - Interactive Manager\n.stats {container_name} - Live Statistics\n.logs {container_name} - System Logs\n.ssh-gen {container_name} - SSH Access\n.reboot {container_name} - Reboot VPS\n.shutdown {container_name} - Shutdown VPS\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ .manage {container_name} - Interactive Manager\n│ .stats  {container_name} - Live Statistics\n│ .logs   {container_name} - System Logs\n│ .ssh-gen {container_name} - SSH Access\n│ .reboot {container_name} - Reboot VPS\n│ .shutdown {container_name} - Shutdown VPS\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            success_embed_msg.add_field(
-                name="🔗 QUICK LINKS",
-                value=f"[📖 Documentation](https://github.com/AnkitKing7/Svm5-bot) | [💬 Support](https://discord.gg) | [🐛 Report Issue](https://github.com/AnkitKing7/Svm5-bot/issues)",
+            # VPS Status
+            success_embed.add_field(
+                name="📊 VPS STATUS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Status      : 🟢 RUNNING\n│ Uptime      : Just Started\n│ Created     : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            success_embed_msg.set_footer(
-                text=f"⚡ Created by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+            # PUBLIC STATISTICS - VISIBLE TO ALL
+            success_embed.add_field(
+                name="🌍 PUBLIC STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n│ Total RAM Used    : {total_ram}GB\n│ Total CPU Used    : {total_cpu} Cores\n│ Total Disk Used   : {total_disk}GB\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.set_footer(
+                text=f"⚡ SVM5-BOT • Created by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
                 icon_url=THUMBNAIL_URL
             )
             
-            await progress.edit(embed=success_embed_msg)
+            await progress_msg.edit(embed=success_embed)
             
-            # Send DM to user
+            # DM to user
             try:
                 dm_embed = discord.Embed(
-                    title="```glow\n✨ YOUR VPS IS READY! ✨\n```",
-                    description=f"🎉 A new VPS has been created for you!",
+                    title="```glow\n🌟 YOUR VPS IS READY! 🌟\n```",
+                    description=f"🎉 A new VPS has been created for you by {self.ctx.author.name}!",
                     color=0x57F287
                 )
                 dm_embed.set_thumbnail(url=THUMBNAIL_URL)
-                dm_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
-                
                 dm_embed.add_field(
                     name="📦 CONTAINER",
                     value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\n```",
                     inline=False
                 )
-                
                 dm_embed.add_field(
                     name="⚙️ RESOURCES",
                     value=f"```fix\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```",
                     inline=True
                 )
-                
                 dm_embed.add_field(
-                    name="📅 CREATED",
-                    value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
-                    inline=True
-                )
-                
-                dm_embed.add_field(
-                    name="🖥️ QUICK COMMANDS",
-                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n.ssh-gen {container_name}\n```",
+                    name="🖥️ COMMANDS",
+                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n```",
                     inline=False
                 )
-                
-                dm_embed.set_footer(
-                    text=f"⚡ SVM5-BOT • Manage your VPS with .help ⚡",
-                    icon_url=THUMBNAIL_URL
-                )
-                
                 await self.user.send(embed=dm_embed)
-                
             except:
                 pass
             
-            # Log
             logger.info(f"Admin {self.ctx.author} created VPS {container_name} for {self.user}")
             
         except Exception as e:
-            await progress.edit(embed=error_embed("Creation Failed", f"```diff\n- {str(e)}\n```"))
+            await progress_msg.edit(embed=error_embed("Creation Failed", f"```diff\n- {str(e)}\n```"))
             try:
                 await run_lxc(f"lxc delete {container_name} --force")
             except:
                 pass
 
-
-# ==================================================================================================
-#  📋  OS SELECTION VIEW
-# ==================================================================================================
 
 class OSDropdownView(View):
     def __init__(self, ctx, ram, cpu, disk, user):
@@ -5172,7 +5205,6 @@ class OSDropdownView(View):
         self.disk = disk
         self.user = user
         
-        # Create OS options
         options = []
         for os in OS_OPTIONS[:25]:
             options.append(discord.SelectOption(
@@ -5198,9 +5230,14 @@ class OSDropdownView(View):
         selected_os = self.select.values[0]
         os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
         
+        # Get public statistics for confirmation embed
+        all_vps = get_all_vps()
+        total_vps = len(all_vps)
+        total_users = len(set([v['user_id'] for v in all_vps]))
+        
         embed = discord.Embed(
             title="```glow\n⚠️ CONFIRM VPS CREATION ⚠️\n```",
-            description=f"```fix\nUser: {self.user.mention}\nOS: {os_name}\nRAM: {self.ram}GB\nCPU: {self.cpu} Core(s)\nDisk: {self.disk}GB\n```\n\n**Please confirm to create this VPS.**",
+            description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ User : {self.user.mention}\n│ OS   : {os_name}\n│ RAM  : {self.ram}GB\n│ CPU  : {self.cpu} Core(s)\n│ Disk : {self.disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please confirm to create this VPS.**\n\n```glow\n🌍 Current Statistics:\n• Total VPS: {total_vps}\n• Total Users: {total_users}\n```",
             color=0xFFAA00
         )
         embed.set_thumbnail(url=THUMBNAIL_URL)
@@ -5216,20 +5253,22 @@ class OSDropdownView(View):
         )
 
 
-# ==================================================================================================
-#  🚀  .create COMMAND
-# ==================================================================================================
-
 @bot.command(name="create")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
 async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member):
-    """Create a VPS for a user with full UI and OS selection"""
+    """Create a VPS for a user with public statistics"""
     if ram <= 0 or cpu <= 0 or disk <= 0:
         return await ctx.send(embed=error_embed("Invalid Specs", "```diff\n- RAM, CPU, Disk must be positive integers.\n```"))
     
+    # Get public statistics for main embed
+    all_vps = get_all_vps()
+    total_vps = len(all_vps)
+    total_users = len(set([v['user_id'] for v in all_vps]))
+    active_vps = len([v for v in all_vps if v['status'] == 'running'])
+    
     embed = discord.Embed(
         title="```glow\n🖥️ CREATE NEW VPS 🖥️\n```",
-        description=f"```fix\n👤 User: {user.mention}\n💾 RAM: {ram}GB\n⚙️ CPU: {cpu} Core(s)\n💽 Disk: {disk}GB\n```\n\n**Please select an operating system from the dropdown menu below.**",
+        description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ 👤 User : {user.mention}\n│ 💾 RAM  : {ram}GB\n│ ⚙️ CPU  : {cpu} Core(s)\n│ 💽 Disk : {disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please select an operating system from the dropdown menu below.**\n\n```glow\n🌍 Current Server Statistics:\n• Total VPS Created: {total_vps}\n• Total Users: {total_users}\n• Active VPS: {active_vps}\n```",
         color=0x5865F2
     )
     embed.set_thumbnail(url=THUMBNAIL_URL)
@@ -5241,6 +5280,282 @@ async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member)
     
     view = OSDropdownView(ctx, ram, cpu, disk, user)
     await ctx.send(embed=embed, view=view)
+
+# ==================================================================================================
+#  📏  COMPLETE .resize COMMAND - ADMIN ONLY
+# ==================================================================================================
+
+@bot.command(name="resize")
+@commands.check(lambda ctx: is_admin(str(ctx.author.id)))
+async def resize_vps(ctx, container_name: str, ram: int = None, cpu: int = None, disk: int = None):
+    """Resize VPS resources - Admin only"""
+    if ram is None and cpu is None and disk is None:
+        return await ctx.send(embed=error_embed("Missing Parameters", "```fix\nUsage: .resize <container> [ram] [cpu] [disk]\nExample: .resize my-vps 8 4 100\n```"))
+    
+    # Find the VPS
+    all_vps = get_all_vps()
+    vps = next((v for v in all_vps if v['container_name'] == container_name), None)
+    
+    if not vps:
+        return await ctx.send(embed=error_embed("VPS Not Found", f"```diff\n- Container '{container_name}' not found.\n```"))
+    
+    user = await bot.fetch_user(int(vps['user_id']))
+    
+    # Current resources
+    current_ram = vps['ram']
+    current_cpu = vps['cpu']
+    current_disk = vps['disk']
+    
+    # New resources
+    new_ram = ram if ram is not None else current_ram
+    new_cpu = cpu if cpu is not None else current_cpu
+    new_disk = disk if disk is not None else current_disk
+    
+    # Validate new resources
+    if new_ram <= 0 or new_cpu <= 0 or new_disk <= 0:
+        return await ctx.send(embed=error_embed("Invalid Resources", "```diff\n- RAM, CPU, Disk must be positive.\n```"))
+    
+    if new_ram > 256:
+        return await ctx.send(embed=error_embed("Too High", "```diff\n- RAM cannot exceed 256GB.\n```"))
+    if new_cpu > 128:
+        return await ctx.send(embed=error_embed("Too High", "```diff\n- CPU cannot exceed 128 cores.\n```"))
+    if new_disk > 5000:
+        return await ctx.send(embed=error_embed("Too High", "```diff\n- Disk cannot exceed 5TB.\n```"))
+    
+    # Confirm view
+    view = ResizeConfirmView(ctx, container_name, vps, user, current_ram, current_cpu, current_disk, new_ram, new_cpu, new_disk)
+    
+    # Resource bars
+    ram_bar = "█" * int(current_ram / 16) + "░" * (10 - int(current_ram / 16))
+    cpu_bar = "█" * int(current_cpu / 8) + "░" * (10 - int(current_cpu / 8))
+    disk_bar = "█" * int(current_disk / 100) + "░" * (10 - int(current_disk / 100))
+    
+    new_ram_bar = "█" * int(new_ram / 16) + "░" * (10 - int(new_ram / 16))
+    new_cpu_bar = "█" * int(new_cpu / 8) + "░" * (10 - int(new_cpu / 8))
+    new_disk_bar = "█" * int(new_disk / 100) + "░" * (10 - int(new_disk / 100))
+    
+    embed = discord.Embed(
+        title="```glow\n📏 SVM5-BOT - RESIZE VPS 📏\n```",
+        description=f"Resizing VPS **{container_name}**\n\n"
+                    f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+        color=0xFFAA00
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    
+    embed.add_field(
+        name="📊 CURRENT RESOURCES",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {current_ram}GB  [{ram_bar}]\n│ CPU  : {current_cpu} Core(s) [{cpu_bar}]\n│ Disk : {current_disk}GB [{disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="⬆️ NEW RESOURCES",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {new_ram}GB  [{new_ram_bar}]\n│ CPU  : {new_cpu} Core(s) [{new_cpu_bar}]\n│ Disk : {new_disk}GB [{new_disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="👤 OWNER",
+        value=f"```fix\n{user.mention}\n```",
+        inline=True
+    )
+    
+    embed.set_footer(
+        text=f"⚡ SVM5-BOT • Resize by {ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+        icon_url=THUMBNAIL_URL
+    )
+    
+    await ctx.send(embed=embed, view=view)
+
+
+class ResizeConfirmView(View):
+    def __init__(self, ctx, container_name, vps, user, current_ram, current_cpu, current_disk, new_ram, new_cpu, new_disk):
+        super().__init__(timeout=60)
+        self.ctx = ctx
+        self.container_name = container_name
+        self.vps = vps
+        self.user = user
+        self.current_ram = current_ram
+        self.current_cpu = current_cpu
+        self.current_disk = current_disk
+        self.new_ram = new_ram
+        self.new_cpu = new_cpu
+        self.new_disk = new_disk
+        
+        confirm_btn = Button(label="✅ Confirm Resize", style=discord.ButtonStyle.success, emoji="✅", row=0)
+        confirm_btn.callback = self.confirm_callback
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=0)
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+    
+    async def confirm_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.perform_resize(interaction)
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nResize cancelled.\n```"),
+            view=None
+        )
+    
+    async def perform_resize(self, interaction):
+        await interaction.response.defer()
+        
+        rainbow_colors = [0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x00CCFF, 0x3366FF, 0x8B00FF]
+        
+        progress_msg = await interaction.followup.send(
+            embed=discord.Embed(
+                title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Checking container status...\n```",
+                color=rainbow_colors[0]
+            ),
+            ephemeral=True
+        )
+        
+        def get_progress_bar(percent):
+            filled = int(percent / 5)
+            return "█" * filled + "░" * (20 - filled)
+        
+        try:
+            # Step 1: Check status
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(20)}] 20% | 🔍 Checking container status...\n```",
+                color=rainbow_colors[0]
+            ))
+            
+            status = await get_container_status(self.container_name)
+            was_running = status == 'running'
+            
+            # Step 2: Stop if running
+            if was_running:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(40)}] 40% | ⏹️ Stopping container...\n```",
+                    color=rainbow_colors[1]
+                ))
+                await run_lxc(f"lxc stop {self.container_name} --force")
+                await asyncio.sleep(2)
+            
+            # Step 3: Apply RAM change
+            if self.new_ram != self.current_ram:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(60)}] 60% | 💾 Updating RAM: {self.current_ram}GB → {self.new_ram}GB\n```",
+                    color=rainbow_colors[2]
+                ))
+                await run_lxc(f"lxc config set {self.container_name} limits.memory {self.new_ram * 1024}MB")
+            
+            # Step 4: Apply CPU change
+            if self.new_cpu != self.current_cpu:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(70)}] 70% | ⚡ Updating CPU: {self.current_cpu} → {self.new_cpu} cores\n```",
+                    color=rainbow_colors[3]
+                ))
+                await run_lxc(f"lxc config set {self.container_name} limits.cpu {self.new_cpu}")
+            
+            # Step 5: Apply Disk change
+            if self.new_disk != self.current_disk:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(80)}] 80% | 💽 Updating Disk: {self.current_disk}GB → {self.new_disk}GB\n```",
+                    color=rainbow_colors[4]
+                ))
+                await run_lxc(f"lxc config device set {self.container_name} root size={self.new_disk}GB")
+            
+            # Step 6: Start if it was running
+            if was_running:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(90)}] 90% | ▶️ Starting container...\n```",
+                    color=rainbow_colors[5]
+                ))
+                await run_lxc(f"lxc start {self.container_name}")
+                await asyncio.sleep(3)
+            
+            # Step 7: Update database
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 RESIZING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(100)}] 100% | 💾 Updating database...\n```",
+                color=rainbow_colors[6]
+            ))
+            
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE vps SET ram = ?, cpu = ?, disk = ? WHERE container_name = ?',
+                       (self.new_ram, self.new_cpu, self.new_disk, self.container_name))
+            conn.commit()
+            conn.close()
+            
+            await asyncio.sleep(1)
+            
+            # Get updated public statistics
+            all_vps = get_all_vps()
+            total_vps = len(all_vps)
+            total_users = len(set([v['user_id'] for v in all_vps]))
+            active_vps = len([v for v in all_vps if v['status'] == 'running'])
+            total_ram = sum([v['ram'] for v in all_vps])
+            total_cpu = sum([v['cpu'] for v in all_vps])
+            total_disk = sum([v['disk'] for v in all_vps])
+            
+            # Resource Bars
+            new_ram_bar = "█" * int(self.new_ram / 16) + "░" * (10 - int(self.new_ram / 16))
+            new_cpu_bar = "█" * int(self.new_cpu / 8) + "░" * (10 - int(self.new_cpu / 8))
+            new_disk_bar = "█" * int(self.new_disk / 100) + "░" * (10 - int(self.new_disk / 100))
+            
+            # Success Embed
+            success_embed = discord.Embed(
+                title="```glow\n✅ VPS RESIZED SUCCESSFULLY! ✅\n```",
+                description=f"🎉 **VPS {self.container_name} has been resized!**\n\n"
+                            f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+                color=0x00FF88
+            )
+            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            
+            success_embed.add_field(
+                name="📦 CONTAINER",
+                value=f"```fix\n{self.container_name}\nOwner: {self.user.mention}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="⚙️ NEW RESOURCES",
+                value=f"```fix\nRAM  : {self.new_ram}GB  [{new_ram_bar}]\nCPU  : {self.new_cpu} Core(s) [{new_cpu_bar}]\nDisk : {self.new_disk}GB [{new_disk_bar}]\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="🌍 PUBLIC STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n│ Total RAM Used    : {total_ram}GB\n│ Total CPU Used    : {total_cpu} Cores\n│ Total Disk Used   : {total_disk}GB\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.set_footer(
+                text=f"⚡ SVM5-BOT • Resized by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                icon_url=THUMBNAIL_URL
+            )
+            
+            await progress_msg.edit(embed=success_embed)
+            
+            # DM user
+            try:
+                dm_embed = success_embed("📏 VPS Resized!", f"Your VPS **{self.container_name}** has been resized by an admin!")
+                dm_embed.add_field(name="⚙️ New Resources", value=f"```fix\nRAM: {self.new_ram}GB\nCPU: {self.new_cpu} Core(s)\nDisk: {self.new_disk}GB\n```")
+                await self.user.send(embed=dm_embed)
+            except:
+                pass
+            
+            logger.info(f"Admin {self.ctx.author} resized {self.container_name} to {self.new_ram}GB/{self.new_cpu}C/{self.new_disk}GB")
+            
+        except Exception as e:
+            await progress_msg.edit(embed=error_embed("Resize Failed", f"```diff\n- {str(e)}\n```"))
 
 # ==================================================================================================
 #  🔐  LICENSE VERIFY COMMAND
