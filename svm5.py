@@ -955,54 +955,49 @@ LICENSE_VERIFIED = get_setting('license_verified', 'false') == 'true'
 # ==================================================================================================
 #  🎯  VPS MANAGE VIEW WITH ALL BUTTONS
 # ==================================================================================================
-
 # ==================================================================================================
-#  🖥️  COMPLETE VPS MANAGE VIEW - ALL BUTTONS INCLUDED
+#  🖥️  COMPLETE .manage COMMAND - ALL BUTTONS WORKING + TUNNEL URL
 # ==================================================================================================
 
 class VPSManageView(View):
-    """Complete VPS Management View with All Buttons"""
-    
-    def __init__(self, ctx, container_name: str, container_data: dict):
+    def __init__(self, ctx, container_name, container_data):
         super().__init__(timeout=300)
         self.ctx = ctx
         self.container = container_name
         self.data = container_data
+        self.user = ctx.author
         self.message = None
         self.live_mode = False
-        self.live_task = None
         
-        # All Buttons - Row 1 (Basic Controls)
+        # Row 1 - Basic Controls
         self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
         self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
         self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
-        # CHANGED: .warning -> .secondary (Discord doesn't have yellow)
-        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.secondary, emoji="⚡", row=0)
+        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
         self.shutdown_btn = Button(label="⛔ Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
         
-        # Row 2 (Info & Access)
+        # Row 2 - Info & Access
         self.stats_btn = Button(label="📊 Stats", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
         self.process_btn = Button(label="🔝 Processes", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
         self.console_btn = Button(label="📟 Console", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
         self.ssh_btn = Button(label="🔑 SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
         self.logs_btn = Button(label="📋 Logs", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
         
-        # Row 3 (Advanced)
+        # Row 3 - Advanced
         self.ipv4_btn = Button(label="🌍 IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
+        self.tunnel_btn = Button(label="🌐 Tunnel URL", style=discord.ButtonStyle.primary, emoji="🌐", row=2)
         self.ports_btn = Button(label="🔌 Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
         self.backup_btn = Button(label="💾 Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
-        # CHANGED: .warning -> .primary
-        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.primary, emoji="🔄", row=2)
-        self.snapshot_btn = Button(label="📸 Snapshot", style=discord.ButtonStyle.secondary, emoji="📸", row=2)
+        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.warning, emoji="🔄", row=2)
         
-        # Row 4 (Management)
+        # Row 4 - Management
         self.reinstall_btn = Button(label="🔄 Reinstall OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
         self.upgrade_btn = Button(label="⬆️ Upgrade VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
         self.invites_btn = Button(label="📨 Check Invites", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
         self.panel_btn = Button(label="📦 Install Panel", style=discord.ButtonStyle.primary, emoji="📦", row=3)
         self.share_btn = Button(label="👥 Share VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
         
-        # Row 5 (Live & Refresh)
+        # Row 5 - Live & Refresh
         self.live_btn = Button(label="🔴 Live Mode", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
         self.refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
         
@@ -1020,10 +1015,10 @@ class VPSManageView(View):
         self.logs_btn.callback = self.logs_callback
         
         self.ipv4_btn.callback = self.ipv4_callback
+        self.tunnel_btn.callback = self.tunnel_callback
         self.ports_btn.callback = self.ports_callback
         self.backup_btn.callback = self.backup_callback
         self.restore_btn.callback = self.restore_callback
-        self.snapshot_btn.callback = self.snapshot_callback
         
         self.reinstall_btn.callback = self.reinstall_callback
         self.upgrade_btn.callback = self.upgrade_callback
@@ -1048,10 +1043,10 @@ class VPSManageView(View):
         self.add_item(self.logs_btn)
         
         self.add_item(self.ipv4_btn)
+        self.add_item(self.tunnel_btn)
         self.add_item(self.ports_btn)
         self.add_item(self.backup_btn)
         self.add_item(self.restore_btn)
-        self.add_item(self.snapshot_btn)
         
         self.add_item(self.reinstall_btn)
         self.add_item(self.upgrade_btn)
@@ -1062,114 +1057,38 @@ class VPSManageView(View):
         self.add_item(self.live_btn)
         self.add_item(self.refresh_btn)
     
-    async def get_stats_embed(self) -> discord.Embed:
-        """Get current VPS stats embed"""
+    async def get_stats_embed(self):
         stats = await get_container_stats(self.container)
         
         embed = discord.Embed(
-            title=f"```glow\n🖥️ VPS Management: {self.container}\n```",
+            title=f"```glow\n🖥️ VPS MANAGEMENT - {self.container.upper()}\n```",
+            description=f"👤 **Owner:** {self.user.mention}\n📦 **Container:** `{self.container}`",
             color=0x5865F2
         )
-        embed.set_thumbnail(url=THUMBNAIL_URL)
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
+        embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
         
-        # Status Section
-        status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+        status_emoji = "🟢" if stats['status'] == 'running' and not self.data.get('suspended') else "⛔" if self.data.get('suspended') else "🔴"
         status_text = stats['status'].upper()
         if self.data.get('suspended'):
-            status_text = "⛔ SUSPENDED"
-            status_emoji = "⛔"
+            status_text = "SUSPENDED"
         
-        embed.add_field(
-            name="📊 Status",
-            value=f"{status_emoji} `{status_text}`",
-            inline=True
-        )
+        embed.add_field(name="📊 STATUS", value=f"{status_emoji} `{status_text}`", inline=True)
+        embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
+        embed.add_field(name="📀 MEMORY", value=f"```fix\n{stats['memory']}\n```", inline=True)
+        embed.add_field(name="💽 DISK", value=f"```fix\n{stats['disk']}\n```", inline=True)
+        embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
+        embed.add_field(name="🔌 MAC", value=f"```fix\n{stats['mac']}\n```", inline=True)
+        embed.add_field(name="⏱️ UPTIME", value=f"```fix\n{stats['uptime']}\n```", inline=True)
         
-        # Resources Section
-        embed.add_field(
-            name="⚙️ Resources",
-            value=f"```fix\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```",
-            inline=True
-        )
+        ram_alloc = self.data['ram']
+        cpu_alloc = self.data['cpu']
+        disk_alloc = self.data['disk']
+        ram_bar = "█" * int(ram_alloc / 16) + "░" * (10 - int(ram_alloc / 16))
+        cpu_bar = "█" * int(cpu_alloc / 8) + "░" * (10 - int(cpu_alloc / 8))
+        disk_bar = "█" * int(disk_alloc / 100) + "░" * (10 - int(disk_alloc / 100))
         
-        # OS Info
-        embed.add_field(
-            name="🐧 OS",
-            value=f"```fix\n{self.data.get('os_version', 'ubuntu:22.04')}\n```",
-            inline=True
-        )
-        
-        if stats['status'] == 'running' and not self.data.get('suspended'):
-            # CPU Usage with Graph
-            cpu_val = float(stats['cpu'].replace('%', '')) if stats['cpu'] != '0%' else 0
-            cpu_bar = "█" * int(cpu_val / 10) + "░" * (10 - int(cpu_val / 10))
-            
-            # Memory Usage with Graph
-            mem_val = 0
-            if '/' in stats['memory']:
-                try:
-                    used = int(stats['memory'].split('/')[0].replace('MB', '').strip())
-                    total = int(stats['memory'].split('/')[1].replace('MB', '').strip())
-                    mem_val = (used / total) * 100 if total > 0 else 0
-                except:
-                    mem_val = 0
-            mem_bar = "█" * int(mem_val / 10) + "░" * (10 - int(mem_val / 10))
-            
-            # Disk Usage with Graph
-            disk_val = 0
-            if '/' in stats['disk']:
-                try:
-                    used = stats['disk'].split('/')[0].replace('GB', '').strip()
-                    total = stats['disk'].split('/')[1].split()[0].strip()
-                    disk_val = (float(used) / float(total)) * 100 if float(total) > 0 else 0
-                except:
-                    disk_val = 0
-            disk_bar = "█" * int(disk_val / 10) + "░" * (10 - int(disk_val / 10))
-            
-            embed.add_field(
-                name="💾 CPU Usage",
-                value=f"```fix\n{cpu_bar} {stats['cpu']}\n```",
-                inline=True
-            )
-            embed.add_field(
-                name="📀 Memory Usage",
-                value=f"```fix\n{mem_bar} {stats['memory']}\n```",
-                inline=True
-            )
-            embed.add_field(
-                name="💽 Disk Usage",
-                value=f"```fix\n{disk_bar} {stats['disk']}\n```",
-                inline=True
-            )
-            
-            # Network Info
-            embed.add_field(
-                name="🌐 IP Address",
-                value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```",
-                inline=True
-            )
-            embed.add_field(
-                name="🔌 MAC Address",
-                value=f"```fix\n{stats['mac']}\n```",
-                inline=True
-            )
-            embed.add_field(
-                name="⏱️ Uptime",
-                value=f"```fix\n{stats['uptime']}\n```",
-                inline=True
-            )
-            
-            # Process Count
-            embed.add_field(
-                name="📟 Processes",
-                value=f"```fix\n{stats.get('processes', 'N/A')}\n```",
-                inline=True
-            )
-        
-        embed.set_footer(
-            text=f"⚡ {BOT_NAME} • Container: {self.container} • Last Updated: {datetime.now().strftime('%H:%M:%S')} ⚡",
-            icon_url=THUMBNAIL_URL
-        )
+        embed.add_field(name="⚙️ RESOURCES", value=f"```fix\nRAM: {ram_alloc}GB [{ram_bar}]\nCPU: {cpu_alloc} Core(s) [{cpu_bar}]\nDisk: {disk_alloc}GB [{disk_bar}]\n```", inline=False)
         
         return embed
     
@@ -1177,7 +1096,7 @@ class VPSManageView(View):
         await interaction.response.defer()
         await run_lxc(f"lxc start {self.container}")
         update_vps_status(self.container, 'running')
-        await interaction.followup.send(embed=success_embed("Started", f"```fix\n{self.container} started successfully!\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("Started", f"```fix\n{self.container} started!\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
     async def stop_callback(self, interaction):
@@ -1211,14 +1130,11 @@ class VPSManageView(View):
     async def stats_callback(self, interaction):
         stats = await get_container_stats(self.container)
         embed = info_embed(f"Live Stats: {self.container}")
-        
         embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
         embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
         embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
         embed.add_field(name="💽 Disk", value=f"```fix\n{stats['disk']}\n```", inline=True)
         embed.add_field(name="⏱️ Uptime", value=f"```fix\n{stats['uptime']}\n```", inline=True)
-        embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
-        
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
     async def process_callback(self, interaction):
@@ -1241,12 +1157,11 @@ class VPSManageView(View):
         url = out.strip()
         if url:
             try:
-                dm = success_embed("🔑 SSH Access Generated")
-                dm.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```")
-                dm.add_field(name="🔐 SSH Command", value=f"```bash\n{url}\n```")
-                dm.add_field(name="⏱️ Expires", value="```fix\n15 minutes\n```")
+                dm = success_embed("🔑 SSH Access")
+                dm.add_field(name="Container", value=f"```fix\n{self.container}\n```")
+                dm.add_field(name="Command", value=f"```bash\n{url}\n```")
                 await interaction.user.send(embed=dm)
-                await interaction.followup.send(embed=success_embed("SSH Generated", "Check your DMs!"), ephemeral=True)
+                await interaction.followup.send(embed=success_embed("SSH Generated", "Check DMs!"), ephemeral=True)
             except:
                 await interaction.followup.send(embed=error_embed("DM Failed", f"```fix\n{url}\n```"), ephemeral=True)
         else:
@@ -1264,6 +1179,25 @@ class VPSManageView(View):
         embed = terminal_embed(f"IPv4 Details: {self.container}", out[:1900])
         await interaction.followup.send(embed=embed, ephemeral=True)
     
+    async def tunnel_callback(self, interaction):
+        await interaction.response.defer()
+        # Try to create cloudflared tunnel
+        tunnel_url = await create_cloudflared_tunnel(self.container, 80)
+        if tunnel_url:
+            embed = success_embed("🌐 Tunnel URL Generated")
+            embed.add_field(name="URL", value=f"```fix\n{tunnel_url}\n```", inline=False)
+            embed.add_field(name="Expires", value="```fix\n24 hours\n```", inline=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+            # Save to database
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE panels SET tunnel_url = ? WHERE container_name = ?', (tunnel_url, self.container))
+            conn.commit()
+            conn.close()
+        else:
+            await interaction.followup.send(embed=error_embed("Failed", "Could not create tunnel"), ephemeral=True)
+    
     async def ports_callback(self, interaction):
         await interaction.response.defer()
         out, _, _ = await exec_in_container(self.container, "netstat -tuln | head -20")
@@ -1274,111 +1208,65 @@ class VPSManageView(View):
         await interaction.response.defer()
         backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         out, err, code = await run_lxc(f"lxc snapshot {self.container} {backup_name}")
-        
         if code == 0:
             add_snapshot(str(self.ctx.author.id), self.container, backup_name)
             embed = success_embed("Backup Created")
             embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-            embed.add_field(name="💾 Backup Name", value=f"```fix\n{backup_name}\n```", inline=True)
-            embed.add_field(name="📅 Created", value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```", inline=True)
+            embed.add_field(name="💾 Backup", value=f"```fix\n{backup_name}\n```", inline=True)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.followup.send(embed=error_embed("Backup Failed", f"```diff\n- {err}\n```"), ephemeral=True)
     
     async def restore_callback(self, interaction):
-        # Get available snapshots
         snapshots = get_snapshots(self.container)
-        
         if not snapshots:
-            await interaction.response.send_message(embed=error_embed("No Backups", "No backups found for this VPS."), ephemeral=True)
-            return
+            return await interaction.response.send_message(embed=error_embed("No Backups"), ephemeral=True)
         
-        # Create selection view for snapshots
-        view = View(timeout=60)
         options = []
         for s in snapshots[:10]:
-            options.append(discord.SelectOption(
-                label=s['snapshot_name'],
-                value=s['snapshot_name'],
-                description=f"Created: {s['created_at'][:16]}"
-            ))
+            options.append(discord.SelectOption(label=s['snapshot_name'], value=s['snapshot_name'], description=f"Created: {s['created_at'][:16]}"))
         
-        select = Select(placeholder="Select backup to restore...", options=options)
+        view = View()
+        select = Select(placeholder="Select backup...", options=options)
         
-        async def select_callback(select_interaction):
+        async def select_cb(sel_interaction):
             snap_name = select.values[0]
-            await select_interaction.response.defer()
-            msg = await select_interaction.followup.send(embed=info_embed("Restoring", f"```fix\nRestoring {self.container} from {snap_name}...\n```"), ephemeral=True)
+            await sel_interaction.response.defer()
+            msg = await sel_interaction.followup.send(embed=info_embed("Restoring", f"```fix\n{self.container} from {snap_name}...\n```"), ephemeral=True)
             
             status = await get_container_status(self.container)
             if status == 'running':
                 await run_lxc(f"lxc stop {self.container} --force")
-            
             out, err, code = await run_lxc(f"lxc restore {self.container} {snap_name}")
-            
             if code == 0:
                 await run_lxc(f"lxc start {self.container}")
-                embed = success_embed("Backup Restored")
-                embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-                embed.add_field(name="💾 Backup", value=f"```fix\n{snap_name}\n```", inline=True)
-                await msg.edit(embed=embed)
+                await msg.edit(embed=success_embed("Restored", f"```fix\n{self.container} restored from {snap_name}\n```"))
             else:
                 await msg.edit(embed=error_embed("Restore Failed", f"```diff\n- {err}\n```"))
         
-        select.callback = select_callback
+        select.callback = select_cb
         view.add_item(select)
-        
-        embed = info_embed("Select Backup", "Choose a backup to restore:")
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-    
-    async def snapshot_callback(self, interaction):
-        await interaction.response.defer()
-        snapshots = get_snapshots(self.container)
-        
-        if not snapshots:
-            await interaction.followup.send(embed=info_embed("No Snapshots", "No snapshots found."), ephemeral=True)
-            return
-        
-        embed = info_embed(f"Snapshots: {self.container}")
-        for s in snapshots[:10]:
-            embed.add_field(
-                name=f"📸 {s['snapshot_name']}",
-                value=f"```fix\nCreated: {s['created_at'][:16]}\nSize: {s.get('size_mb', 'N/A')} MB\n```",
-                inline=False
-            )
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=info_embed("Select Backup"), view=view, ephemeral=True)
     
     async def reinstall_callback(self, interaction):
-        """Reinstall OS with OS selection"""
-        # OS selection view
-        view = View(timeout=120)
         options = []
         for os in OS_OPTIONS[:25]:
-            options.append(discord.SelectOption(
-                label=os['label'][:100],
-                value=os['value'],
-                description=os['desc'][:100],
-                emoji=os.get('icon', '🐧')
-            ))
+            options.append(discord.SelectOption(label=os['label'][:100], value=os['value'], description=os['desc'][:100]))
         
-        select = Select(placeholder="Select new operating system...", options=options)
+        view = View()
+        select = Select(placeholder="Select new OS...", options=options)
         
-        async def select_callback(select_interaction):
-            if select_interaction.user.id != self.ctx.author.id:
-                await select_interaction.response.send_message("Not for you!", ephemeral=True)
-                return
+        async def select_cb(sel_interaction):
+            os_val = select.values[0]
+            os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == os_val), os_val)
             
-            selected_os = select.values[0]
-            
-            # Confirmation view
-            confirm_view = View(timeout=60)
+            confirm_view = View()
             confirm_btn = Button(label="✅ Confirm Reinstall", style=discord.ButtonStyle.danger)
             cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
             
             async def confirm_cb(confirm_interaction):
                 await confirm_interaction.response.defer()
-                msg = await confirm_interaction.followup.send(embed=info_embed("Reinstalling", f"```fix\nReinstalling {self.container} with {selected_os}...\n```"), ephemeral=True)
+                msg = await confirm_interaction.followup.send(embed=info_embed("Reinstalling", f"```fix\n{self.container} with {os_name}...\n```"), ephemeral=True)
                 
                 try:
                     status = await get_container_status(self.container)
@@ -1390,7 +1278,7 @@ class VPSManageView(View):
                     disk = self.data['disk']
                     
                     await run_lxc(f"lxc delete {self.container} --force")
-                    await run_lxc(f"lxc init {selected_os} {self.container} -s {DEFAULT_STORAGE_POOL}")
+                    await run_lxc(f"lxc init {os_val} {self.container} -s {DEFAULT_STORAGE_POOL}")
                     await run_lxc(f"lxc config set {self.container} limits.memory {ram_mb}MB")
                     await run_lxc(f"lxc config set {self.container} limits.cpu {cpu}")
                     await run_lxc(f"lxc config device set {self.container} root size={disk}GB")
@@ -1399,143 +1287,123 @@ class VPSManageView(View):
                     
                     embed = success_embed("OS Reinstalled")
                     embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-                    embed.add_field(name="🐧 New OS", value=f"```fix\n{selected_os}\n```", inline=True)
+                    embed.add_field(name="🐧 New OS", value=f"```fix\n{os_name}\n```", inline=True)
                     await msg.edit(embed=embed)
-                    
                 except Exception as e:
                     await msg.edit(embed=error_embed("Reinstall Failed", f"```diff\n- {str(e)}\n```"))
             
-            async def cancel_cb(cancel_interaction):
-                await cancel_interaction.response.edit_message(embed=info_embed("Cancelled", "Reinstall cancelled."), view=None)
-            
             confirm_btn.callback = confirm_cb
-            cancel_btn.callback = cancel_cb
+            cancel_btn.callback = lambda ci: ci.response.edit_message(embed=info_embed("Cancelled"), view=None)
             confirm_view.add_item(confirm_btn)
             confirm_view.add_item(cancel_btn)
             
-            os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
-            embed = warning_embed(
-                "⚠️ Confirm Reinstall",
-                f"```fix\nContainer: {self.container}\nCurrent OS: {self.data.get('os_version', 'ubuntu:22.04')}\nNew OS: {os_name}\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```\n\n**⚠️ ALL DATA WILL BE LOST!**"
-            )
-            await select_interaction.response.edit_message(embed=embed, view=confirm_view)
+            embed = warning_embed("⚠️ Confirm Reinstall", f"```fix\nContainer: {self.container}\nCurrent OS: {self.data.get('os_version', 'ubuntu:22.04')}\nNew OS: {os_name}\n```\n\n⚠️ ALL DATA WILL BE LOST!")
+            await sel_interaction.response.edit_message(embed=embed, view=confirm_view)
         
-        select.callback = select_callback
+        select.callback = select_cb
         view.add_item(select)
-        
-        embed = info_embed("Reinstall OS", "Select new operating system:")
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=info_embed("Reinstall OS"), view=view, ephemeral=True)
     
     async def upgrade_callback(self, interaction):
-        """Upgrade VPS resources"""
-        await interaction.response.defer()
+        stats = get_user_stats(str(self.ctx.author.id))
+        invites = stats.get('invites', 0)
         
-        # Get current stats
-        stats = await get_container_stats(self.container)
-        
-        # Create upgrade options
-        view = View(timeout=120)
-        
-        # RAM Upgrade Options
-        ram_opts = [
-            discord.SelectOption(label=f"RAM: +2GB (Total: {self.data['ram'] + 2}GB)", value=f"ram:2"),
-            discord.SelectOption(label=f"RAM: +4GB (Total: {self.data['ram'] + 4}GB)", value=f"ram:4"),
-            discord.SelectOption(label=f"RAM: +8GB (Total: {self.data['ram'] + 8}GB)", value=f"ram:8"),
+        options = [
+            discord.SelectOption(label="💾 +2GB RAM", value="ram:2", description=f"Cost: 5 invites → New: {self.data['ram']+2}GB"),
+            discord.SelectOption(label="💾 +4GB RAM", value="ram:4", description=f"Cost: 10 invites → New: {self.data['ram']+4}GB"),
+            discord.SelectOption(label="⚡ +1 CPU Core", value="cpu:1", description=f"Cost: 5 invites → New: {self.data['cpu']+1} cores"),
+            discord.SelectOption(label="⚡ +2 CPU Cores", value="cpu:2", description=f"Cost: 10 invites → New: {self.data['cpu']+2} cores"),
+            discord.SelectOption(label="💽 +20GB Disk", value="disk:20", description=f"Cost: 5 invites → New: {self.data['disk']+20}GB"),
+            discord.SelectOption(label="💽 +50GB Disk", value="disk:50", description=f"Cost: 10 invites → New: {self.data['disk']+50}GB"),
         ]
-        ram_select = Select(placeholder="Select RAM upgrade...", options=ram_opts, row=0)
         
-        # CPU Upgrade Options
-        cpu_opts = [
-            discord.SelectOption(label=f"CPU: +1 Core (Total: {self.data['cpu'] + 1})", value=f"cpu:1"),
-            discord.SelectOption(label=f"CPU: +2 Cores (Total: {self.data['cpu'] + 2})", value=f"cpu:2"),
-            discord.SelectOption(label=f"CPU: +4 Cores (Total: {self.data['cpu'] + 4})", value=f"cpu:4"),
-        ]
-        cpu_select = Select(placeholder="Select CPU upgrade...", options=cpu_opts, row=1)
+        view = View()
+        select = Select(placeholder="Select upgrade...", options=options)
         
-        # Disk Upgrade Options
-        disk_opts = [
-            discord.SelectOption(label=f"Disk: +10GB (Total: {self.data['disk'] + 10}GB)", value=f"disk:10"),
-            discord.SelectOption(label=f"Disk: +20GB (Total: {self.data['disk'] + 20}GB)", value=f"disk:20"),
-            discord.SelectOption(label=f"Disk: +50GB (Total: {self.data['disk'] + 50}GB)", value=f"disk:50"),
-        ]
-        disk_select = Select(placeholder="Select disk upgrade...", options=disk_opts, row=2)
+        async def select_cb(sel_interaction):
+            value = select.values[0]
+            resource, amount = value.split(':')
+            amount = int(amount)
+            cost = 5 if amount in [2,1,20] else 10
+            
+            if invites < cost:
+                return await sel_interaction.response.send_message(embed=error_embed("Not Enough Invites", f"Need {cost} invites, you have {invites}"), ephemeral=True)
+            
+            confirm_view = View()
+            confirm_btn = Button(label="✅ Confirm Upgrade", style=discord.ButtonStyle.success)
+            cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            
+            async def confirm_cb(confirm_interaction):
+                await confirm_interaction.response.defer()
+                msg = await confirm_interaction.followup.send(embed=info_embed("Upgrading", f"```fix\n+{amount} {resource.upper()}...\n```"), ephemeral=True)
+                
+                try:
+                    status = await get_container_status(self.container)
+                    was_running = status == 'running'
+                    
+                    if was_running:
+                        await run_lxc(f"lxc stop {self.container} --force")
+                    
+                    if resource == "ram":
+                        new_ram = self.data['ram'] + amount
+                        await run_lxc(f"lxc config set {self.container} limits.memory {new_ram * 1024}MB")
+                        conn = get_db()
+                        cur = conn.cursor()
+                        cur.execute('UPDATE vps SET ram = ? WHERE container_name = ?', (new_ram, self.container))
+                        conn.commit()
+                        conn.close()
+                        self.data['ram'] = new_ram
+                    elif resource == "cpu":
+                        new_cpu = self.data['cpu'] + amount
+                        await run_lxc(f"lxc config set {self.container} limits.cpu {new_cpu}")
+                        conn = get_db()
+                        cur = conn.cursor()
+                        cur.execute('UPDATE vps SET cpu = ? WHERE container_name = ?', (new_cpu, self.container))
+                        conn.commit()
+                        conn.close()
+                        self.data['cpu'] = new_cpu
+                    elif resource == "disk":
+                        new_disk = self.data['disk'] + amount
+                        await run_lxc(f"lxc config device set {self.container} root size={new_disk}GB")
+                        conn = get_db()
+                        cur = conn.cursor()
+                        cur.execute('UPDATE vps SET disk = ? WHERE container_name = ?', (new_disk, self.container))
+                        conn.commit()
+                        conn.close()
+                        self.data['disk'] = new_disk
+                    
+                    if was_running:
+                        await run_lxc(f"lxc start {self.container}")
+                    
+                    conn = get_db()
+                    cur = conn.cursor()
+                    cur.execute('UPDATE user_stats SET invites = invites - ?, last_updated = ? WHERE user_id = ?',
+                               (cost, datetime.now().isoformat(), str(self.ctx.author.id)))
+                    conn.commit()
+                    conn.close()
+                    
+                    embed = success_embed("Upgraded")
+                    embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                    embed.add_field(name="⚙️ Upgrade", value=f"```fix\n+{amount} {resource.upper()}\nCost: {cost} invites\n```", inline=True)
+                    await msg.edit(embed=embed)
+                except Exception as e:
+                    await msg.edit(embed=error_embed("Upgrade Failed", f"```diff\n- {str(e)}\n```"))
+            
+            confirm_btn.callback = confirm_cb
+            cancel_btn.callback = lambda ci: ci.response.edit_message(embed=info_embed("Cancelled"), view=None)
+            confirm_view.add_item(confirm_btn)
+            confirm_view.add_item(cancel_btn)
+            
+            embed = warning_embed("Confirm Upgrade", f"```fix\nContainer: {self.container}\nUpgrade: +{amount} {resource.upper()}\nCost: {cost} invites\nCurrent: {self.data['ram'] if resource=='ram' else self.data['cpu'] if resource=='cpu' else self.data['disk']}\nNew: {self.data[resource] + amount}\n```")
+            await sel_interaction.response.edit_message(embed=embed, view=confirm_view)
         
-        async def ram_callback(select_interaction):
-            value = ram_select.values[0]
-            amt = int(value.split(':')[1])
-            await self.apply_upgrade(select_interaction, 'ram', amt)
+        select.callback = select_cb
+        view.add_item(select)
         
-        async def cpu_callback(select_interaction):
-            value = cpu_select.values[0]
-            amt = int(value.split(':')[1])
-            await self.apply_upgrade(select_interaction, 'cpu', amt)
-        
-        async def disk_callback(select_interaction):
-            value = disk_select.values[0]
-            amt = int(value.split(':')[1])
-            await self.apply_upgrade(select_interaction, 'disk', amt)
-        
-        ram_select.callback = ram_callback
-        cpu_select.callback = cpu_callback
-        disk_select.callback = disk_callback
-        
-        view.add_item(ram_select)
-        view.add_item(cpu_select)
-        view.add_item(disk_select)
-        
-        embed = info_embed("Upgrade VPS", f"```fix\nCurrent Resources:\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```\nSelect upgrade option:")
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-    
-    async def apply_upgrade(self, interaction, resource, amount):
-        await interaction.response.defer()
-        
-        status = await get_container_status(self.container)
-        was_running = status == 'running'
-        
-        if was_running:
-            await run_lxc(f"lxc stop {self.container} --force")
-        
-        if resource == 'ram':
-            new_ram = self.data['ram'] + amount
-            await run_lxc(f"lxc config set {self.container} limits.memory {new_ram * 1024}MB")
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute('UPDATE vps SET ram = ? WHERE container_name = ?', (new_ram, self.container))
-            conn.commit()
-            conn.close()
-            self.data['ram'] = new_ram
-        
-        elif resource == 'cpu':
-            new_cpu = self.data['cpu'] + amount
-            await run_lxc(f"lxc config set {self.container} limits.cpu {new_cpu}")
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute('UPDATE vps SET cpu = ? WHERE container_name = ?', (new_cpu, self.container))
-            conn.commit()
-            conn.close()
-            self.data['cpu'] = new_cpu
-        
-        elif resource == 'disk':
-            new_disk = self.data['disk'] + amount
-            await run_lxc(f"lxc config device set {self.container} root size={new_disk}GB")
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute('UPDATE vps SET disk = ? WHERE container_name = ?', (new_disk, self.container))
-            conn.commit()
-            conn.close()
-            self.data['disk'] = new_disk
-        
-        if was_running:
-            await run_lxc(f"lxc start {self.container}")
-        
-        embed = success_embed("VPS Upgraded")
-        embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-        embed.add_field(name="⚙️ New Resources", value=f"```fix\nRAM: {self.data['ram']}GB\nCPU: {self.data['cpu']} Core(s)\nDisk: {self.data['disk']}GB\n```", inline=False)
-        await interaction.followup.send(embed=embed, ephemeral=True)
-        await self.refresh_callback(interaction)
+        embed = info_embed("Upgrade VPS", f"```fix\nContainer: {self.container}\nCurrent RAM: {self.data['ram']}GB\nCurrent CPU: {self.data['cpu']} cores\nCurrent Disk: {self.data['disk']}GB\nYour Invites: {invites}\n```")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     async def invites_callback(self, interaction):
-        await interaction.response.defer()
         stats = get_user_stats(str(self.ctx.author.id))
         invites = stats.get('invites', 0)
         vps_count = len(get_user_vps(str(self.ctx.author.id)))
@@ -1544,7 +1412,6 @@ class VPSManageView(View):
         embed.add_field(name="📨 Total Invites", value=f"```fix\n{invites}\n```", inline=True)
         embed.add_field(name="🖥️ VPS Count", value=f"```fix\n{vps_count}\n```", inline=True)
         
-        # Next plan
         next_plan = None
         for plan in FREE_VPS_PLANS['invites']:
             if invites < plan['invites']:
@@ -1552,141 +1419,36 @@ class VPSManageView(View):
                 break
         
         if next_plan:
-            embed.add_field(
-                name="🎯 Next Plan",
-                value=f"```fix\n{next_plan['emoji']} {next_plan['name']}\nNeed {next_plan['invites'] - invites} more invites\nRAM: {next_plan['ram']}GB | CPU: {next_plan['cpu']} | Disk: {next_plan['disk']}GB\n```",
-                inline=False
-            )
+            embed.add_field(name="🎯 Next Plan", value=f"```fix\n{next_plan['emoji']} {next_plan['name']}\nNeed {next_plan['invites'] - invites} more invites\nRAM: {next_plan['ram']}GB\n```", inline=False)
         else:
             embed.add_field(name="🏆 Status", value="```fix\nYou have reached the maximum plan!\n```", inline=False)
         
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
     
     async def panel_callback(self, interaction):
-        """Install Panel on VPS"""
-        await interaction.response.defer()
-        
-        view = View(timeout=120)
-        ptero_btn = Button(label="🦅 Pterodactyl", style=discord.ButtonStyle.primary, emoji="🦅")
-        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
-        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
-        
-        async def ptero_cb(i):
-            await self.install_panel(i, "pterodactyl")
-        
-        async def puffer_cb(i):
-            await self.install_panel(i, "pufferpanel")
-        
-        async def cancel_cb(i):
-            await i.response.edit_message(embed=info_embed("Cancelled"), view=None)
-        
-        ptero_btn.callback = ptero_cb
-        puffer_btn.callback = puffer_cb
-        cancel_btn.callback = cancel_cb
-        
-        view.add_item(ptero_btn)
-        view.add_item(puffer_btn)
-        view.add_item(cancel_btn)
-        
-        embed = info_embed("Install Panel", "Select panel to install on this VPS:")
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-    
-    async def install_panel(self, interaction, panel_type):
-        await interaction.response.defer()
-        msg = await interaction.followup.send(embed=info_embed(f"Installing {panel_type.title()}", "Step 1/6: Preparing..."), ephemeral=True)
-        
-        try:
-            admin = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-            email = f"{admin}@{random.choice(['gmail.com', 'outlook.com', 'proton.me'])}"
-            pwd = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%", k=16))
-            
-            if panel_type == "pterodactyl":
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git unzip tar nginx mariadb-server redis-server php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
-                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
-                    "mkdir -p /var/www/pterodactyl",
-                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
-                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
-                    "cd /var/www/pterodactyl && cp .env.example .env",
-                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
-                    "cd /var/www/pterodactyl && php artisan key:generate --force",
-                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
-                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{email}' --username='{admin}' --password='{pwd}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
-                ]
-                for i, cmd in enumerate(cmds, 2):
-                    await msg.edit(embed=info_embed(f"Installing {panel_type.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(self.container, cmd)
-                    await asyncio.sleep(1)
-                out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}"
-            else:
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git",
-                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
-                    "apt-get install -y -qq pufferpanel",
-                    "systemctl enable pufferpanel",
-                    "systemctl start pufferpanel",
-                    f"pufferpanel user add --name '{admin}' --email '{email}' --password '{pwd}' --admin"
-                ]
-                for i, cmd in enumerate(cmds, 2):
-                    await msg.edit(embed=info_embed(f"Installing {panel_type.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(self.container, cmd)
-                    await asyncio.sleep(1)
-                out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}:8080"
-            
-            add_panel(str(self.ctx.author.id), panel_type, url, admin, pwd, email, self.container, "")
-            
-            embed = success_embed(f"{panel_type.title()} Installed!")
-            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
-            embed.add_field(name="👤 Username", value=f"||`{admin}`||", inline=True)
-            embed.add_field(name="📧 Email", value=f"||`{email}`||", inline=True)
-            embed.add_field(name="🔑 Password", value=f"||`{pwd}`||", inline=False)
-            await msg.edit(embed=embed)
-            
-            try:
-                dm = success_embed(f"🔐 {panel_type.title()} Credentials")
-                dm.add_field(name="URL", value=url)
-                dm.add_field(name="Username", value=admin)
-                dm.add_field(name="Email", value=email)
-                dm.add_field(name="Password", value=pwd)
-                await self.ctx.author.send(embed=dm)
-            except:
-                pass
-                
-        except Exception as e:
-            await msg.edit(embed=error_embed("Installation Failed", f"```diff\n- {str(e)[:500]}\n```"))
+        view = PanelInstallView(self.ctx, self.container)
+        embed = info_embed("Install Panel", "Select panel to install:")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     async def share_callback(self, interaction):
-        """Share VPS with another user"""
         modal = ShareModal(self.container)
         await interaction.response.send_modal(modal)
     
     async def live_callback(self, interaction):
-        """Toggle live mode"""
         self.live_mode = not self.live_mode
-        
         if self.live_mode:
             self.live_btn.label = "⏹️ Stop Live"
             self.live_btn.style = discord.ButtonStyle.success
             await interaction.response.edit_message(view=self)
-            
-            # Start live update task
             self.live_task = asyncio.create_task(self.live_update_task(interaction))
         else:
             self.live_btn.label = "🔴 Live Mode"
             self.live_btn.style = discord.ButtonStyle.danger
             await interaction.response.edit_message(view=self)
-            
             if self.live_task:
                 self.live_task.cancel()
     
     async def live_update_task(self, interaction):
-        """Task for live updates"""
         while self.live_mode:
             try:
                 embed = await self.get_stats_embed()
@@ -1697,52 +1459,39 @@ class VPSManageView(View):
                 break
     
     async def refresh_callback(self, interaction):
-        """Refresh VPS stats"""
         embed = await self.get_stats_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
 
 class CommandModal(Modal):
-    """Modal for running commands"""
-    def __init__(self, container_name):
+    def __init__(self, container):
         super().__init__(title="Run Command")
-        self.container = container_name
-        self.add_item(InputText(label="Command", placeholder="e.g., apt update, ps aux, df -h", style=discord.InputTextStyle.paragraph))
+        self.container = container
+        self.add_item(InputText(label="Command", placeholder="e.g., apt update", style=discord.InputTextStyle.paragraph))
         self.add_item(InputText(label="Timeout (seconds)", placeholder="30", required=False, value="30"))
     
     async def callback(self, interaction):
         cmd = self.children[0].value
         timeout = int(self.children[1].value or "30")
-        
         await interaction.response.defer()
         msg = await interaction.followup.send(embed=info_embed("Executing", f"```fix\n$ {cmd}\n```"), ephemeral=True)
-        
-        try:
-            out, err, code = await exec_in_container(self.container, cmd, timeout)
-            output = out if out else err
-            
-            embed = terminal_embed(f"Command Output", f"$ {cmd}\n\n{output[:1900]}")
-            embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
-            await msg.edit(embed=embed)
-        except asyncio.TimeoutError:
-            await msg.edit(embed=error_embed("Timeout", f"Command timed out after {timeout} seconds"))
-        except Exception as e:
-            await msg.edit(embed=error_embed("Error", f"```diff\n- {str(e)}\n```"))
+        out, err, code = await exec_in_container(self.container, cmd, timeout)
+        embed = terminal_embed("Output", f"$ {cmd}\n\n{(out or err)[:1900]}")
+        embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
+        await msg.edit(embed=embed)
 
 
 class ShareModal(Modal):
-    """Modal for sharing VPS"""
     def __init__(self, container):
         super().__init__(title="Share VPS")
         self.container = container
-        self.add_item(InputText(label="User ID or @mention", placeholder="e.g., 123456789 or @username"))
+        self.add_item(InputText(label="User ID or @mention"))
         self.add_item(InputText(label="Permissions", placeholder="view, manage, full", required=False, value="view"))
     
     async def callback(self, interaction):
         user_input = self.children[0].value
         perms = self.children[1].value or "view"
         
-        # Parse user
         user_id = user_input
         if user_input.startswith('<@') and user_input.endswith('>'):
             user_id = user_input[2:-1]
@@ -1758,131 +1507,44 @@ class ShareModal(Modal):
                 embed.add_field(name="🔑 Permissions", value=f"```fix\n{perms}\n```", inline=True)
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 
-                # DM the user
                 try:
                     dm = info_embed("VPS Shared With You")
                     dm.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```")
                     dm.add_field(name="👤 Owner", value=interaction.user.mention)
-                    dm.add_field(name="🔑 Permissions", value=f"```fix\n{perms}\n```")
-                    dm.add_field(name="🖥️ Manage", value=f"Use `.manage-shared {interaction.user.id} 1` to manage")
                     await user.send(embed=dm)
                 except:
                     pass
             else:
-                await interaction.response.send_message(embed=error_embed("Failed", "Could not share VPS"), ephemeral=True)
+                await interaction.response.send_message(embed=error_embed("Failed"), ephemeral=True)
         except:
-            await interaction.response.send_message(embed=error_embed("Invalid User", "User not found"), ephemeral=True)
+            await interaction.response.send_message(embed=error_embed("Invalid User"), ephemeral=True)
 
+
+@bot.command(name="manage")
+async def manage(ctx, container_name: str = None):
+    """Interactive VPS manager with all buttons"""
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+        container_data = vps_list[0]
+    else:
+        vps_list = get_user_vps(user_id)
+        container_data = next((v for v in vps_list if v['container_name'] == container_name), None)
+        if not container_data:
+            return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    view = VPSManageView(ctx, container_name, container_data)
+    embed = await view.get_stats_embed()
+    msg = await ctx.send(embed=embed, view=view)
+    view.message = msg
+    
 # ==================================================================================================
 #  📦  PANEL INSTALL VIEW WITH BUTTONS
 # ==================================================================================================
-
-class PanelInstallView(View):
-    def __init__(self, ctx):
-        super().__init__(timeout=120)
-        self.ctx = ctx
-        
-        ptero_btn = Button(label="🦅 Pterodactyl Panel", style=discord.ButtonStyle.primary, emoji="🦅")
-        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡")
-        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
-        
-        ptero_btn.callback = lambda i: self.install(i, "pterodactyl")
-        puffer_btn.callback = lambda i: self.install(i, "pufferpanel")
-        cancel_btn.callback = lambda i: i.response.edit_message(embed=info_embed("Cancelled"), view=None)
-        
-        self.add_item(ptero_btn)
-        self.add_item(puffer_btn)
-        self.add_item(cancel_btn)
-    
-    async def install(self, interaction, ptype):
-        if interaction.user.id != self.ctx.author.id:
-            return await interaction.response.send_message("Not for you!", ephemeral=True)
-        await interaction.response.defer()
-        uid = str(self.ctx.author.id)
-        vps = get_user_vps(uid)
-        if not vps:
-            return await interaction.followup.send(embed=no_vps_embed(), ephemeral=True)
-        
-        if len(vps) > 1:
-            opts = []
-            for i, v in enumerate(vps, 1):
-                opts.append(discord.SelectOption(label=f"VPS #{i}: {v['container_name']}", value=v['container_name']))
-            view = View()
-            sel = Select(placeholder="Select VPS...", options=opts)
-            async def sel_cb(si):
-                await self.do_install(si, ptype, sel.values[0])
-            sel.callback = sel_cb
-            view.add_item(sel)
-            await interaction.followup.send(embed=info_embed("Select VPS"), view=view, ephemeral=True)
-        else:
-            await self.do_install(interaction, ptype, vps[0]['container_name'])
-    
-    async def do_install(self, interaction, ptype, container):
-        await interaction.response.defer()
-        msg = await interaction.followup.send(embed=info_embed(f"Installing {ptype.title()}", "Step 1/6: Preparing..."), ephemeral=True)
-        try:
-            admin = ''.join(random.choices(string.ascii_lowercase+string.digits, k=8))
-            email = f"{admin}@{random.choice(['gmail.com','outlook.com','proton.me'])}"
-            pwd = ''.join(random.choices(string.ascii_letters+string.digits+"!@#$%", k=16))
-            
-            if ptype == "pterodactyl":
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git unzip tar nginx mariadb-server redis-server php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}",
-                    "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
-                    "mkdir -p /var/www/pterodactyl",
-                    "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz",
-                    "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/",
-                    "cd /var/www/pterodactyl && cp .env.example .env",
-                    "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction",
-                    "cd /var/www/pterodactyl && php artisan key:generate --force",
-                    "cd /var/www/pterodactyl && php artisan migrate --seed --force",
-                    f"cd /var/www/pterodactyl && php artisan p:user:make --email='{email}' --username='{admin}' --password='{pwd}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction"
-                ]
-                for i, cmd in enumerate(cmds, 2):
-                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(container, cmd)
-                    await asyncio.sleep(1)
-                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}"
-            else:
-                cmds = [
-                    "apt-get update -qq",
-                    "apt-get install -y -qq curl wget git",
-                    "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash",
-                    "apt-get install -y -qq pufferpanel",
-                    "systemctl enable pufferpanel",
-                    "systemctl start pufferpanel",
-                    f"pufferpanel user add --name '{admin}' --email '{email}' --password '{pwd}' --admin"
-                ]
-                for i, cmd in enumerate(cmds, 2):
-                    await msg.edit(embed=info_embed(f"Installing {ptype.title()}", f"Step {i}/6: Progress..."))
-                    await exec_in_container(container, cmd)
-                    await asyncio.sleep(1)
-                out, _, _ = await exec_in_container(container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
-                ip = out.strip() or SERVER_IP
-                url = f"http://{ip}:8080"
-            
-            add_panel(uid, ptype, url, admin, pwd, email, container, "")
-            embed = success_embed(f"{ptype.title()} Installed!")
-            embed.add_field(name="🌐 URL", value=f"```fix\n{url}\n```", inline=False)
-            embed.add_field(name="👤 Username", value=f"||`{admin}`||", inline=True)
-            embed.add_field(name="📧 Email", value=f"||`{email}`||", inline=True)
-            embed.add_field(name="🔑 Password", value=f"||`{pwd}`||", inline=False)
-            await msg.edit(embed=embed)
-            try:
-                dm = success_embed(f"🔐 {ptype.title()} Credentials")
-                dm.add_field(name="URL", value=url)
-                dm.add_field(name="Username", value=admin)
-                dm.add_field(name="Email", value=email)
-                dm.add_field(name="Password", value=pwd)
-                await self.ctx.author.send(embed=dm)
-            except:
-                pass
-        except Exception as e:
-            await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)[:500]}\n```"))
-
 # ==================================================================================================
 #  📚  COMPLETE HELP COMMAND - ULTIMATE UI WITH SELECT MENU & IMAGES
 # ==================================================================================================
@@ -5344,95 +5006,20 @@ async def os_list(ctx, category: str = None):
 # ==================================================================================================
 #  🚀  COMPLETE .create COMMAND - WITH apply_lxc_config FIX & FULL UI
 # ==================================================================================================
+# ==================================================================================================
+#  🚀  COMPLETE .create COMMAND - WITH USER PROFILE & FULL DETAILS
+# ==================================================================================================
 
 import asyncio
 import random
 import string
 import time
 from datetime import datetime
+from PIL import Image, ImageDraw, ImageFont
+import io
 
-# ==================================================================================================
-#  🔧  LXC HELPER FUNCTIONS - ADD THESE IF NOT EXISTS
-# ==================================================================================================
-
-async def apply_lxc_config(container_name: str):
-    """Apply LXC configuration for better compatibility"""
-    try:
-        # Enable nesting and privileged mode
-        await run_lxc(f"lxc config set {container_name} security.nesting true")
-        await run_lxc(f"lxc config set {container_name} security.privileged true")
-        
-        # Add kernel modules
-        await run_lxc(f"lxc config set {container_name} linux.kernel_modules overlay,br_netfilter,nf_nat,ip_tables,ip6_tables,netlink_diag,xt_conntrack,nf_conntrack")
-        
-        # Raw LXC config
-        raw_config = """
-lxc.apparmor.profile = unconfined
-lxc.cgroup.devices.allow = a
-lxc.cap.drop =
-lxc.mount.auto = proc:rw sys:rw cgroup:rw
-"""
-        await run_lxc(f"lxc config set {container_name} raw.lxc '{raw_config}'")
-        
-        logger.info(f"✅ Applied LXC config to {container_name}")
-    except Exception as e:
-        logger.error(f"Failed to apply LXC config to {container_name}: {e}")
-
-
-async def apply_internal_permissions(container_name: str):
-    """Apply internal permissions for Docker compatibility"""
-    await asyncio.sleep(3)
-    commands = [
-        "mkdir -p /etc/sysctl.d/",
-        "echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/99-custom.conf",
-        "echo 'net.ipv4.ping_group_range=0 2147483647' >> /etc/sysctl.d/99-custom.conf",
-        "echo 'fs.inotify.max_user_watches=524288' >> /etc/sysctl.d/99-custom.conf",
-        "sysctl -p /etc/sysctl.d/99-custom.conf || true",
-        "apt-get update -qq",
-        "apt-get install -y -qq curl wget sudo vim nano htop net-tools iproute2 iputils-ping dnsutils traceroute mtr tcpdump telnet ncdu tmux screen",
-    ]
-    for cmd in commands:
-        await exec_in_container(container_name, cmd)
-
-
-async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
-    """Run LXC command asynchronously"""
-    try:
-        cmd = shlex.split(command)
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            return "", f"Command timed out after {timeout} seconds", -1
-    except Exception as e:
-        return "", str(e), -1
-
-
-async def exec_in_container(container_name: str, command: str, timeout: int = 30) -> Tuple[str, str, int]:
-    """Execute command inside container"""
-    return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
-
-# ==================================================================================================
-#  🚀  COMPLETE .create COMMAND - WITH PUBLIC STATISTICS & RAINBOW PROGRESS
-# ==================================================================================================
-
-# Rainbow colors for progress
 RAINBOW_COLORS = [
-    0xFF0000,  # Red
-    0xFF7700,  # Orange
-    0xFFFF00,  # Yellow
-    0x00FF00,  # Green
-    0x00CCFF,  # Cyan
-    0x3366FF,  # Blue
-    0x8B00FF,  # Violet
-    0xFF00CC,  # Pink
+    0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x00CCFF, 0x3366FF, 0x8B00FF, 0xFF00CC
 ]
 
 
@@ -5463,10 +5050,7 @@ class CreateVPSView(View):
         await self.create_vps(interaction)
     
     async def cancel_callback(self, interaction):
-        await interaction.response.edit_message(
-            embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"),
-            view=None
-        )
+        await interaction.response.edit_message(embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"), view=None)
     
     async def create_vps(self, interaction):
         await interaction.response.defer()
@@ -5474,92 +5058,58 @@ class CreateVPSView(View):
         user_id = str(self.user.id)
         container_name = f"svm5-{user_id[:6]}-{random.randint(1000, 9999)}"
         
-        # Rainbow progress
+        def get_progress_bar(percent):
+            filled = int(percent / 5)
+            return "█" * filled + "░" * (20 - filled)
+        
         progress_msg = await interaction.followup.send(
             embed=discord.Embed(
                 title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Initializing container...\n```",
+                description=f"```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | 👤 User: {self.user.display_name}\n```",
                 color=RAINBOW_COLORS[0]
             ),
             ephemeral=True
         )
         
-        def get_progress_bar(percent):
-            filled = int(percent / 5)
-            return "█" * filled + "░" * (20 - filled)
-        
         try:
             ram_mb = self.ram * 1024
             
-            # Step 1: Initialize container
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(10)}] 10% | 🔧 Initializing container...\n```",
-                color=RAINBOW_COLORS[0]
-            ))
-            await run_lxc(f"lxc init {self.os_version} {container_name} -s {DEFAULT_STORAGE_POOL}")
-            await asyncio.sleep(1)
+            steps = [
+                (10, "🔧 Initializing container..."),
+                (25, f"💾 Setting RAM ({self.ram}GB)..."),
+                (40, f"⚡ Setting CPU ({self.cpu} cores)..."),
+                (55, f"💽 Setting Disk ({self.disk}GB)..."),
+                (70, "🔨 Applying LXC config..."),
+                (85, "▶️ Starting container..."),
+                (95, "🔧 Configuring permissions..."),
+                (100, "🎉 Finalizing..."),
+            ]
             
-            # Step 2: Set RAM limits
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(25)}] 25% | 💾 Setting RAM limits ({self.ram}GB)...\n```",
-                color=RAINBOW_COLORS[1]
-            ))
-            await run_lxc(f"lxc config set {container_name} limits.memory {ram_mb}MB")
-            await asyncio.sleep(1)
-            
-            # Step 3: Set CPU limits
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(40)}] 40% | ⚡ Setting CPU limits ({self.cpu} cores)...\n```",
-                color=RAINBOW_COLORS[2]
-            ))
-            await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
-            await asyncio.sleep(1)
-            
-            # Step 4: Set Disk limits
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(55)}] 55% | 💽 Setting Disk limits ({self.disk}GB)...\n```",
-                color=RAINBOW_COLORS[3]
-            ))
-            await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
-            await asyncio.sleep(1)
-            
-            # Step 5: Apply LXC config
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(70)}] 70% | 🔨 Applying LXC configuration...\n```",
-                color=RAINBOW_COLORS[4]
-            ))
-            await apply_lxc_config(container_name)
-            await asyncio.sleep(1)
-            
-            # Step 6: Start container
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(85)}] 85% | ▶️ Starting container...\n```",
-                color=RAINBOW_COLORS[5]
-            ))
-            await run_lxc(f"lxc start {container_name}")
-            await asyncio.sleep(2)
-            
-            # Step 7: Apply permissions
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(95)}] 95% | 🔧 Configuring permissions...\n```",
-                color=RAINBOW_COLORS[6]
-            ))
-            await apply_internal_permissions(container_name)
-            await asyncio.sleep(2)
-            
-            # Step 8: Get IP and MAC
-            await progress_msg.edit(embed=discord.Embed(
-                title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
-                description=f"```fix\n[{get_progress_bar(100)}] 100% | 🎉 Finalizing...\n```",
-                color=RAINBOW_COLORS[7]
-            ))
+            color_idx = 0
+            for progress, desc in steps:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 SVM5-BOT - CREATING VPS 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(progress)}] {progress}% | {desc}\n👤 User: {self.user.display_name}\n```",
+                    color=RAINBOW_COLORS[color_idx % len(RAINBOW_COLORS)]
+                ))
+                color_idx += 1
+                
+                if progress == 10:
+                    await run_lxc(f"lxc init {self.os_version} {container_name} -s {DEFAULT_STORAGE_POOL}")
+                elif progress == 25:
+                    await run_lxc(f"lxc config set {container_name} limits.memory {ram_mb}MB")
+                elif progress == 40:
+                    await run_lxc(f"lxc config set {container_name} limits.cpu {self.cpu}")
+                elif progress == 55:
+                    await run_lxc(f"lxc config device set {container_name} root size={self.disk}GB")
+                elif progress == 70:
+                    await apply_lxc_config(container_name)
+                elif progress == 85:
+                    await run_lxc(f"lxc start {container_name}")
+                elif progress == 95:
+                    await apply_internal_permissions(container_name)
+                
+                await asyncio.sleep(1)
             
             # Get IP and MAC
             ip = "N/A"
@@ -5575,7 +5125,6 @@ class CreateVPSView(View):
             # Save to database
             add_vps(user_id, container_name, self.ram, self.cpu, self.disk, self.os_version, "Custom")
             
-            # Update VPS with IP and MAC
             conn = get_db()
             cur = conn.cursor()
             cur.execute('UPDATE vps SET ip_address = ?, mac_address = ? WHERE container_name = ?',
@@ -5593,14 +5142,11 @@ class CreateVPSView(View):
                 except:
                     pass
             
-            # Get public statistics
+            # Get statistics
             all_vps = get_all_vps()
             total_vps = len(all_vps)
             total_users = len(set([v['user_id'] for v in all_vps]))
             active_vps = len([v for v in all_vps if v['status'] == 'running'])
-            total_ram = sum([v['ram'] for v in all_vps])
-            total_cpu = sum([v['cpu'] for v in all_vps])
-            total_disk = sum([v['disk'] for v in all_vps])
             
             # Resource Bars
             ram_bar = "█" * int(self.ram / 16) + "░" * (10 - int(self.ram / 16))
@@ -5609,47 +5155,48 @@ class CreateVPSView(View):
             
             # Success Embed
             success_embed = discord.Embed(
-                title="```glow\n🌟✨ SVM5-BOT - VPS CREATED SUCCESSFULLY! ✨🌟\n```",
-                description=f"🎉 **VPS created for {self.user.mention} by {self.ctx.author.mention}!**\n\n"
+                title=f"```glow\n🌟✨ VPS CREATED FOR {self.user.display_name.upper()}! ✨🌟\n```",
+                description=f"🎉 **VPS created successfully by {self.ctx.author.mention}!**\n\n"
                             f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
                 color=0x00FF88
             )
-            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
             success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
             
-            # Container Details
             success_embed.add_field(
-                name="📦 CONTAINER DETAILS",
-                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Name      : {container_name}\n│ IP Address: {ip}\n│ MAC Address: {mac}\n│ OS        : {self.os_name}\n└─────────────────────────────────────────────────┘\n```",
+                name="👤 OWNER",
+                value=f"```fix\n{self.user.mention}\nID: {self.user.id}\nCreated: {self.user.created_at.strftime('%Y-%m-%d')}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="📦 CONTAINER",
+                value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="⚙️ RESOURCES",
+                value=f"```fix\nRAM: {self.ram}GB [{ram_bar}]\nCPU: {self.cpu} Core(s) [{cpu_bar}]\nDisk: {self.disk}GB [{disk_bar}]\n```",
                 inline=False
             )
             
-            # Resource Allocation
             success_embed.add_field(
-                name="⚙️ RESOURCE ALLOCATION",
-                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {self.ram}GB  [{ram_bar}]\n│ CPU  : {self.cpu} Core(s) [{cpu_bar}]\n│ Disk : {self.disk}GB [{disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
+                name="🖥️ MANAGEMENT",
+                value=f"```fix\n.manage {container_name} - Interactive Manager\n.stats {container_name} - Live Stats\n.logs {container_name} - System Logs\n.ssh-gen {container_name} - SSH Access\n.reboot {container_name} - Reboot\n.shutdown {container_name} - Shutdown\n```",
                 inline=False
             )
             
-            # Management Commands
             success_embed.add_field(
-                name="🖥️ MANAGEMENT COMMANDS",
-                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ .manage {container_name} - Interactive Manager\n│ .stats  {container_name} - Live Statistics\n│ .logs   {container_name} - System Logs\n│ .ssh-gen {container_name} - SSH Access\n│ .reboot {container_name} - Reboot VPS\n│ .shutdown {container_name} - Shutdown VPS\n└─────────────────────────────────────────────────┘\n```",
-                inline=False
+                name="📊 STATUS",
+                value=f"```fix\nStatus: 🟢 RUNNING\nCreated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nUptime: Just Started\n```",
+                inline=True
             )
             
-            # VPS Status
             success_embed.add_field(
-                name="📊 VPS STATUS",
-                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Status      : 🟢 RUNNING\n│ Uptime      : Just Started\n│ Created     : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n└─────────────────────────────────────────────────┘\n```",
-                inline=False
-            )
-            
-            # PUBLIC STATISTICS - VISIBLE TO ALL
-            success_embed.add_field(
-                name="🌍 PUBLIC STATISTICS",
-                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n│ Total RAM Used    : {total_ram}GB\n│ Total CPU Used    : {total_cpu} Cores\n│ Total Disk Used   : {total_disk}GB\n└─────────────────────────────────────────────────┘\n```",
-                inline=False
+                name="🌍 PUBLIC STATS",
+                value=f"```fix\nTotal VPS: {total_vps}\nTotal Users: {total_users}\nActive VPS: {active_vps}\n```",
+                inline=True
             )
             
             success_embed.set_footer(
@@ -5662,11 +5209,11 @@ class CreateVPSView(View):
             # DM to user
             try:
                 dm_embed = discord.Embed(
-                    title="```glow\n🌟 YOUR VPS IS READY! 🌟\n```",
+                    title=f"```glow\n🌟 YOUR VPS IS READY! 🌟\n```",
                     description=f"🎉 A new VPS has been created for you by {self.ctx.author.name}!",
                     color=0x57F287
                 )
-                dm_embed.set_thumbnail(url=THUMBNAIL_URL)
+                dm_embed.set_thumbnail(url=self.ctx.author.avatar.url if self.ctx.author.avatar else THUMBNAIL_URL)
                 dm_embed.add_field(
                     name="📦 CONTAINER",
                     value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\n```",
@@ -5679,7 +5226,7 @@ class CreateVPSView(View):
                 )
                 dm_embed.add_field(
                     name="🖥️ COMMANDS",
-                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n```",
+                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n.ssh-gen {container_name}\n```",
                     inline=False
                 )
                 await self.user.send(embed=dm_embed)
@@ -5730,48 +5277,43 @@ class OSDropdownView(View):
         selected_os = self.select.values[0]
         os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == selected_os), selected_os)
         
-        # Get public statistics for confirmation embed
         all_vps = get_all_vps()
         total_vps = len(all_vps)
         total_users = len(set([v['user_id'] for v in all_vps]))
         
         embed = discord.Embed(
-            title="```glow\n⚠️ CONFIRM VPS CREATION ⚠️\n```",
-            description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ User : {self.user.mention}\n│ OS   : {os_name}\n│ RAM  : {self.ram}GB\n│ CPU  : {self.cpu} Core(s)\n│ Disk : {self.disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please confirm to create this VPS.**\n\n```glow\n🌍 Current Statistics:\n• Total VPS: {total_vps}\n• Total Users: {total_users}\n```",
+            title=f"```glow\n⚠️ CONFIRM VPS CREATION FOR {self.user.display_name.upper()}\n```",
+            description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ 👤 User : {self.user.mention}\n│ 🐧 OS   : {os_name}\n│ 💾 RAM  : {self.ram}GB\n│ ⚙️ CPU  : {self.cpu} Core(s)\n│ 💽 Disk : {self.disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please confirm to create this VPS.**\n\n```glow\n🌍 Current Statistics:\n• Total VPS: {total_vps}\n• Total Users: {total_users}\n```",
             color=0xFFAA00
         )
-        embed.set_thumbnail(url=THUMBNAIL_URL)
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
         
         view = CreateVPSView(self.ctx, self.ram, self.cpu, self.disk, self.user, selected_os, os_name)
         await interaction.response.edit_message(embed=embed, view=view)
     
     async def cancel_callback(self, interaction):
-        await interaction.response.edit_message(
-            embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"),
-            view=None
-        )
+        await interaction.response.edit_message(embed=info_embed("Cancelled", "```fix\nVPS creation cancelled.\n```"), view=None)
 
 
 @bot.command(name="create")
 @commands.check(lambda ctx: is_admin(str(ctx.author.id)))
 async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member):
-    """Create a VPS for a user with public statistics"""
+    """Create a VPS for a user"""
     if ram <= 0 or cpu <= 0 or disk <= 0:
         return await ctx.send(embed=error_embed("Invalid Specs", "```diff\n- RAM, CPU, Disk must be positive integers.\n```"))
     
-    # Get public statistics for main embed
     all_vps = get_all_vps()
     total_vps = len(all_vps)
     total_users = len(set([v['user_id'] for v in all_vps]))
     active_vps = len([v for v in all_vps if v['status'] == 'running'])
     
     embed = discord.Embed(
-        title="```glow\n🖥️ CREATE NEW VPS 🖥️\n```",
-        description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ 👤 User : {user.mention}\n│ 💾 RAM  : {ram}GB\n│ ⚙️ CPU  : {cpu} Core(s)\n│ 💽 Disk : {disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please select an operating system from the dropdown menu below.**\n\n```glow\n🌍 Current Server Statistics:\n• Total VPS Created: {total_vps}\n• Total Users: {total_users}\n• Active VPS: {active_vps}\n```",
+        title=f"```glow\n🖥️ CREATE VPS FOR {user.display_name.upper()}\n```",
+        description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ 👤 User : {user.mention}\n│ 💾 RAM  : {ram}GB\n│ ⚙️ CPU  : {cpu} Core(s)\n│ 💽 Disk : {disk}GB\n└─────────────────────────────────────────────────┘\n```\n\n**Please select an operating system.**\n\n```glow\n🌍 Server Statistics:\n• Total VPS: {total_vps}\n• Total Users: {total_users}\n• Active VPS: {active_vps}\n```",
         color=0x5865F2
     )
-    embed.set_thumbnail(url=THUMBNAIL_URL)
+    embed.set_thumbnail(url=user.avatar.url if user.avatar else THUMBNAIL_URL)
     embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
     embed.set_footer(
         text=f"⚡ SVM5-BOT • Created by {ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
@@ -5779,7 +5321,7 @@ async def admin_create(ctx, ram: int, cpu: int, disk: int, user: discord.Member)
     )
     
     view = OSDropdownView(ctx, ram, cpu, disk, user)
-    await ctx.send(embed=embed, view=view)
+    await ctx.send(embed=embed, view=view)  
 
 # ==================================================================================================
 #  📏  COMPLETE .resize COMMAND - ADMIN ONLY
