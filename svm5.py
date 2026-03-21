@@ -3388,7 +3388,7 @@ async def myvps(ctx):
 
 @bot.command(name="list")
 async def list_cmd(ctx):
-    await myvps(ctx) msg
+    await myvps(ctx) 
 
 @bot.command(name="stats")
 async def vps_stats(ctx, container: str = None):
