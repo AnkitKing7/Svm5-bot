@@ -13,8 +13,7 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║ qrcode
-      |   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║ qrcode # |   |   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
 # ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
 # ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
@@ -238,9 +237,6 @@ OS_OPTIONS = [
     {"label": "💻 Gentoo Current", "value": "images:gentoo/current", "desc": "Gentoo Current - Rolling", "category": "Gentoo", "icon": "💻"},
     {"label": "💻 Gentoo OpenRC", "value": "images:gentoo/openrc", "desc": "Gentoo with OpenRC", "category": "Gentoo", "icon": "💻"},
     {"label": "💻 Gentoo Systemd", "value": "images:gentoo/systemd", "desc": "Gentoo with Systemd", "category": "Gentoo", "icon": "💻"},
-    {"label": "⚪ Void Linux", "value": "images:voidlinux", "desc": "Void - Independent", "category": "Void", "icon": "⚪"},
-    {"label": "⚪ Void Linux musl", "value": "images:voidlinux/musl", "desc": "Void with musl libc", "category": "Void", "ico: "⚪"},
-    {"label": "⚪ Void Linux glibc", "value": "images:voidlinux/glibc", "desc": "Void with glibc", "category": "Void", "icon": "⚪"},
     {"label": "🔬 Scientific Linux 7", "value": "images:scientific/7", "desc": "Scientific Linux 7", "category": "Scientific", "icon": "🔬"},
     {"label": "🔬 Scientific Linux 6", "value": "images:scientific/6", "desc": "Scientific Linux 6", "category": "Scientific", "icon": "🔬"},
     {"label": "☁️ Amazon Linux 2", "value": "images:amazonlinux/2", "desc": "Amazon Linux 2 - AWS Optimized", "category": "Amazon", "icon": "☁️"},
