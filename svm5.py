@@ -969,38 +969,38 @@ class VPSManageView(View):
         self.message = None
         self.live_mode = False
         
-        # Row 1 - Basic Controls
-        self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
-        self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
-        self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
-        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
-        self.shutdown_btn = Button(label="⛔ Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
-        
-        # Row 2 - Info & Access
-        self.stats_btn = Button(label="📊 Stats", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
-        self.process_btn = Button(label="🔝 Processes", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
-        self.console_btn = Button(label="📟 Console", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
-        self.ssh_btn = Button(label="🔑 SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
-        self.logs_btn = Button(label="📋 Logs", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
-        
-        # Row 3 - Advanced
-        self.ipv4_btn = Button(label="🌍 IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
-        self.tunnel_btn = Button(label="🌐 Tunnel URL", style=discord.ButtonStyle.primary, emoji="🌐", row=2)
-        self.ports_btn = Button(label="🔌 Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
-        self.backup_btn = Button(label="💾 Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
-        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.warning, emoji="🔄", row=2)
-        
-        # Row 4 - Management
-        self.reinstall_btn = Button(label="🔄 Reinstall OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
-        self.upgrade_btn = Button(label="⬆️ Upgrade VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
-        self.invites_btn = Button(label="📨 Check Invites", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
-        self.panel_btn = Button(label="📦 Install Panel", style=discord.ButtonStyle.primary, emoji="📦", row=3)
-        self.share_btn = Button(label="👥 Share VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
-        
-        # Row 5 - Live & Refresh
-        self.live_btn = Button(label="🔴 Live Mode", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
-        self.refresh_btn = Button(label="🔄 Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
-        
+# Row 1 - Basic Controls
+self.start_btn = Button(label="Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
+self.stop_btn = Button(label="Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
+self.restart_btn = Button(label="Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
+self.reboot_btn = Button(label="Reboot", style=discord.ButtonStyle.secondary, emoji="⚡", row=0)
+self.shutdown_btn = Button(label="Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
+
+# Row 2 - Info & Access
+self.stats_btn = Button(label="Stats", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
+self.process_btn = Button(label="Processes", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
+self.console_btn = Button(label="Console", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
+self.ssh_btn = Button(label="SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
+self.logs_btn = Button(label="Logs", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
+
+# Row 3 - Advanced
+self.ipv4_btn = Button(label="IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
+self.tunnel_btn = Button(label="Tunnel URL", style=discord.ButtonStyle.primary, emoji="🌐", row=2)
+self.ports_btn = Button(label="Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
+self.backup_btn = Button(label="Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
+self.restore_btn = Button(label="Restore", style=discord.ButtonStyle.secondary, emoji="🔄", row=2)
+
+# Row 4 - Management
+self.reinstall_btn = Button(label="Reinstall OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
+self.upgrade_btn = Button(label="Upgrade VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
+self.invites_btn = Button(label="Check Invites", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
+self.panel_btn = Button(label="Install Panel", style=discord.ButtonStyle.primary, emoji="📦", row=3)
+self.share_btn = Button(label="Share VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
+
+# Row 5 - Live & Refresh
+self.live_btn = Button(label="Live Mode", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
+self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
+
         # Set callbacks
         self.start_btn.callback = self.start_callback
         self.stop_btn.callback = self.stop_callback
