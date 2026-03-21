@@ -94,7 +94,7 @@ logger = logging.getLogger("SVM5-BOT")
 #  ⚙️  CONFIGURATION
 # ==================================================================================================
 
-BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
+BOT_TOKEN = "DT"
 BOT_PREFIX = "."
 BOT_NAME = "SVM5-BOT"
 BOT_AUTHOR = "Ankit-Dev"
@@ -2166,11 +2166,6 @@ class TerminalView(View):
     
     async def get_terminal_embed(self):
         """Get current terminal embed with output"""
-        embed = discord.Embed(
-            title=f"```glow\n🖥️ VPS TERMINAL - {self.container.upper()}\n```",
-            description=f"```bash\n{self.current_output[:1900] if self.current_output else 'Welcome to SVM5-BOT Terminal!\nType a command using the button below.\n\n$ '}\n```",
-            color=0x2C2F33
-        )
         embed.set_footer(text=f"⚡ SVM5-BOT • Terminal • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡")
         return embed
     
@@ -3464,6 +3459,134 @@ async def reboot(ctx, container: str):
     await run_lxc(f"lxc restart {container}")
     update_vps_status(container, 'running')
     await ctx.send(embed=success_embed("Rebooted", f"```fix\n{container}\n```"))
+
+# ==================================================================================================
+#  🔧  MISSING FUNCTIONS - apply_lxc_config, load_ai_history, save_ai_history, clear_ai_history
+# ==================================================================================================
+# ==================================================================================================
+#  🛠️  LXC FUNCTION - apply_lxc_config
+# ==================================================================================================
+
+async def apply_lxc_config(container_name: str):
+    """Apply LXC configuration for better compatibility"""
+    try:
+        await run_lxc(f"lxc config set {container_name} security.nesting true")
+        await run_lxc(f"lxc config set {container_name} security.privileged true")
+        await run_lxc(f"lxc config set {container_name} linux.kernel_modules overlay,br_netfilter,nf_nat,ip_tables")
+        
+        raw_config = """
+lxc.apparmor.profile = unconfined
+lxc.cgroup.devices.allow = a
+lxc.cap.drop =
+lxc.mount.auto = proc:rw sys:rw cgroup:rw
+"""
+        await run_lxc(f"lxc config set {container_name} raw.lxc '{raw_config}'")
+        logger.info(f"✅ Applied LXC config to {container_name}")
+    except Exception as e:
+        logger.error(f"Failed to apply LXC config to {container_name}: {e}")
+
+
+async def run_lxc(command: str, timeout: int = 60) -> Tuple[str, str, int]:
+    """Run LXC command asynchronously"""
+    try:
+        cmd = shlex.split(command)
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return "", f"Command timed out after {timeout} seconds", -1
+    except Exception as e:
+        return "", str(e), -1
+
+
+async def exec_in_container(container_name: str, command: str, timeout: int = 30) -> Tuple[str, str, int]:
+    """Execute command inside container"""
+    return await run_lxc(f"lxc exec {container_name} -- bash -c {shlex.quote(command)}", timeout)
+
+
+# ==================================================================================================
+#  🤖  AI HISTORY FUNCTIONS - load_ai_history, save_ai_history, clear_ai_history
+# ==================================================================================================
+
+def save_ai_history(user_id: str, messages: List[Dict]):
+    """Save AI chat history to database"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return
+        cur = conn.cursor()
+        
+        cur.execute('''CREATE TABLE IF NOT EXISTS ai_history (
+            user_id TEXT PRIMARY KEY,
+            messages TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )''')
+        
+        now = datetime.now().isoformat()
+        cur.execute('INSERT OR REPLACE INTO ai_history (user_id, messages, updated_at) VALUES (?, ?, ?)',
+                    (user_id, json.dumps(messages), now))
+        conn.commit()
+        logger.info(f"Saved AI history for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error saving AI history: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+
+def load_ai_history(user_id: str) -> List[Dict]:
+    """Load AI chat history from database"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return []
+        cur = conn.cursor()
+        
+        cur.execute('''CREATE TABLE IF NOT EXISTS ai_history (
+            user_id TEXT PRIMARY KEY,
+            messages TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )''')
+        
+        cur.execute('SELECT messages FROM ai_history WHERE user_id = ?', (user_id,))
+        row = cur.fetchone()
+        
+        if row and row['messages']:
+            return json.loads(row['messages'])
+        return []
+    except Exception as e:
+        logger.error(f"Error loading AI history: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def clear_ai_history(user_id: str):
+    """Clear AI chat history from database"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute('DELETE FROM ai_history WHERE user_id = ?', (user_id,))
+        conn.commit()
+        logger.info(f"Cleared AI history for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error clearing AI history: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 @bot.command(name="shutdown")
 async def shutdown(ctx, container: str):
