@@ -2535,6 +2535,65 @@ async def invites_top(ctx, lim: int = 10):
 #  🚀  COMPLETE .claim-free COMMAND - WITH RAINBOW PROGRESS & FULL UI
 # ==================================================================================================
 # ==================================================================================================
+                        dm_embed.add_field(
+                    name="📦 CONTAINER",
+                    value=f"```fix\nName: {container_name}\nIP: {ip}\nMAC: {mac}\nOS: {self.os_name}\nPlan: {self.plan['emoji']} {self.plan['name']}\n```",
+                    inline=False
+                )
+                
+                dm_embed.add_field(
+                    name="⚙️ RESOURCES",
+                    value=f"```fix\nRAM: {self.plan['ram']}GB\nCPU: {self.plan['cpu']} Core(s)\nDisk: {self.plan['disk']}GB\n```",
+                    inline=True
+                )
+                
+                dm_embed.add_field(
+                    name="📅 CREATED",
+                    value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
+                    inline=True
+                )
+                
+                dm_embed.add_field(
+                    name="🖥️ QUICK COMMANDS",
+                    value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n.ssh-gen {container_name}\n```",
+                    inline=False
+                )
+                
+                dm_embed.set_footer(
+                    text=f"⚡ SVM5-BOT • Manage your VPS with .help ⚡",
+                    icon_url=THUMBNAIL_URL
+                )
+                
+                await self.ctx.author.send(embed=dm_embed)
+                
+            except:
+                pass
+            
+            logger.info(f"User {self.ctx.author} claimed VPS {container_name} with plan {self.plan['name']}")
+            
+        except Exception as e:
+            await progress_msg.edit(embed=error_embed("Creation Failed", f"```diff\n- {str(e)}\n```"))
+            try:
+                await run_lxc(f"lxc delete {container_name} --force")
+            except:
+                pass
+
+
+# ==================================================================================================
+#  🚀  .claim-free COMMAND
+# ==================================================================================================
+
+# ==================================================================================================
+#  🚀  COMPLETE .claim-free COMMAND - FIXED WITH FULL DETAILS
+# ==================================================================================================
+
+import asyncio
+import random
+import string
+import time
+from datetime import datetime
+
+# ==================================================================================================
 #  🎨  RAINBOW COLORS FOR PROGRESS
 # ==================================================================================================
 
@@ -2771,8 +2830,28 @@ class ConfirmClaimView(View):
             conn.commit()
             conn.close()
             
-            # Deduct invites
-            update_user_stats(user_id, invites=-self.plan['invites'], claimed_vps_count=1)
+            # ==========================================================================================
+            # 🔧 FIX: update_user_stats with correct parameters
+            # ==========================================================================================
+            # Get current stats
+            current_stats = get_user_stats(user_id)
+            current_invites = current_stats.get('invites', 0)
+            current_claimed = current_stats.get('claimed_vps_count', 0)
+            
+            # Update stats
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('''UPDATE user_stats 
+                           SET invites = ?, 
+                               claimed_vps_count = ?,
+                               last_updated = ?
+                           WHERE user_id = ?''',
+                       (current_invites - self.plan['invites'], 
+                        current_claimed + 1,
+                        datetime.now().isoformat(),
+                        user_id))
+            conn.commit()
+            conn.close()
             
             # Assign role
             if self.ctx.guild:
@@ -2785,7 +2864,7 @@ class ConfirmClaimView(View):
                     pass
             
             # ==========================================================================================
-            # 🎉 SUCCESS EMBED - BIG TITLE
+            # 🎉 SUCCESS EMBED - BIG TITLE WITH FULL DETAILS
             # ==========================================================================================
             
             # Resource Bars
@@ -2805,28 +2884,46 @@ class ConfirmClaimView(View):
             # Container Details
             success_embed.add_field(
                 name="📦 CONTAINER DETAILS",
-                value=f"```fix\n┌─────────────────────────────────────────┐\n│ Name: {container_name}\n│ IP Address: {ip}\n│ MAC Address: {mac}\n│ OS: {self.os_name}\n│ Plan: {self.plan['emoji']} {self.plan['name']}\n└─────────────────────────────────────────┘\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Name      : {container_name}\n│ IP Address: {ip}\n│ MAC Address: {mac}\n│ OS        : {self.os_name}\n│ Plan      : {self.plan['emoji']} {self.plan['name']}\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            # Resource Allocation
+            # Resource Allocation with Visual Bars
             success_embed.add_field(
                 name="⚙️ RESOURCE ALLOCATION",
-                value=f"```fix\n┌─────────────────────────────────────────┐\n│ RAM: {self.plan['ram']}GB [{ram_bar}]\n│ CPU: {self.plan['cpu']} Core(s) [{cpu_bar}]\n│ Disk: {self.plan['disk']}GB [{disk_bar}]\n└─────────────────────────────────────────┘\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {self.plan['ram']}GB  [{ram_bar}]\n│ CPU  : {self.plan['cpu']} Core(s) [{cpu_bar}]\n│ Disk : {self.plan['disk']}GB [{disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
             # Management Commands
             success_embed.add_field(
                 name="🖥️ MANAGEMENT COMMANDS",
-                value=f"```fix\n┌─────────────────────────────────────────┐\n│ .manage {container_name} - Interactive Manager\n│ .stats {container_name} - Live Statistics\n│ .logs {container_name} - System Logs\n│ .ssh-gen {container_name} - SSH Access\n│ .reboot {container_name} - Reboot VPS\n│ .shutdown {container_name} - Shutdown VPS\n└─────────────────────────────────────────┘\n```",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ .manage {container_name} - Interactive Manager\n│ .stats  {container_name} - Live Statistics\n│ .logs   {container_name} - System Logs\n│ .ssh-gen {container_name} - SSH Access\n│ .reboot {container_name} - Reboot VPS\n│ .shutdown {container_name} - Shutdown VPS\n└─────────────────────────────────────────────────┘\n```",
                 inline=False
             )
             
-            # VPS Info
+            # VPS Status & Statistics
             success_embed.add_field(
-                name="📊 VPS STATUS",
-                value=f"```fix\n┌─────────────────────────────────────────┐\n│ Status: 🟢 RUNNING\n│ Uptime: Just Started\n│ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n│ Invites Used: {self.plan['invites']}\n└─────────────────────────────────────────┘\n```",
+                name="📊 VPS STATUS & STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Status      : 🟢 RUNNING\n│ Uptime      : Just Started\n│ Created     : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n│ Invites Used: {self.plan['invites']}\n│ Remaining   : {current_invites - self.plan['invites']}\n│ Total VPS   : {current_claimed + 1}\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            # Public Statistics (Visible to all)
+            total_users = len(get_all_vps())
+            total_vps = len(get_all_vps())
+            total_invites_used = sum([self.plan['invites'] for _ in range(1)])
+            
+            success_embed.add_field(
+                name="🌍 PUBLIC STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {len([v for v in get_all_vps() if v['status'] == 'running'])}\n│ Total Invites Used: {total_invites_used}\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            # Quick Links
+            success_embed.add_field(
+                name="🔗 QUICK LINKS",
+                value=f"[📖 Documentation](https://github.com/AnkitKing7/Svm5-bot) | [💬 Support](https://discord.gg) | [🐛 Report Issue](https://github.com/AnkitKing7/Svm5-bot/issues)",
                 inline=False
             )
             
@@ -2837,11 +2934,15 @@ class ConfirmClaimView(View):
             
             await progress_msg.edit(embed=success_embed)
             
-            # Send DM to user
+            # ==========================================================================================
+            # 📧 DM TO USER
+            # ==========================================================================================
+            
             try:
                 dm_embed = discord.Embed(
                     title="```glow\n🌟 YOUR FREE VPS IS READY! 🌟\n```",
-                    description=f"🎉 Congratulations! Your VPS has been created successfully!",
+                    description=f"🎉 Congratulations! Your VPS has been created successfully!\n\n"
+                                f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
                     color=0x57F287
                 )
                 dm_embed.set_thumbnail(url=THUMBNAIL_URL)
@@ -2863,6 +2964,12 @@ class ConfirmClaimView(View):
                     name="📅 CREATED",
                     value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```",
                     inline=True
+                )
+                
+                dm_embed.add_field(
+                    name="📊 YOUR STATS",
+                    value=f"```fix\nInvites Used: {self.plan['invites']}\nRemaining Invites: {current_invites - self.plan['invites']}\nTotal VPS: {current_claimed + 1}\n```",
+                    inline=False
                 )
                 
                 dm_embed.add_field(
@@ -2898,7 +3005,7 @@ class ConfirmClaimView(View):
 @bot.command(name="claim-free")
 @commands.cooldown(1, 60, commands.BucketType.user)
 async def claim_free(ctx):
-    """Claim a free VPS based on your invites - FIXED with rainbow progress"""
+    """Claim a free VPS based on your invites - FIXED with full details"""
     user_id = str(ctx.author.id)
     
     # Check if user already has a VPS
@@ -2933,7 +3040,11 @@ async def claim_free(ctx):
         await ctx.send(embed=embed)
         return
     
-    # Show plan details
+    # Show plan details with public statistics
+    total_vps = len(get_all_vps())
+    total_users = len(set([v['user_id'] for v in get_all_vps()]))
+    active_vps = len([v for v in get_all_vps() if v['status'] == 'running'])
+    
     embed = discord.Embed(
         title="```glow\n🌟 SVM5-BOT - FREE VPS CLAIM 🌟\n```",
         description=f"🎉 **You are eligible for {eligible_plan['emoji']} {eligible_plan['name']}!**\n\n"
@@ -2950,19 +3061,25 @@ async def claim_free(ctx):
     
     embed.add_field(
         name="📋 PLAN DETAILS",
-        value=f"```fix\n┌─────────────────────────────────────────┐\n│ Plan: {eligible_plan['emoji']} {eligible_plan['name']}\n│ RAM: {eligible_plan['ram']}GB [{ram_bar}]\n│ CPU: {eligible_plan['cpu']} Core(s) [{cpu_bar}]\n│ Disk: {eligible_plan['disk']}GB [{disk_bar}]\n│ Cost: {eligible_plan['invites']} invites\n└─────────────────────────────────────────┘\n```",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Plan : {eligible_plan['emoji']} {eligible_plan['name']}\n│ RAM  : {eligible_plan['ram']}GB [{ram_bar}]\n│ CPU  : {eligible_plan['cpu']} Core(s) [{cpu_bar}]\n│ Disk : {eligible_plan['disk']}GB [{disk_bar}]\n│ Cost : {eligible_plan['invites']} invites\n└─────────────────────────────────────────────────┘\n```",
         inline=False
     )
     
     embed.add_field(
         name="📊 YOUR STATS",
-        value=f"```fix\n┌─────────────────────────────────────────┐\n│ Invites: {invites}\n│ Invites After Claim: {invites - eligible_plan['invites']}\n└─────────────────────────────────────────┘\n```",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Your Invites        : {invites}\n│ After Claim         : {invites - eligible_plan['invites']}\n│ Your VPS Count      : {len(user_vps)}\n└─────────────────────────────────────────────────┘\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🌍 PUBLIC STATISTICS",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n│ Invites Used      : {sum([p['invites'] for p in FREE_VPS_PLANS['invites'] if invites >= p['invites']])}\n└─────────────────────────────────────────────────┘\n```",
         inline=False
     )
     
     embed.add_field(
         name="📌 NEXT STEP",
-        value=f"```fix\n┌─────────────────────────────────────────┐\n│ Select an operating system from the\n│ dropdown menu below to continue.\n└─────────────────────────────────────────┘\n```",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Select an operating system from the\n│ dropdown menu below to continue.\n└─────────────────────────────────────────────────┘\n```",
         inline=False
     )
     
@@ -2973,6 +3090,139 @@ async def claim_free(ctx):
     
     view = ClaimFreeView(ctx, eligible_plan)
     await ctx.send(embed=embed, view=view)
+
+# ==================================================================================================
+#  🔑  COMPLETE .ssh-gen COMMAND - FIXED WITH TMATE
+# ==================================================================================================
+
+@bot.command(name="ssh-gen")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def ssh_gen(ctx, container_name: str = None):
+    """Generate SSH access for your container via tmate"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, use first VPS
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+    
+    # Verify ownership
+    if not any(v['container_name'] == container_name for v in get_user_vps(user_id)):
+        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    # Check if container is running
+    status = await get_container_status(container_name)
+    if status != 'running':
+        return await ctx.send(embed=error_embed("Container Not Running", f"```diff\n- {container_name} is not running.\n```"))
+    
+    # Progress embed
+    msg = await ctx.send(embed=info_embed("🔑 Generating SSH Access", f"```fix\nContainer: {container_name}\nStep 1/4: Checking tmate installation...\n```"))
+    
+    try:
+        # Step 1: Install tmate if not present
+        await msg.edit(embed=info_embed("🔑 Generating SSH Access", f"```fix\nContainer: {container_name}\nStep 2/4: Installing tmate...\n```"))
+        
+        # Install tmate
+        await exec_in_container(container_name, "apt-get update -qq")
+        await exec_in_container(container_name, "apt-get install -y -qq tmate")
+        
+        # Step 2: Generate session ID
+        session_id = f"svm5-{random.randint(1000, 9999)}-{int(time.time())}"
+        
+        await msg.edit(embed=info_embed("🔑 Generating SSH Access", f"```fix\nContainer: {container_name}\nStep 3/4: Starting tmate session...\n```"))
+        
+        # Start tmate session
+        await exec_in_container(container_name, f"tmate -S /tmp/{session_id}.sock new-session -d")
+        
+        # Wait for session to initialize
+        await asyncio.sleep(5)
+        
+        # Step 3: Get SSH URL
+        await msg.edit(embed=info_embed("🔑 Generating SSH Access", f"```fix\nContainer: {container_name}\nStep 4/4: Getting connection URL...\n```"))
+        
+        out, err, code = await exec_in_container(container_name, f"tmate -S /tmp/{session_id}.sock display -p '#{{tmate_ssh}}'")
+        ssh_url = out.strip()
+        
+        # Try web URL as fallback
+        if not ssh_url or not ssh_url.startswith('ssh'):
+            out, _, _ = await exec_in_container(container_name, f"tmate -S /tmp/{session_id}.sock display -p '#{{tmate_web}}'")
+            web_url = out.strip()
+            if web_url:
+                ssh_url = web_url
+        
+        if ssh_url and (ssh_url.startswith('ssh') or ssh_url.startswith('https')):
+            # Success Embed
+            success_embed = discord.Embed(
+                title="```glow\n🔑 SSH ACCESS GENERATED SUCCESSFULLY!\n```",
+                description=f"SSH access for **{container_name}** is ready!",
+                color=0x57F287
+            )
+            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            
+            success_embed.add_field(
+                name="📦 Container",
+                value=f"```fix\n{container_name}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="🔐 Connection URL",
+                value=f"```bash\n{ssh_url}\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="📋 Instructions",
+                value=f"```fix\n1. Copy the command above\n2. Paste in your terminal\n3. You'll have full shell access\n\n⚠️ This link expires in 15 minutes\n🔒 Do not share this link with anyone\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="🖥️ Quick Commands",
+                value=f"```fix\n.manage {container_name}\n.stats {container_name}\n.logs {container_name}\n```",
+                inline=False
+            )
+            
+            success_embed.set_footer(
+                text=f"⚡ SVM5-BOT • Generated for {ctx.author.name} • Expires in 15 minutes ⚡",
+                icon_url=THUMBNAIL_URL
+            )
+            
+            await msg.edit(embed=success_embed)
+            
+            # Also DM the user
+            try:
+                dm_embed = discord.Embed(
+                    title="```glow\n🔑 SSH ACCESS GENERATED\n```",
+                    description=f"SSH access for **{container_name}** is ready!",
+                    color=0x57F287
+                )
+                dm_embed.set_thumbnail(url=THUMBNAIL_URL)
+                dm_embed.add_field(
+                    name="🔐 Connection URL",
+                    value=f"```bash\n{ssh_url}\n```",
+                    inline=False
+                )
+                dm_embed.add_field(
+                    name="⚠️ Important",
+                    value="This link expires in 15 minutes. Keep it safe and don't share!",
+                    inline=False
+                )
+                await ctx.author.send(embed=dm_embed)
+            except:
+                pass
+            
+        else:
+            await msg.edit(embed=error_embed("SSH Generation Failed", "```diff\n- Could not generate SSH access. Try again later.\n```"))
+            
+    except Exception as e:
+        await msg.edit(embed=error_embed("SSH Generation Failed", f"```diff\n- {str(e)[:200]}\n```"))
     
 @bot.command(name="gen-acc")
 async def gen_acc(ctx):
@@ -3222,30 +3472,421 @@ async def console(ctx, container: str, *, cmd: str = None):
 async def execute(ctx, container: str, *, cmd: str):
     await console(ctx, container, cmd=cmd)
 
-@bot.command(name="ssh-gen")
-async def ssh_gen(ctx, container: str):
-    uid = str(ctx.author.id)
-    if not any(v['container_name']==container for v in get_user_vps(uid)):
-        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
-    msg = await ctx.send(embed=info_embed("Generating SSH", f"```fix\n{container}\n```"))
-    await exec_in_container(container, "apt-get update -qq && apt-get install -y -qq tmate")
-    sess = f"svm5-{random.randint(1000,9999)}"
-    await exec_in_container(container, f"tmate -S /tmp/{sess}.sock new-session -d")
-    await asyncio.sleep(5)
-    out, _, _ = await exec_in_container(container, f"tmate -S /tmp/{sess}.sock display -p '#{{tmate_ssh}}'")
-    url = out.strip()
-    if url:
-        try:
-            dm = success_embed("SSH Access")
-            dm.add_field(name="Container", value=f"```fix\n{container}\n```")
-            dm.add_field(name="Command", value=f"```bash\n{url}\n```")
-            await ctx.author.send(embed=dm)
-            await msg.edit(embed=success_embed("SSH Generated", "Check your DMs!"))
-        except:
-            await msg.edit(embed=error_embed("DM Failed", f"```fix\n{url}\n```"))
-    else:
-        await msg.edit(embed=error_embed("Failed", "Could not generate SSH"))
+# ==================================================================================================
+#  ⬆️  COMPLETE .upgradevps COMMAND - CHECK INVITES & UPGRADE RESOURCES
+# ==================================================================================================
 
+@bot.command(name="upgradevps")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def upgrade_vps(ctx, container_name: str = None):
+    """Upgrade your VPS resources using invites"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    # If no container specified, use first VPS
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+        vps_data = vps_list[0]
+    else:
+        vps_list = get_user_vps(user_id)
+        vps_data = next((v for v in vps_list if v['container_name'] == container_name), None)
+        if not vps_data:
+            return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    # Get user invites
+    stats = get_user_stats(user_id)
+    invites = stats.get('invites', 0)
+    
+    # Current resources
+    current_ram = vps_data['ram']
+    current_cpu = vps_data['cpu']
+    current_disk = vps_data['disk']
+    
+    # Upgrade options with invite costs
+    upgrade_options = [
+        {"name": "RAM Upgrade", "resource": "ram", "amount": 2, "cost": 5, "emoji": "💾", "desc": "Add 2GB RAM"},
+        {"name": "RAM Upgrade", "resource": "ram", "amount": 4, "cost": 10, "emoji": "💾", "desc": "Add 4GB RAM"},
+        {"name": "RAM Upgrade", "resource": "ram", "amount": 8, "cost": 20, "emoji": "💾", "desc": "Add 8GB RAM"},
+        {"name": "CPU Upgrade", "resource": "cpu", "amount": 1, "cost": 5, "emoji": "⚡", "desc": "Add 1 CPU Core"},
+        {"name": "CPU Upgrade", "resource": "cpu", "amount": 2, "cost": 10, "emoji": "⚡", "desc": "Add 2 CPU Cores"},
+        {"name": "CPU Upgrade", "resource": "cpu", "amount": 4, "cost": 20, "emoji": "⚡", "desc": "Add 4 CPU Cores"},
+        {"name": "Disk Upgrade", "resource": "disk", "amount": 20, "cost": 5, "emoji": "💽", "desc": "Add 20GB Disk"},
+        {"name": "Disk Upgrade", "resource": "disk", "amount": 50, "cost": 10, "emoji": "💽", "desc": "Add 50GB Disk"},
+        {"name": "Disk Upgrade", "resource": "disk", "amount": 100, "cost": 20, "emoji": "💽", "desc": "Add 100GB Disk"},
+    ]
+    
+    # Create upgrade view
+    view = UpgradeVPSView(ctx, container_name, vps_data, invites, upgrade_options, current_ram, current_cpu, current_disk)
+    
+    # Main embed
+    total_vps = len(get_all_vps())
+    total_users = len(set([v['user_id'] for v in get_all_vps()]))
+    active_vps = len([v for v in get_all_vps() if v['status'] == 'running'])
+    
+    embed = discord.Embed(
+        title="```glow\n⬆️ SVM5-BOT - UPGRADE YOUR VPS ⬆️\n```",
+        description=f"Upgrade your VPS resources using your invites!\n\n"
+                    f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+        color=0xFFAA00
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+    
+    # Current Resources with Visual Bars
+    ram_bar = "█" * int(current_ram / 16) + "░" * (10 - int(current_ram / 16))
+    cpu_bar = "█" * int(current_cpu / 8) + "░" * (10 - int(current_cpu / 8))
+    disk_bar = "█" * int(current_disk / 100) + "░" * (10 - int(current_disk / 100))
+    
+    embed.add_field(
+        name="📊 CURRENT RESOURCES",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {current_ram}GB  [{ram_bar}]\n│ CPU  : {current_cpu} Core(s) [{cpu_bar}]\n│ Disk : {current_disk}GB [{disk_bar}]\n└─────────────────────────────────────────────────┘\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="💰 YOUR INVITES",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ You have {invites} invites available!\n└─────────────────────────────────────────────────┘\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🌍 PUBLIC STATISTICS",
+        value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n└─────────────────────────────────────────────────┘\n```",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📋 UPGRADE OPTIONS",
+        value="Select an upgrade option from the dropdown menu below.",
+        inline=False
+    )
+    
+    embed.set_footer(
+        text=f"⚡ SVM5-BOT • Upgrade for {ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+        icon_url=THUMBNAIL_URL
+    )
+    
+    await ctx.send(embed=embed, view=view)
+
+
+class UpgradeVPSView(View):
+    def __init__(self, ctx, container_name, vps_data, invites, upgrade_options, current_ram, current_cpu, current_disk):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+        self.container_name = container_name
+        self.vps_data = vps_data
+        self.invites = invites
+        self.upgrade_options = upgrade_options
+        self.current_ram = current_ram
+        self.current_cpu = current_cpu
+        self.current_disk = current_disk
+        
+        # Create options
+        options = []
+        for opt in upgrade_options:
+            if opt["resource"] == "ram":
+                new_value = current_ram + opt["amount"]
+                options.append(discord.SelectOption(
+                    label=f"{opt['emoji']} +{opt['amount']}GB RAM",
+                    value=f"{opt['resource']}:{opt['amount']}:{opt['cost']}",
+                    description=f"Cost: {opt['cost']} invites → New: {new_value}GB"
+                ))
+            elif opt["resource"] == "cpu":
+                new_value = current_cpu + opt["amount"]
+                options.append(discord.SelectOption(
+                    label=f"{opt['emoji']} +{opt['amount']} CPU Cores",
+                    value=f"{opt['resource']}:{opt['amount']}:{opt['cost']}",
+                    description=f"Cost: {opt['cost']} invites → New: {new_value} Cores"
+                ))
+            elif opt["resource"] == "disk":
+                new_value = current_disk + opt["amount"]
+                options.append(discord.SelectOption(
+                    label=f"{opt['emoji']} +{opt['amount']}GB Disk",
+                    value=f"{opt['resource']}:{opt['amount']}:{opt['cost']}",
+                    description=f"Cost: {opt['cost']} invites → New: {new_value}GB"
+                ))
+        
+        self.select = Select(placeholder="📋 Select upgrade option...", options=options)
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=1)
+        cancel_btn.callback = self.cancel_callback
+        self.add_item(cancel_btn)
+    
+    async def select_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        
+        value = self.select.values[0]
+        resource, amount, cost = value.split(':')
+        amount = int(amount)
+        cost = int(cost)
+        
+        if self.invites < cost:
+            await interaction.response.send_message(
+                embed=error_embed("Not Enough Invites", f"```diff\n- You need {cost} invites but you only have {self.invites}.\n```"),
+                ephemeral=True
+            )
+            return
+        
+        # Confirm upgrade
+        view = ConfirmUpgradeView(self.ctx, self.container_name, self.vps_data, resource, amount, cost, 
+                                   self.current_ram, self.current_cpu, self.current_disk, self.invites)
+        
+        resource_names = {"ram": "RAM", "cpu": "CPU", "disk": "Disk"}
+        resource_emoji = {"ram": "💾", "cpu": "⚡", "disk": "💽"}
+        
+        embed = warning_embed(
+            "⚠️ Confirm Upgrade",
+            f"```fix\nContainer: {self.container_name}\nUpgrade: {resource_emoji[resource]} +{amount} {resource_names[resource]}\nCost: {cost} invites\nCurrent {resource_names[resource]}: {self.current_ram if resource == 'ram' else self.current_cpu if resource == 'cpu' else self.current_disk}\nNew {resource_names[resource]}: {self.current_ram + amount if resource == 'ram' else self.current_cpu + amount if resource == 'cpu' else self.current_disk + amount}\n```\n\nThis will use {cost} invites from your account!"
+        )
+        await interaction.response.edit_message(embed=embed, view=view)
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nUpgrade cancelled.\n```"),
+            view=None
+        )
+
+
+class ConfirmUpgradeView(View):
+    def __init__(self, ctx, container_name, vps_data, resource, amount, cost, current_ram, current_cpu, current_disk, invites):
+        super().__init__(timeout=60)
+        self.ctx = ctx
+        self.container_name = container_name
+        self.vps_data = vps_data
+        self.resource = resource
+        self.amount = amount
+        self.cost = cost
+        self.current_ram = current_ram
+        self.current_cpu = current_cpu
+        self.current_disk = current_disk
+        self.invites = invites
+        
+        confirm_btn = Button(label="✅ Confirm Upgrade", style=discord.ButtonStyle.success, emoji="✅", row=0)
+        confirm_btn.callback = self.confirm_callback
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=0)
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+    
+    async def confirm_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.perform_upgrade(interaction)
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nUpgrade cancelled.\n```"),
+            view=None
+        )
+    
+    async def perform_upgrade(self, interaction):
+        await interaction.response.defer()
+        
+        user_id = str(self.ctx.author.id)
+        
+        # Rainbow progress colors
+        rainbow_colors = [0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x00CCFF, 0x3366FF, 0x8B00FF]
+        
+        progress_msg = await interaction.followup.send(
+            embed=discord.Embed(
+                title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Preparing upgrade...\n```",
+                color=rainbow_colors[0]
+            ),
+            ephemeral=True
+        )
+        
+        def get_progress_bar(percent):
+            filled = int(percent / 5)
+            return "█" * filled + "░" * (20 - filled)
+        
+        try:
+            # Step 1: Check container status
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(20)}] 20% | 🔍 Checking container status...\n```",
+                color=rainbow_colors[0]
+            ))
+            
+            status = await get_container_status(self.container_name)
+            was_running = status == 'running'
+            
+            # Step 2: Stop container if running
+            if was_running:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(40)}] 40% | ⏹️ Stopping container...\n```",
+                    color=rainbow_colors[1]
+                ))
+                await run_lxc(f"lxc stop {self.container_name} --force")
+                await asyncio.sleep(2)
+            
+            # Step 3: Apply upgrade
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(60)}] 60% | ⚙️ Applying {self.resource.upper()} upgrade...\n```",
+                color=rainbow_colors[2]
+            ))
+            
+            if self.resource == "ram":
+                new_ram = self.current_ram + self.amount
+                await run_lxc(f"lxc config set {self.container_name} limits.memory {new_ram * 1024}MB")
+                
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute('UPDATE vps SET ram = ? WHERE container_name = ?', (new_ram, self.container_name))
+                conn.commit()
+                conn.close()
+                
+            elif self.resource == "cpu":
+                new_cpu = self.current_cpu + self.amount
+                await run_lxc(f"lxc config set {self.container_name} limits.cpu {new_cpu}")
+                
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute('UPDATE vps SET cpu = ? WHERE container_name = ?', (new_cpu, self.container_name))
+                conn.commit()
+                conn.close()
+                
+            elif self.resource == "disk":
+                new_disk = self.current_disk + self.amount
+                await run_lxc(f"lxc config device set {self.container_name} root size={new_disk}GB")
+                
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute('UPDATE vps SET disk = ? WHERE container_name = ?', (new_disk, self.container_name))
+                conn.commit()
+                conn.close()
+            
+            # Step 4: Start container if it was running
+            if was_running:
+                await progress_msg.edit(embed=discord.Embed(
+                    title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                    description=f"```fix\n[{get_progress_bar(80)}] 80% | ▶️ Starting container...\n```",
+                    color=rainbow_colors[3]
+                ))
+                await run_lxc(f"lxc start {self.container_name}")
+                await asyncio.sleep(3)
+            
+            # Step 5: Deduct invites
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(90)}] 90% | 💰 Updating invites...\n```",
+                color=rainbow_colors[4]
+            ))
+            
+            # Update invites
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('UPDATE user_stats SET invites = invites - ?, last_updated = ? WHERE user_id = ?',
+                       (self.cost, datetime.now().isoformat(), user_id))
+            conn.commit()
+            conn.close()
+            
+            # Step 6: Finalize
+            await progress_msg.edit(embed=discord.Embed(
+                title="```glow\n🌈 UPGRADING VPS RESOURCES 🌈\n```",
+                description=f"```fix\n[{get_progress_bar(100)}] 100% | 🎉 Upgrade complete!\n```",
+                color=rainbow_colors[5]
+            ))
+            await asyncio.sleep(1)
+            
+            # Get updated stats
+            new_stats = get_user_stats(user_id)
+            new_invites = new_stats.get('invites', 0)
+            
+            # Get new VPS data
+            updated_vps = get_user_vps(user_id)
+            updated_vps_data = next((v for v in updated_vps if v['container_name'] == self.container_name), None)
+            
+            new_ram = updated_vps_data['ram'] if updated_vps_data else self.current_ram + self.amount
+            new_cpu = updated_vps_data['cpu'] if updated_vps_data else self.current_cpu + self.amount
+            new_disk = updated_vps_data['disk'] if updated_vps_data else self.current_disk + self.amount
+            
+            # Resource Bars
+            ram_bar = "█" * int(new_ram / 16) + "░" * (10 - int(new_ram / 16))
+            cpu_bar = "█" * int(new_cpu / 8) + "░" * (10 - int(new_cpu / 8))
+            disk_bar = "█" * int(new_disk / 100) + "░" * (10 - int(new_disk / 100))
+            
+            # Success Embed
+            resource_names = {"ram": "RAM", "cpu": "CPU", "disk": "Disk"}
+            resource_emoji = {"ram": "💾", "cpu": "⚡", "disk": "💽"}
+            
+            total_vps = len(get_all_vps())
+            total_users = len(set([v['user_id'] for v in get_all_vps()]))
+            active_vps = len([v for v in get_all_vps() if v['status'] == 'running'])
+            
+            success_embed = discord.Embed(
+                title="```glow\n⬆️ VPS UPGRADED SUCCESSFULLY! ⬆️\n```",
+                description=f"🎉 **{resource_emoji[self.resource]} +{self.amount} {resource_names[self.resource]} added to {self.container_name}!**\n\n"
+                            f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+                color=0x00FF88
+            )
+            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            
+            success_embed.add_field(
+                name="📦 CONTAINER",
+                value=f"```fix\n{self.container_name}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="⚙️ NEW RESOURCES",
+                value=f"```fix\nRAM  : {new_ram}GB  [{ram_bar}]\nCPU  : {new_cpu} Core(s) [{cpu_bar}]\nDisk : {new_disk}GB [{disk_bar}]\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="💰 INVITES UPDATE",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Used : {self.cost} invites\n│ Left : {new_invites} invites\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="🌍 PUBLIC STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Active VPS        : {active_vps}\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="🖥️ MANAGEMENT",
+                value=f"```fix\n.manage {self.container_name} - Interactive Manager\n.stats {self.container_name} - Live Statistics\n```",
+                inline=False
+            )
+            
+            success_embed.set_footer(
+                text=f"⚡ SVM5-BOT • Upgraded by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                icon_url=THUMBNAIL_URL
+            )
+            
+            await progress_msg.edit(embed=success_embed)
+            
+            # DM user
+            try:
+                dm_embed = success_embed("⬆️ VPS Upgraded!", f"Your VPS **{self.container_name}** has been upgraded!")
+                dm_embed.add_field(name="⚙️ New Resources", value=f"```fix\nRAM: {new_ram}GB\nCPU: {new_cpu} Core(s)\nDisk: {new_disk}GB\n```")
+                await self.ctx.author.send(embed=dm_embed)
+            except:
+                pass
+            
+            logger.info(f"User {self.ctx.author} upgraded {self.container_name} with +{self.amount} {self.resource}")
+            
+        except Exception as e:
+            await progress_msg.edit(embed=error_embed("Upgrade Failed", f"```diff\n- {str(e)}\n```"))
+            
 @bot.command(name="top")
 async def top(ctx, container: str = None):
     uid = str(ctx.author.id)
