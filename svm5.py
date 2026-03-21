@@ -3388,29 +3388,7 @@ async def myvps(ctx):
 
 @bot.command(name="list")
 async def list_cmd(ctx):
-    await myvps(ctx)
-
-# In your manage command, replace the old view with:
-@bot.command(name="manage")
-async def manage(ctx, container: str = None):
-    uid = str(ctx.author.id)
-    
-    if not container:
-        vps = get_user_vps(uid)
-        if not vps:
-            return await ctx.send(embed=no_vps_embed())
-        container = vps[0]['container_name']
-        container_data = vps[0]
-    elif not any(v['container_name'] == container for v in get_user_vps(uid)):
-        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
-    else:
-        vps = get_user_vps(uid)
-        container_data = next((v for v in vps if v['container_name'] == container), None)
-    
-    view = VPSManageView(ctx, container, container_data)
-    embed = await view.get_stats_embed()
-    msg = await ctx.send(embed=embed, view=view)
-    view.message = msg
+    await myvps(ctx) msg
 
 @bot.command(name="stats")
 async def vps_stats(ctx, container: str = None):
