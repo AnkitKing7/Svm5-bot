@@ -13,7 +13,8 @@
 # ║                         Made by Ankit-Dev with ❤️ - Version 5.0.0                            ║
 # ║                                                                                               ║
 # ║  ╔════════════════════════════════════════════════════════════════════════════════════════╗   ║
-# ║  ║  ✅ 96 COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
+# ║  ║ qrcode
+      |   97+ COMMANDS • 70+ OS • 7 GAMES • 7 TOOLS • NODES • SHARE • PORTS • IPv4 • PANELS  ║   ║
 # ║  ║  ✅ FULL UI • BUTTONS • SELECT MENUS • MODALS • REAL-TIME STATS • NODE.JSON            ║   ║
 # ║  ║  ✅ AUTO NODE DETECTION • CLOUDFLARED TUNNEL • AI CHAT • UPI QR • BACKUP/RESTORE      ║   ║
 # ║  ╚════════════════════════════════════════════════════════════════════════════════════════╝   ║
@@ -45,6 +46,9 @@ import hashlib
 import base64
 import uuid
 import qrcode
+import base64
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import textwrap
 import io
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
@@ -1961,7 +1965,7 @@ class HelpView(View):
                 'title': "🏠 SVM5-BOT TOOLS - ULTIMATE VPS MANAGEMENT",
                 'desc': f"```glow\nWelcome to {BOT_NAME} - Complete VPS Management Solution\n```\n"
                         f"**Select a category from the dropdown menu to view commands.**\n\n"
-                        f"```fix\n📊 Bot Statistics:\n• Total Commands: 92+\n• OS Options: 70+\n• Games: 7\n• Tools: 7\n• Active Users: {len(get_all_vps())} VPS\n• Server IP: {SERVER_IP}\n• License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}\n```",
+                        f"```fix\n📊 Bot Statistics:\n• Total Commands: 97+\n• OS Options: 70+\n• Games: 7\n• Tools: 7\n• Active Users: {len(get_all_vps())} VPS\n• Server IP: {SERVER_IP}\n• License: {'✅ Verified' if LICENSE_VERIFIED else '❌ Not Verified'}\n```",
                 'fields': [
                     ("👤 USER (14)", "Basic commands for all users", True),
                     ("🖥️ VPS (8)", "Manage your VPS containers", True),
@@ -4563,14 +4567,571 @@ async def pay(ctx, amt: int, *, note: str = None):
 #  📦  PANEL COMMANDS
 # ==================================================================================================
 
+# ==================================================================================================
+#  📦  COMPLETE .install-panel COMMAND - WITH CLOUDFLARED TUNNEL & DM
+# ==================================================================================================
+
+# Rainbow colors for progress
+RAINBOW_COLORS = [
+    0xFF0000,  # Red
+    0xFF7700,  # Orange
+    0xFFFF00,  # Yellow
+    0x00FF00,  # Green
+    0x00CCFF,  # Cyan
+    0x3366FF,  # Blue
+    0x8B00FF,  # Violet
+    0xFF00CC,  # Pink
+]
+
+# Check if cloudflared is installed
+CLOUDFLARED_AVAILABLE = shutil.which("cloudflared") is not None
+
+
+async def create_cloudflared_tunnel(container_name: str, port: int = 80) -> Optional[str]:
+    """Create cloudflared tunnel for container and return URL"""
+    if not CLOUDFLARED_AVAILABLE:
+        return None
+    
+    try:
+        # Install cloudflared in container if not present
+        await exec_in_container(container_name, "which cloudflared || (wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared)")
+        
+        # Generate unique tunnel ID
+        tunnel_id = str(uuid.uuid4())[:8]
+        
+        # Start tunnel
+        cmd = f"nohup cloudflared tunnel --url http://localhost:{port} --no-autoupdate > /tmp/cloudflared_{tunnel_id}.log 2>&1 & echo $!"
+        pid, _, _ = await exec_in_container(container_name, cmd)
+        
+        # Wait for tunnel to establish
+        await asyncio.sleep(8)
+        
+        # Get tunnel URL
+        out, _, _ = await exec_in_container(container_name, f"cat /tmp/cloudflared_{tunnel_id}.log | grep -oP 'https://[a-z0-9-]+\\.trycloudflare\\.com' | head -1")
+        url = out.strip()
+        
+        if url:
+            return url
+    except Exception as e:
+        logger.error(f"Failed to create cloudflared tunnel: {e}")
+    
+    return None
+
+
+class PanelInstallView(View):
+    def __init__(self, ctx, container_name: str):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.container = container_name
+        self.message = None
+        
+        ptero_btn = Button(label="🦅 Pterodactyl Panel", style=discord.ButtonStyle.primary, emoji="🦅", row=0)
+        ptero_btn.callback = self.ptero_callback
+        
+        puffer_btn = Button(label="🐡 Pufferpanel", style=discord.ButtonStyle.success, emoji="🐡", row=0)
+        puffer_btn.callback = self.puffer_callback
+        
+        cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary, emoji="❌", row=1)
+        cancel_btn.callback = self.cancel_callback
+        
+        self.add_item(ptero_btn)
+        self.add_item(puffer_btn)
+        self.add_item(cancel_btn)
+    
+    async def ptero_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pterodactyl")
+    
+    async def puffer_callback(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("```diff\n- This menu is not for you!\n```", ephemeral=True)
+            return
+        await self.install_panel(interaction, "pufferpanel")
+    
+    async def cancel_callback(self, interaction):
+        await interaction.response.edit_message(
+            embed=info_embed("Cancelled", "```fix\nPanel installation cancelled.\n```"),
+            view=None
+        )
+    
+    async def install_panel(self, interaction, panel_type: str):
+        await interaction.response.defer()
+        
+        # Generate admin credentials
+        admin_user = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+        admin_email = f"{admin_user}@{random.choice(['gmail.com', 'outlook.com', 'proton.me', 'yandex.com'])}"
+        admin_pass = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*", k=16))
+        
+        # Rainbow progress
+        progress_msg = await interaction.followup.send(
+            embed=discord.Embed(
+                title="```glow\n🌈 SVM5-BOT - INSTALLING PANEL 🌈\n```",
+                description="```fix\n[░░░░░░░░░░░░░░░░░░░░] 0% | Preparing installation...\n```",
+                color=RAINBOW_COLORS[0]
+            ),
+            ephemeral=True
+        )
+        
+        def get_progress_bar(percent):
+            filled = int(percent / 5)
+            return "█" * filled + "░" * (20 - filled)
+        
+        try:
+            if panel_type == "pterodactyl":
+                # Pterodactyl Installation Steps
+                steps = [
+                    (10, "🔧 Updating system..."),
+                    (20, "📦 Installing dependencies..."),
+                    (30, "🌐 Installing Nginx, MySQL, Redis..."),
+                    (40, "🐘 Installing PHP 8.1..."),
+                    (50, "📥 Downloading Pterodactyl..."),
+                    (60, "🔧 Configuring environment..."),
+                    (70, "📦 Installing Composer packages..."),
+                    (80, "🗄️ Setting up database..."),
+                    (90, "👤 Creating admin user..."),
+                    (100, "🌍 Creating cloudflared tunnel..."),
+                ]
+                
+                color_index = 0
+                for progress, desc in steps:
+                    await progress_msg.edit(embed=discord.Embed(
+                        title="```glow\n🌈 SVM5-BOT - INSTALLING PTERODACTYL 🌈\n```",
+                        description=f"```fix\n[{get_progress_bar(progress)}] {progress}% | {desc}\n```",
+                        color=RAINBOW_COLORS[color_index % len(RAINBOW_COLORS)]
+                    ))
+                    color_index += 1
+                    
+                    if progress == 10:
+                        await exec_in_container(self.container, "apt-get update -qq")
+                    elif progress == 20:
+                        await exec_in_container(self.container, "apt-get install -y -qq curl wget git unzip tar")
+                    elif progress == 30:
+                        await exec_in_container(self.container, "apt-get install -y -qq nginx mariadb-server redis-server")
+                    elif progress == 40:
+                        await exec_in_container(self.container, "apt-get install -y -qq php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip}")
+                    elif progress == 50:
+                        await exec_in_container(self.container, "mkdir -p /var/www/pterodactyl")
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && curl -Lo panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz")
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && tar -xzvf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/")
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && cp .env.example .env")
+                    elif progress == 60:
+                        await exec_in_container(self.container, "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer")
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && composer install --no-dev --optimize-autoloader --no-interaction")
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && php artisan key:generate --force")
+                    elif progress == 70:
+                        await exec_in_container(self.container, "cd /var/www/pterodactyl && php artisan migrate --seed --force")
+                    elif progress == 80:
+                        await exec_in_container(self.container, f"cd /var/www/pterodactyl && php artisan p:user:make --email='{admin_email}' --username='{admin_user}' --password='{admin_pass}' --name-first='Admin' --name-last='User' --admin=1 --no-interaction")
+                    elif progress == 90:
+                        out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                        ip = out.strip() or SERVER_IP
+                        panel_url = f"http://{ip}"
+                        
+                        # Create tunnel
+                        tunnel_url = await create_cloudflared_tunnel(self.container, 80)
+                        if tunnel_url:
+                            panel_url = tunnel_url
+                    
+                    await asyncio.sleep(1)
+                
+            else:  # pufferpanel
+                steps = [
+                    (10, "🔧 Updating system..."),
+                    (20, "📦 Adding Pufferpanel repository..."),
+                    (30, "📥 Installing Pufferpanel..."),
+                    (40, "⚙️ Configuring services..."),
+                    (50, "▶️ Starting Pufferpanel..."),
+                    (60, "👤 Creating admin user..."),
+                    (70, "🌍 Creating cloudflared tunnel..."),
+                    (80, "🔧 Finalizing..."),
+                ]
+                
+                color_index = 0
+                for progress, desc in steps:
+                    await progress_msg.edit(embed=discord.Embed(
+                        title="```glow\n🌈 SVM5-BOT - INSTALLING PUFFERPANEL 🌈\n```",
+                        description=f"```fix\n[{get_progress_bar(progress)}] {progress}% | {desc}\n```",
+                        color=RAINBOW_COLORS[color_index % len(RAINBOW_COLORS)]
+                    ))
+                    color_index += 1
+                    
+                    if progress == 10:
+                        await exec_in_container(self.container, "apt-get update -qq")
+                    elif progress == 20:
+                        await exec_in_container(self.container, "curl -s https://packagecloud.io/install/repositories/pufferpanel/pufferpanel/script.deb.sh | bash")
+                    elif progress == 30:
+                        await exec_in_container(self.container, "apt-get install -y -qq pufferpanel")
+                    elif progress == 40:
+                        await exec_in_container(self.container, "systemctl enable pufferpanel")
+                    elif progress == 50:
+                        await exec_in_container(self.container, "systemctl start pufferpanel")
+                    elif progress == 60:
+                        await exec_in_container(self.container, f"pufferpanel user add --name '{admin_user}' --email '{admin_email}' --password '{admin_pass}' --admin")
+                    elif progress == 70:
+                        out, _, _ = await exec_in_container(self.container, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+                        ip = out.strip() or SERVER_IP
+                        panel_url = f"http://{ip}:8080"
+                        
+                        # Create tunnel
+                        tunnel_url = await create_cloudflared_tunnel(self.container, 8080)
+                        if tunnel_url:
+                            panel_url = tunnel_url
+                    
+                    await asyncio.sleep(1)
+            
+            # Save to database
+            add_panel(str(self.ctx.author.id), panel_type, panel_url, admin_user, admin_pass, admin_email, self.container, tunnel_url or "")
+            
+            # Get public statistics
+            all_vps = get_all_vps()
+            total_vps = len(all_vps)
+            total_users = len(set([v['user_id'] for v in all_vps]))
+            total_panels = len(get_user_panels(str(self.ctx.author.id)))
+            
+            # Success Embed
+            success_embed = discord.Embed(
+                title="```glow\n✅ PANEL INSTALLED SUCCESSFULLY! ✅\n```",
+                description=f"🎉 **{panel_type.title()} has been installed on {self.container}!**\n\n"
+                            f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
+                color=0x00FF88
+            )
+            success_embed.set_thumbnail(url=THUMBNAIL_URL)
+            success_embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+            
+            success_embed.add_field(
+                name="🌐 PANEL URL",
+                value=f"```fix\n{panel_url}\n```",
+                inline=False
+            )
+            
+            if tunnel_url:
+                success_embed.add_field(
+                    name="🌍 CLOUDFLARED TUNNEL",
+                    value=f"```fix\n{tunnel_url}\n```",
+                    inline=False
+                )
+            
+            success_embed.add_field(
+                name="🔐 CREDENTIALS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Username : {admin_user}\n│ Email    : {admin_email}\n│ Password : {admin_pass}\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.add_field(
+                name="📦 CONTAINER",
+                value=f"```fix\n{self.container}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="🔌 PORT",
+                value=f"```fix\n{80 if panel_type == 'pterodactyl' else 8080}\n```",
+                inline=True
+            )
+            
+            success_embed.add_field(
+                name="🌍 PUBLIC STATISTICS",
+                value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Total VPS Created : {total_vps}\n│ Total Users       : {total_users}\n│ Panels Installed  : {total_panels}\n└─────────────────────────────────────────────────┘\n```",
+                inline=False
+            )
+            
+            success_embed.set_footer(
+                text=f"⚡ SVM5-BOT • Installed by {self.ctx.author.name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ⚡",
+                icon_url=THUMBNAIL_URL
+            )
+            
+            await progress_msg.edit(embed=success_embed)
+            
+            # DM user with credentials
+            try:
+                dm_embed = discord.Embed(
+                    title="```glow\n🔐 PANEL CREDENTIALS\n```",
+                    description=f"Your {panel_type.title()} panel has been installed successfully!",
+                    color=0x57F287
+                )
+                dm_embed.set_thumbnail(url=THUMBNAIL_URL)
+                dm_embed.add_field(
+                    name="🌐 PANEL URL",
+                    value=f"```fix\n{panel_url}\n```",
+                    inline=False
+                )
+                if tunnel_url:
+                    dm_embed.add_field(
+                        name="🌍 TUNNEL URL",
+                        value=f"```fix\n{tunnel_url}\n```",
+                        inline=False
+                    )
+                dm_embed.add_field(
+                    name="🔐 LOGIN",
+                    value=f"```fix\nUsername: {admin_user}\nEmail: {admin_email}\nPassword: {admin_pass}\n```",
+                    inline=False
+                )
+                dm_embed.add_field(
+                    name="📦 CONTAINER",
+                    value=f"```fix\n{self.container}\n```",
+                    inline=True
+                )
+                await self.ctx.author.send(embed=dm_embed)
+            except:
+                pass
+            
+            logger.info(f"User {self.ctx.author} installed {panel_type} on {self.container}")
+            
+        except Exception as e:
+            await progress_msg.edit(embed=error_embed("Installation Failed", f"```diff\n- {str(e)[:500]}\n```"))
+
+
 @bot.command(name="install-panel")
-async def install_panel(ctx):
+@commands.cooldown(1, 600, commands.BucketType.user)
+async def install_panel(ctx, container_name: str = None):
+    """Install Pterodactyl or Pufferpanel on your VPS with cloudflared tunnel"""
     if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
-        return await ctx.send(embed=error_embed("License Required", "Please verify license."))
-    if not get_user_vps(str(ctx.author.id)):
-        return await ctx.send(embed=no_vps_embed())
-    embed = info_embed("Panel Installation", "Select panel type:")
-    await ctx.send(embed=embed, view=PanelInstallView(ctx))
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+    
+    if not any(v['container_name'] == container_name for v in get_user_vps(user_id)):
+        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    status = await get_container_status(container_name)
+    if status != 'running':
+        return await ctx.send(embed=error_embed("Container Not Running", f"```diff\n- {container_name} is not running.\n```"))
+    
+    # Get public statistics
+    all_vps = get_all_vps()
+    total_vps = len(all_vps)
+    total_users = len(set([v['user_id'] for v in all_vps]))
+    
+    embed = discord.Embed(
+        title="```glow\n📦 PANEL INSTALLATION\n```",
+        description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Container : {container_name}\n└─────────────────────────────────────────────────┘\n```\n\n"
+                    f"🦅 **Pterodactyl** - Popular game server panel\n"
+                    f"🐡 **Pufferpanel** - Lightweight alternative\n\n"
+                    f"```glow\n🌍 Current Statistics:\n• Total VPS: {total_vps}\n• Total Users: {total_users}\n```",
+        color=0x5865F2
+    )
+    embed.set_thumbnail(url=THUMBNAIL_URL)
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
+    
+    view = PanelInstallView(ctx, container_name)
+    await ctx.send(embed=embed, view=view)
+
+# ==================================================================================================
+#  🖥️  COMPLETE .vpsui COMMAND - REAL SCREENSHOT GENERATOR
+# ==================================================================================================
+@bot.command(name="vpsui")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def vps_ui(ctx, container_name: str = None):
+    """Generate a beautiful screenshot/UI of your VPS"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
+    user_id = str(ctx.author.id)
+    
+    if not container_name:
+        vps_list = get_user_vps(user_id)
+        if not vps_list:
+            return await ctx.send(embed=no_vps_embed())
+        container_name = vps_list[0]['container_name']
+    
+    if not any(v['container_name'] == container_name for v in get_user_vps(user_id)):
+        return await ctx.send(embed=error_embed("Access Denied", "You don't own this VPS."))
+    
+    msg = await ctx.send(embed=info_embed("📸 Generating VPS Screenshot", f"```fix\nContainer: {container_name}\nFetching data...\n```"))
+    
+    try:
+        # Get VPS data
+        vps_data = next((v for v in get_user_vps(user_id) if v['container_name'] == container_name), None)
+        stats = await get_container_stats(container_name)
+        
+        # Get more detailed info
+        uname, _, _ = await exec_in_container(container_name, "uname -a")
+        uptime, _, _ = await exec_in_container(container_name, "uptime -p")
+        processes, _, _ = await exec_in_container(container_name, "ps aux | wc -l")
+        load, _, _ = await exec_in_container(container_name, "cat /proc/loadavg | awk '{print $1, $2, $3}'")
+        
+        # Memory details
+        mem_out, _, _ = await exec_in_container(container_name, "free -h | awk '/^Mem:/{print $2, $3, $4}'")
+        mem_parts = mem_out.split() if mem_out else ["N/A", "N/A", "N/A"]
+        mem_total = mem_parts[0] if len(mem_parts) > 0 else "N/A"
+        mem_used = mem_parts[1] if len(mem_parts) > 1 else "N/A"
+        mem_free = mem_parts[2] if len(mem_parts) > 2 else "N/A"
+        
+        # Disk details
+        disk_out, _, _ = await exec_in_container(container_name, "df -h / | awk 'NR==2{print $2, $3, $4, $5}'")
+        disk_parts = disk_out.split() if disk_out else ["N/A", "N/A", "N/A", "N/A"]
+        disk_total = disk_parts[0] if len(disk_parts) > 0 else "N/A"
+        disk_used = disk_parts[1] if len(disk_parts) > 1 else "N/A"
+        disk_avail = disk_parts[2] if len(disk_parts) > 2 else "N/A"
+        disk_use = disk_parts[3] if len(disk_parts) > 3 else "N/A"
+        
+        # CPU details
+        cpu_out, _, _ = await exec_in_container(container_name, "lscpu | grep 'Model name' | cut -d':' -f2 | xargs")
+        cpu_model = cpu_out.strip() if cpu_out else "Unknown"
+        
+        # Network details
+        net_out, _, _ = await exec_in_container(container_name, "ip -4 addr show eth0 | grep -oP '(?<=inet\\s)[0-9.]+' | head -1")
+        ip = net_out.strip() if net_out else "N/A"
+        
+        # Calculate percentages
+        try:
+            if mem_total.endswith('Gi'):
+                mem_total_val = float(mem_total.replace('Gi', '')) * 1024
+                mem_used_val = float(mem_used.replace('Gi', '')) * 1024
+            elif mem_total.endswith('Mi'):
+                mem_total_val = float(mem_total.replace('Mi', ''))
+                mem_used_val = float(mem_used.replace('Mi', ''))
+            else:
+                mem_total_val = float(mem_total)
+                mem_used_val = float(mem_used)
+            mem_percent = (mem_used_val / mem_total_val) * 100 if mem_total_val > 0 else 0
+        except:
+            mem_percent = 0
+        
+        try:
+            disk_percent = float(disk_use.replace('%', '')) if disk_use != "N/A" else 0
+        except:
+            disk_percent = 0
+        
+        # Create image
+        img_width = 800
+        img_height = 600
+        img = Image.new('RGB', (img_width, img_height), color=(18, 18, 24))
+        draw = ImageDraw.Draw(img)
+        
+        # Try to load fonts
+        try:
+            font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+            font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18)
+            font_normal = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+            font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+        except:
+            font_title = ImageFont.load_default()
+            font_header = ImageFont.load_default()
+            font_normal = ImageFont.load_default()
+            font_small = ImageFont.load_default()
+        
+        # Draw header gradient
+        for i in range(60):
+            color = (30 + i, 40 + i, 50 + i)
+            draw.rectangle([(0, i), (img_width, i+1)], fill=color)
+        
+        # Draw title
+        draw.text((20, 15), f"SVM5-BOT • VPS MANAGEMENT UI", fill=(255, 255, 255), font=font_title)
+        draw.text((20, 45), f"Container: {container_name}", fill=(100, 200, 255), font=font_header)
+        draw.text((20, 70), f"Status: {stats['status'].upper()}", fill=(0, 255, 0) if stats['status'] == 'running' else (255, 0, 0), font=font_normal)
+        
+        # Draw separator
+        draw.line([(20, 95), (img_width - 20, 95)], fill=(60, 60, 80), width=2)
+        
+        # System Information Box
+        draw.rectangle([(20, 105), (img_width - 20, 165)], outline=(60, 60, 80), fill=(25, 25, 35))
+        draw.text((30, 110), "📊 SYSTEM INFORMATION", fill=(200, 200, 255), font=font_header)
+        draw.text((30, 135), f"OS: {vps_data.get('os_version', 'N/A')}", fill=(180, 180, 200), font=font_normal)
+        draw.text((300, 135), f"Kernel: {uname.split()[2] if uname else 'N/A'}", fill=(180, 180, 200), font=font_normal)
+        draw.text((30, 155), f"Uptime: {uptime}", fill=(180, 180, 200), font=font_normal)
+        draw.text((300, 155), f"Processes: {processes}", fill=(180, 180, 200), font=font_normal)
+        
+        # Resources Box
+        draw.rectangle([(20, 175), (img_width - 20, 285)], outline=(60, 60, 80), fill=(25, 25, 35))
+        draw.text((30, 180), "⚙️ RESOURCES", fill=(200, 200, 255), font=font_header)
+        
+        # RAM Bar
+        draw.text((30, 210), f"RAM: {mem_used}/{mem_total}", fill=(180, 180, 200), font=font_normal)
+        bar_width = 400
+        bar_height = 12
+        draw.rectangle([(30, 230), (30 + bar_width, 230 + bar_height)], outline=(80, 80, 100), fill=(40, 40, 50))
+        fill_width = int(bar_width * (mem_percent / 100))
+        ram_color = (0, 255, 0) if mem_percent < 70 else (255, 165, 0) if mem_percent < 90 else (255, 0, 0)
+        draw.rectangle([(30, 230), (30 + fill_width, 230 + bar_height)], fill=ram_color)
+        draw.text((30 + bar_width + 10, 228), f"{mem_percent:.1f}%", fill=(180, 180, 200), font=font_normal)
+        
+        # CPU Bar
+        draw.text((30, 250), f"CPU: {stats['cpu']}", fill=(180, 180, 200), font=font_normal)
+        cpu_val = float(stats['cpu'].replace('%', '')) if stats['cpu'] != 'N/A' else 0
+        fill_width = int(bar_width * (cpu_val / 100))
+        cpu_color = (0, 255, 0) if cpu_val < 70 else (255, 165, 0) if cpu_val < 90 else (255, 0, 0)
+        draw.rectangle([(30, 270), (30 + fill_width, 270 + bar_height)], fill=cpu_color)
+        draw.text((30 + bar_width + 10, 268), f"{cpu_val:.1f}%", fill=(180, 180, 200), font=font_normal)
+        
+        # Disk Bar
+        draw.text((30 + bar_width + 100, 210), f"Disk: {disk_used}/{disk_total}", fill=(180, 180, 200), font=font_normal)
+        fill_width = int(bar_width * (disk_percent / 100))
+        disk_color = (0, 255, 0) if disk_percent < 70 else (255, 165, 0) if disk_percent < 90 else (255, 0, 0)
+        draw.rectangle([(30 + bar_width + 100, 230), (30 + bar_width + 100 + bar_width, 230 + bar_height)], fill=disk_color)
+        draw.text((30 + bar_width + 100 + bar_width + 10, 228), f"{disk_percent:.1f}%", fill=(180, 180, 200), font=font_normal)
+        
+        draw.text((30 + bar_width + 100, 250), f"CPU Model: {cpu_model[:40]}", fill=(180, 180, 200), font=font_normal)
+        
+        # Network Box
+        draw.rectangle([(20, 295), (img_width - 20, 375)], outline=(60, 60, 80), fill=(25, 25, 35))
+        draw.text((30, 300), "🌐 NETWORK", fill=(200, 200, 255), font=font_header)
+        draw.text((30, 325), f"IP Address: {ip}", fill=(180, 180, 200), font=font_normal)
+        draw.text((300, 325), f"MAC: {stats['mac']}", fill=(180, 180, 200), font=font_normal)
+        draw.text((30, 345), f"Load Average: {load}", fill=(180, 180, 200), font=font_normal)
+        draw.text((300, 345), f"IPv4: {len(stats['ipv4'])} address(es)", fill=(180, 180, 200), font=font_normal)
+        
+        # Resource Allocation Box
+        draw.rectangle([(20, 385), (img_width - 20, 465)], outline=(60, 60, 80), fill=(25, 25, 35))
+        draw.text((30, 390), "📦 RESOURCE ALLOCATION", fill=(200, 200, 255), font=font_header)
+        
+        # Resource Bars
+        ram_alloc = vps_data['ram']
+        cpu_alloc = vps_data['cpu']
+        disk_alloc = vps_data['disk']
+        
+        ram_bar_alloc = "█" * int(ram_alloc / 16) + "░" * (10 - int(ram_alloc / 16))
+        cpu_bar_alloc = "█" * int(cpu_alloc / 8) + "░" * (10 - int(cpu_alloc / 8))
+        disk_bar_alloc = "█" * int(disk_alloc / 100) + "░" * (10 - int(disk_alloc / 100))
+        
+        draw.text((30, 415), f"RAM: {ram_alloc}GB [{ram_bar_alloc}]", fill=(180, 180, 200), font=font_normal)
+        draw.text((30, 435), f"CPU: {cpu_alloc} Core(s) [{cpu_bar_alloc}]", fill=(180, 180, 200), font=font_normal)
+        draw.text((30, 455), f"Disk: {disk_alloc}GB [{disk_bar_alloc}]", fill=(180, 180, 200), font=font_normal)
+        
+        # Management Commands Box
+        draw.rectangle([(20, 475), (img_width - 20, 560)], outline=(60, 60, 80), fill=(25, 25, 35))
+        draw.text((30, 480), "🖥️ MANAGEMENT COMMANDS", fill=(200, 200, 255), font=font_header)
+        
+        commands_text = f".manage {container_name}  |  .stats {container_name}  |  .logs {container_name}  |  .ssh-gen {container_name}  |  .reboot {container_name}  |  .shutdown {container_name}"
+        wrapped = textwrap.fill(commands_text, width=70)
+        draw.text((30, 505), wrapped, fill=(100, 200, 150), font=font_small)
+        
+        # Footer
+        draw.text((20, img_height - 20), f"SVM5-BOT • Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", fill=(100, 100, 120), font=font_small)
+        
+        # Save to bytes
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        
+        # Send image
+        file = discord.File(img_bytes, filename=f"vpsui_{container_name}.png")
+        
+        embed = discord.Embed(
+            title=f"```glow\n🖥️ VPS UI - {container_name}\n```",
+            description=f"Real-time screenshot of your VPS",
+            color=0x00FF88
+        )
+        embed.set_image(url=f"attachment://vpsui_{container_name}.png")
+        embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
+        embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
+        embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
+        embed.add_field(name="💽 Disk", value=f"```fix\n{stats['disk']}\n```", inline=True)
+        embed.add_field(name="🌐 IP", value=f"```fix\n{ip}\n```", inline=True)
+        embed.add_field(name="⏱️ Uptime", value=f"```fix\n{uptime}\n```", inline=True)
+        
+        await msg.edit(embed=embed, file=file)
+        
+    except Exception as e:
+        await msg.edit(embed=error_embed("Failed", f"```diff\n- {str(e)}\n```"))
 
 @bot.command(name="panel-info")
 async def panel_info(ctx):
