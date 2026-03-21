@@ -955,11 +955,25 @@ LICENSE_VERIFIED = get_setting('license_verified', 'false') == 'true'
 # ==================================================================================================
 #  🎯  VPS MANAGE VIEW WITH ALL BUTTONS
 # ==================================================================================================
-# ==================================================================================================
-#  🖥️  COMPLETE .manage COMMAND - ALL BUTTONS WORKING + TUNNEL URL
+                                   # ==================================================================================================
+#  🖥️  COMPLETE .manage COMMAND - ALL BUTTONS WORKING + REAL LXC
 # ==================================================================================================
 
+import asyncio
+import random
+import string
+import time
+from datetime import datetime
+
+# Rainbow colors for buttons and progress
+RAINBOW_COLORS = [
+    0xFF0000, 0xFF7700, 0xFFFF00, 0x00FF00, 0x00CCFF, 0x3366FF, 0x8B00FF, 0xFF00CC
+]
+
+
 class VPSManageView(View):
+    """Complete VPS Management View with All Working Buttons"""
+    
     def __init__(self, ctx, container_name, container_data):
         super().__init__(timeout=300)
         self.ctx = ctx
@@ -968,39 +982,50 @@ class VPSManageView(View):
         self.user = ctx.author
         self.message = None
         self.live_mode = False
+        self.live_task = None
         
-# Row 1 - Basic Controls
-self.start_btn = Button(label="Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
-self.stop_btn = Button(label="Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
-self.restart_btn = Button(label="Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
-self.reboot_btn = Button(label="Reboot", style=discord.ButtonStyle.secondary, emoji="⚡", row=0)
-self.shutdown_btn = Button(label="Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
-
-# Row 2 - Info & Access
-self.stats_btn = Button(label="Stats", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
-self.process_btn = Button(label="Processes", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
-self.console_btn = Button(label="Console", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
-self.ssh_btn = Button(label="SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
-self.logs_btn = Button(label="Logs", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
-
-# Row 3 - Advanced
-self.ipv4_btn = Button(label="IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
-self.tunnel_btn = Button(label="Tunnel URL", style=discord.ButtonStyle.primary, emoji="🌐", row=2)
-self.ports_btn = Button(label="Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
-self.backup_btn = Button(label="Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
-self.restore_btn = Button(label="Restore", style=discord.ButtonStyle.secondary, emoji="🔄", row=2)
-
-# Row 4 - Management
-self.reinstall_btn = Button(label="Reinstall OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
-self.upgrade_btn = Button(label="Upgrade VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
-self.invites_btn = Button(label="Check Invites", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
-self.panel_btn = Button(label="Install Panel", style=discord.ButtonStyle.primary, emoji="📦", row=3)
-self.share_btn = Button(label="Share VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
-
-# Row 5 - Live & Refresh
-self.live_btn = Button(label="Live Mode", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
-self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
-
+        # ==========================================================================================
+        # ROW 0 - BASIC CONTROLS (Green, Red, Blue, Yellow, Red)
+        # ==========================================================================================
+        self.start_btn = Button(label="▶️ START", style=discord.ButtonStyle.success, emoji="▶️", row=0)
+        self.stop_btn = Button(label="⏹️ STOP", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
+        self.restart_btn = Button(label="🔄 RESTART", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
+        self.reboot_btn = Button(label="⚡ REBOOT", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
+        self.shutdown_btn = Button(label="⛔ SHUTDOWN", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
+        
+        # ==========================================================================================
+        # ROW 1 - INFO & ACCESS (Secondary Buttons)
+        # ==========================================================================================
+        self.stats_btn = Button(label="📊 LIVE STATS", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
+        self.process_btn = Button(label="🔝 PROCESSES", style=discord.ButtonStyle.secondary, emoji="🔝", row=1)
+        self.console_btn = Button(label="📟 CONSOLE", style=discord.ButtonStyle.secondary, emoji="📟", row=1)
+        self.ssh_btn = Button(label="🔑 SSH-GEN", style=discord.ButtonStyle.primary, emoji="🔑", row=1)
+        self.logs_btn = Button(label="📋 LOGS", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
+        
+        # ==========================================================================================
+        # ROW 2 - NETWORK & BACKUP (Info Buttons)
+        # ==========================================================================================
+        self.ipv4_btn = Button(label="🌍 IPv4 DETAILS", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
+        self.tunnel_btn = Button(label="🌐 TUNNEL URL", style=discord.ButtonStyle.primary, emoji="🌐", row=2)
+        self.ports_btn = Button(label="🔌 OPEN PORTS", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
+        self.backup_btn = Button(label="💾 CREATE BACKUP", style=discord.ButtonStyle.success, emoji="💾", row=2)
+        self.restore_btn = Button(label="🔄 RESTORE", style=discord.ButtonStyle.warning, emoji="🔄", row=2)
+        
+        # ==========================================================================================
+        # ROW 3 - MANAGEMENT (Danger & Primary Buttons)
+        # ==========================================================================================
+        self.reinstall_btn = Button(label="🔄 REINSTALL OS", style=discord.ButtonStyle.danger, emoji="🔄", row=3)
+        self.upgrade_btn = Button(label="⬆️ UPGRADE VPS", style=discord.ButtonStyle.primary, emoji="⬆️", row=3)
+        self.invites_btn = Button(label="📨 CHECK INVITES", style=discord.ButtonStyle.secondary, emoji="📨", row=3)
+        self.panel_btn = Button(label="📦 INSTALL PANEL", style=discord.ButtonStyle.primary, emoji="📦", row=3)
+        self.share_btn = Button(label="👥 SHARE VPS", style=discord.ButtonStyle.secondary, emoji="👥", row=3)
+        
+        # ==========================================================================================
+        # ROW 4 - LIVE MODE & REFRESH
+        # ==========================================================================================
+        self.live_btn = Button(label="🔴 LIVE MODE", style=discord.ButtonStyle.danger, emoji="🔴", row=4)
+        self.refresh_btn = Button(label="🔄 REFRESH", style=discord.ButtonStyle.secondary, emoji="🔄", row=4)
+        
         # Set callbacks
         self.start_btn.callback = self.start_callback
         self.stop_btn.callback = self.stop_callback
@@ -1058,93 +1083,193 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         self.add_item(self.refresh_btn)
     
     async def get_stats_embed(self):
+        """Get current VPS stats embed with user profile"""
         stats = await get_container_stats(self.container)
+        
+        # Get user profile
+        user_avatar = self.user.avatar.url if self.user.avatar else THUMBNAIL_URL
         
         embed = discord.Embed(
             title=f"```glow\n🖥️ VPS MANAGEMENT - {self.container.upper()}\n```",
-            description=f"👤 **Owner:** {self.user.mention}\n📦 **Container:** `{self.container}`",
+            description=f"┌─────────────────────────────────────────────────┐\n"
+                        f"│ 👤 **Owner:** {self.user.mention}\n"
+                        f"│ 🆔 **User ID:** `{self.user.id}`\n"
+                        f"│ 📅 **Joined:** `{self.user.joined_at.strftime('%Y-%m-%d') if self.user.joined_at else 'Unknown'}`\n"
+                        f"└─────────────────────────────────────────────────┘\n"
+                        f"```glow\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```",
             color=0x5865F2
         )
-        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
+        embed.set_thumbnail(url=user_avatar)
         embed.set_image(url="https://cdn.discordapp.com/attachments/1429752932756361267/1478323497179807837/1763894084589.jpg")
         
+        # Status
         status_emoji = "🟢" if stats['status'] == 'running' and not self.data.get('suspended') else "⛔" if self.data.get('suspended') else "🔴"
         status_text = stats['status'].upper()
         if self.data.get('suspended'):
             status_text = "SUSPENDED"
         
-        embed.add_field(name="📊 STATUS", value=f"{status_emoji} `{status_text}`", inline=True)
-        embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
-        embed.add_field(name="📀 MEMORY", value=f"```fix\n{stats['memory']}\n```", inline=True)
-        embed.add_field(name="💽 DISK", value=f"```fix\n{stats['disk']}\n```", inline=True)
-        embed.add_field(name="🌐 IP", value=f"```fix\n{stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n```", inline=True)
-        embed.add_field(name="🔌 MAC", value=f"```fix\n{stats['mac']}\n```", inline=True)
-        embed.add_field(name="⏱️ UPTIME", value=f"```fix\n{stats['uptime']}\n```", inline=True)
+        embed.add_field(
+            name="📊 STATUS",
+            value=f"{status_emoji} `{status_text}`\n"
+                  f"🔄 **Uptime:** `{stats['uptime']}`\n"
+                  f"📟 **Processes:** `{stats.get('processes', 'N/A')}`\n"
+                  f"📈 **Load:** `{stats.get('load', 'N/A')}`",
+            inline=True
+        )
         
+        # CPU with Graph
+        cpu_val = float(stats['cpu'].replace('%', '')) if stats['cpu'] != 'N/A' else 0
+        cpu_bar = "█" * int(cpu_val / 10) + "░" * (10 - int(cpu_val / 10))
+        embed.add_field(
+            name="💾 CPU USAGE",
+            value=f"```fix\n{cpu_bar} {stats['cpu']}\n```",
+            inline=True
+        )
+        
+        # Memory with Graph
+        mem_val = 0
+        if '/' in stats['memory']:
+            try:
+                parts = stats['memory'].split('/')
+                used = float(parts[0].replace('MB', '').strip())
+                total = float(parts[1].replace('MB', '').strip())
+                mem_val = (used / total) * 100 if total > 0 else 0
+            except:
+                pass
+        mem_bar = "█" * int(mem_val / 10) + "░" * (10 - int(mem_val / 10))
+        embed.add_field(
+            name="📀 MEMORY",
+            value=f"```fix\n{mem_bar} {stats['memory']}\n```",
+            inline=True
+        )
+        
+        # Disk with Graph
+        disk_val = 0
+        if '/' in stats['disk']:
+            try:
+                parts = stats['disk'].split('/')
+                used = float(parts[0].replace('GB', '').strip())
+                total = float(parts[1].split()[0].strip())
+                disk_val = (used / total) * 100 if total > 0 else 0
+            except:
+                pass
+        disk_bar = "█" * int(disk_val / 10) + "░" * (10 - int(disk_val / 10))
+        embed.add_field(
+            name="💽 DISK",
+            value=f"```fix\n{disk_bar} {stats['disk']}\n```",
+            inline=True
+        )
+        
+        # Network Info
+        embed.add_field(
+            name="🌐 NETWORK",
+            value=f"```fix\nIP: {stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\nMAC: {stats['mac']}\n```",
+            inline=True
+        )
+        
+        # Resource Allocation with Bars
         ram_alloc = self.data['ram']
         cpu_alloc = self.data['cpu']
         disk_alloc = self.data['disk']
-        ram_bar = "█" * int(ram_alloc / 16) + "░" * (10 - int(ram_alloc / 16))
-        cpu_bar = "█" * int(cpu_alloc / 8) + "░" * (10 - int(cpu_alloc / 8))
-        disk_bar = "█" * int(disk_alloc / 100) + "░" * (10 - int(disk_alloc / 100))
+        ram_alloc_bar = "█" * int(ram_alloc / 16) + "░" * (10 - int(ram_alloc / 16))
+        cpu_alloc_bar = "█" * int(cpu_alloc / 8) + "░" * (10 - int(cpu_alloc / 8))
+        disk_alloc_bar = "█" * int(disk_alloc / 100) + "░" * (10 - int(disk_alloc / 100))
         
-        embed.add_field(name="⚙️ RESOURCES", value=f"```fix\nRAM: {ram_alloc}GB [{ram_bar}]\nCPU: {cpu_alloc} Core(s) [{cpu_bar}]\nDisk: {disk_alloc}GB [{disk_bar}]\n```", inline=False)
+        embed.add_field(
+            name="⚙️ RESOURCE ALLOCATION",
+            value=f"```fix\n┌─────────────────────────────────────────────────┐\n│ RAM  : {ram_alloc}GB  [{ram_alloc_bar}]\n│ CPU  : {cpu_alloc} Core(s) [{cpu_alloc_bar}]\n│ Disk : {disk_alloc}GB [{disk_alloc_bar}]\n└─────────────────────────────────────────────────┘\n```",
+            inline=False
+        )
+        
+        # OS Info
+        embed.add_field(
+            name="🐧 OPERATING SYSTEM",
+            value=f"```fix\n{self.data.get('os_version', 'ubuntu:22.04')}\n```",
+            inline=True
+        )
+        
+        # Creation Info
+        embed.add_field(
+            name="📅 CREATED",
+            value=f"```fix\n{self.data.get('created_at', 'Unknown')[:16]}\n```",
+            inline=True
+        )
+        
+        embed.set_footer(
+            text=f"⚡ SVM5-BOT • Container: {self.container} • Last Updated: {datetime.now().strftime('%H:%M:%S')} ⚡",
+            icon_url=THUMBNAIL_URL
+        )
         
         return embed
+    
+    # ==========================================================================================
+    # ROW 0 - BASIC CONTROLS (REAL LXC COMMANDS)
+    # ==========================================================================================
     
     async def start_callback(self, interaction):
         await interaction.response.defer()
         await run_lxc(f"lxc start {self.container}")
         update_vps_status(self.container, 'running')
-        await interaction.followup.send(embed=success_embed("Started", f"```fix\n{self.container} started!\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("✅ STARTED", f"```fix\n{self.container} started successfully!\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
     async def stop_callback(self, interaction):
         await interaction.response.defer()
         await run_lxc(f"lxc stop {self.container}")
         update_vps_status(self.container, 'stopped')
-        await interaction.followup.send(embed=success_embed("Stopped", f"```fix\n{self.container} stopped.\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("⏹️ STOPPED", f"```fix\n{self.container} stopped.\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
     async def restart_callback(self, interaction):
         await interaction.response.defer()
         await run_lxc(f"lxc restart {self.container}")
         update_vps_status(self.container, 'running')
-        await interaction.followup.send(embed=success_embed("Restarted", f"```fix\n{self.container} restarted.\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("🔄 RESTARTED", f"```fix\n{self.container} restarted.\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
     async def reboot_callback(self, interaction):
         await interaction.response.defer()
         await run_lxc(f"lxc restart {self.container}")
         update_vps_status(self.container, 'running')
-        await interaction.followup.send(embed=success_embed("Rebooted", f"```fix\n{self.container} rebooted.\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("⚡ REBOOTED", f"```fix\n{self.container} rebooted.\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
     async def shutdown_callback(self, interaction):
         await interaction.response.defer()
         await run_lxc(f"lxc stop {self.container}")
         update_vps_status(self.container, 'stopped')
-        await interaction.followup.send(embed=success_embed("Shutdown", f"```fix\n{self.container} shutdown.\n```"), ephemeral=True)
+        await interaction.followup.send(embed=success_embed("⛔ SHUTDOWN", f"```fix\n{self.container} shutdown.\n```"), ephemeral=True)
         await self.refresh_callback(interaction)
     
+    # ==========================================================================================
+    # ROW 1 - INFO & ACCESS
+    # ==========================================================================================
+    
     async def stats_callback(self, interaction):
+        await interaction.response.defer()
         stats = await get_container_stats(self.container)
-        embed = info_embed(f"Live Stats: {self.container}")
-        embed.add_field(name="📊 Status", value=f"```fix\n{stats['status'].upper()}\n```", inline=True)
-        embed.add_field(name="💾 CPU", value=f"```fix\n{stats['cpu']}\n```", inline=True)
-        embed.add_field(name="📀 Memory", value=f"```fix\n{stats['memory']}\n```", inline=True)
-        embed.add_field(name="💽 Disk", value=f"```fix\n{stats['disk']}\n```", inline=True)
-        embed.add_field(name="⏱️ Uptime", value=f"```fix\n{stats['uptime']}\n```", inline=True)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        embed = discord.Embed(
+            title=f"```glow\n📊 LIVE STATS - {self.container}\n```",
+            description=f"```fix\n┌─────────────────────────────────────────────────┐\n│ Status   : {stats['status'].upper()}\n│ CPU      : {stats['cpu']}\n│ Memory   : {stats['memory']}\n│ Disk     : {stats['disk']}\n│ Uptime   : {stats['uptime']}\n│ Processes: {stats.get('processes', 'N/A')}\n│ Load     : {stats.get('load', 'N/A')}\n│ IP       : {stats['ipv4'][0] if stats['ipv4'] else 'N/A'}\n│ MAC      : {stats['mac']}\n└─────────────────────────────────────────────────┘\n```",
+            color=0x00CCFF
+        )
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
+        await interaction.followup.send(embed=embed, ephemeral=True)
     
     async def process_callback(self, interaction):
         await interaction.response.defer()
-        out, _, _ = await exec_in_container(self.container, "ps aux --sort=-%cpu | head -15")
-        embed = terminal_embed(f"Top Processes: {self.container}", out)
+        out, _, _ = await exec_in_container(self.container, "ps aux --sort=-%cpu | head -20")
+        embed = discord.Embed(
+            title=f"```glow\n🔝 TOP PROCESSES - {self.container}\n```",
+            description=f"```bash\n{out[:1900]}\n```",
+            color=0x2C2F33
+        )
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.followup.send(embed=embed, ephemeral=True)
     
     async def console_callback(self, interaction):
-        modal = CommandModal(self.container)
+        modal = ConsoleModal(self.container, self.user)
         await interaction.response.send_modal(modal)
     
     async def ssh_callback(self, interaction):
@@ -1155,13 +1280,15 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         await asyncio.sleep(5)
         out, _, _ = await exec_in_container(self.container, f"tmate -S /tmp/{sess}.sock display -p '#{{tmate_ssh}}'")
         url = out.strip()
+        
         if url:
             try:
-                dm = success_embed("🔑 SSH Access")
-                dm.add_field(name="Container", value=f"```fix\n{self.container}\n```")
-                dm.add_field(name="Command", value=f"```bash\n{url}\n```")
-                await interaction.user.send(embed=dm)
-                await interaction.followup.send(embed=success_embed("SSH Generated", "Check DMs!"), ephemeral=True)
+                dm_embed = success_embed("🔑 SSH ACCESS GENERATED")
+                dm_embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                dm_embed.add_field(name="🔐 Command", value=f"```bash\n{url}\n```", inline=False)
+                dm_embed.add_field(name="⏱️ Expires", value="```fix\n15 minutes\n```", inline=True)
+                await interaction.user.send(embed=dm_embed)
+                await interaction.followup.send(embed=success_embed("SSH Generated", "Check your DMs!"), ephemeral=True)
             except:
                 await interaction.followup.send(embed=error_embed("DM Failed", f"```fix\n{url}\n```"), ephemeral=True)
         else:
@@ -1169,27 +1296,40 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
     
     async def logs_callback(self, interaction):
         await interaction.response.defer()
-        out, _, _ = await exec_in_container(self.container, "journalctl -n 50 --no-pager 2>/dev/null || dmesg | tail -50")
-        embed = terminal_embed(f"Logs: {self.container}", out[:1900])
+        out, _, _ = await exec_in_container(self.container, "journalctl -n 100 --no-pager 2>/dev/null || dmesg | tail -100")
+        embed = discord.Embed(
+            title=f"```glow\n📋 SYSTEM LOGS - {self.container}\n```",
+            description=f"```bash\n{out[:1900]}\n```",
+            color=0x2C2F33
+        )
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    # ==========================================================================================
+    # ROW 2 - NETWORK & BACKUP
+    # ==========================================================================================
     
     async def ipv4_callback(self, interaction):
         await interaction.response.defer()
         out, _, _ = await exec_in_container(self.container, "ip addr show")
-        embed = terminal_embed(f"IPv4 Details: {self.container}", out[:1900])
+        embed = discord.Embed(
+            title=f"```glow\n🌍 IPv4 DETAILS - {self.container}\n```",
+            description=f"```bash\n{out[:1900]}\n```",
+            color=0x00CCFF
+        )
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.followup.send(embed=embed, ephemeral=True)
     
     async def tunnel_callback(self, interaction):
         await interaction.response.defer()
-        # Try to create cloudflared tunnel
         tunnel_url = await create_cloudflared_tunnel(self.container, 80)
         if tunnel_url:
-            embed = success_embed("🌐 Tunnel URL Generated")
-            embed.add_field(name="URL", value=f"```fix\n{tunnel_url}\n```", inline=False)
-            embed.add_field(name="Expires", value="```fix\n24 hours\n```", inline=True)
+            embed = success_embed("🌐 TUNNEL URL GENERATED")
+            embed.add_field(name="🔗 URL", value=f"```fix\n{tunnel_url}\n```", inline=False)
+            embed.add_field(name="⏱️ Expires", value="```fix\n24 hours\n```", inline=True)
+            embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
             await interaction.followup.send(embed=embed, ephemeral=True)
             
-            # Save to database
             conn = get_db()
             cur = conn.cursor()
             cur.execute('UPDATE panels SET tunnel_url = ? WHERE container_name = ?', (tunnel_url, self.container))
@@ -1200,19 +1340,26 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
     
     async def ports_callback(self, interaction):
         await interaction.response.defer()
-        out, _, _ = await exec_in_container(self.container, "netstat -tuln | head -20")
-        embed = terminal_embed(f"Open Ports: {self.container}", out)
+        out, _, _ = await exec_in_container(self.container, "ss -tuln | head -30")
+        embed = discord.Embed(
+            title=f"```glow\n🔌 OPEN PORTS - {self.container}\n```",
+            description=f"```bash\n{out[:1900]}\n```",
+            color=0x00CCFF
+        )
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.followup.send(embed=embed, ephemeral=True)
     
     async def backup_callback(self, interaction):
         await interaction.response.defer()
         backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         out, err, code = await run_lxc(f"lxc snapshot {self.container} {backup_name}")
+        
         if code == 0:
-            add_snapshot(str(self.ctx.author.id), self.container, backup_name)
-            embed = success_embed("Backup Created")
+            add_snapshot(str(self.user.id), self.container, backup_name)
+            embed = success_embed("💾 BACKUP CREATED")
             embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-            embed.add_field(name="💾 Backup", value=f"```fix\n{backup_name}\n```", inline=True)
+            embed.add_field(name="💾 Name", value=f"```fix\n{backup_name}\n```", inline=True)
+            embed.add_field(name="📅 Created", value=f"```fix\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n```", inline=True)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.followup.send(embed=error_embed("Backup Failed", f"```diff\n- {err}\n```"), ephemeral=True)
@@ -1227,7 +1374,7 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
             options.append(discord.SelectOption(label=s['snapshot_name'], value=s['snapshot_name'], description=f"Created: {s['created_at'][:16]}"))
         
         view = View()
-        select = Select(placeholder="Select backup...", options=options)
+        select = Select(placeholder="📋 Select backup to restore...", options=options)
         
         async def select_cb(sel_interaction):
             snap_name = select.values[0]
@@ -1237,10 +1384,15 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
             status = await get_container_status(self.container)
             if status == 'running':
                 await run_lxc(f"lxc stop {self.container} --force")
+            
             out, err, code = await run_lxc(f"lxc restore {self.container} {snap_name}")
+            
             if code == 0:
                 await run_lxc(f"lxc start {self.container}")
-                await msg.edit(embed=success_embed("Restored", f"```fix\n{self.container} restored from {snap_name}\n```"))
+                embed = success_embed("✅ RESTORED")
+                embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
+                embed.add_field(name="💾 Backup", value=f"```fix\n{snap_name}\n```", inline=True)
+                await msg.edit(embed=embed)
             else:
                 await msg.edit(embed=error_embed("Restore Failed", f"```diff\n- {err}\n```"))
         
@@ -1248,21 +1400,25 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         view.add_item(select)
         await interaction.response.send_message(embed=info_embed("Select Backup"), view=view, ephemeral=True)
     
+    # ==========================================================================================
+    # ROW 3 - MANAGEMENT
+    # ==========================================================================================
+    
     async def reinstall_callback(self, interaction):
         options = []
         for os in OS_OPTIONS[:25]:
             options.append(discord.SelectOption(label=os['label'][:100], value=os['value'], description=os['desc'][:100]))
         
         view = View()
-        select = Select(placeholder="Select new OS...", options=options)
+        select = Select(placeholder="📋 Select new operating system...", options=options)
         
         async def select_cb(sel_interaction):
             os_val = select.values[0]
             os_name = next((o['label'] for o in OS_OPTIONS if o['value'] == os_val), os_val)
             
             confirm_view = View()
-            confirm_btn = Button(label="✅ Confirm Reinstall", style=discord.ButtonStyle.danger)
-            cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            confirm_btn = Button(label="✅ CONFIRM REINSTALL", style=discord.ButtonStyle.danger)
+            cancel_btn = Button(label="❌ CANCEL", style=discord.ButtonStyle.secondary)
             
             async def confirm_cb(confirm_interaction):
                 await confirm_interaction.response.defer()
@@ -1283,9 +1439,10 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
                     await run_lxc(f"lxc config set {self.container} limits.cpu {cpu}")
                     await run_lxc(f"lxc config device set {self.container} root size={disk}GB")
                     await run_lxc(f"lxc start {self.container}")
-                    await asyncio.sleep(5)
+                    await apply_internal_permissions(self.container)
+                    await asyncio.sleep(3)
                     
-                    embed = success_embed("OS Reinstalled")
+                    embed = success_embed("✅ OS REINSTALLED")
                     embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
                     embed.add_field(name="🐧 New OS", value=f"```fix\n{os_name}\n```", inline=True)
                     await msg.edit(embed=embed)
@@ -1297,7 +1454,7 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
             confirm_view.add_item(confirm_btn)
             confirm_view.add_item(cancel_btn)
             
-            embed = warning_embed("⚠️ Confirm Reinstall", f"```fix\nContainer: {self.container}\nCurrent OS: {self.data.get('os_version', 'ubuntu:22.04')}\nNew OS: {os_name}\n```\n\n⚠️ ALL DATA WILL BE LOST!")
+            embed = warning_embed("⚠️ CONFIRM REINSTALL", f"```fix\nContainer: {self.container}\nCurrent OS: {self.data.get('os_version', 'ubuntu:22.04')}\nNew OS: {os_name}\n```\n\n⚠️ **ALL DATA WILL BE LOST!**")
             await sel_interaction.response.edit_message(embed=embed, view=confirm_view)
         
         select.callback = select_cb
@@ -1305,7 +1462,7 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         await interaction.response.send_message(embed=info_embed("Reinstall OS"), view=view, ephemeral=True)
     
     async def upgrade_callback(self, interaction):
-        stats = get_user_stats(str(self.ctx.author.id))
+        stats = get_user_stats(str(self.user.id))
         invites = stats.get('invites', 0)
         
         options = [
@@ -1318,7 +1475,7 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         ]
         
         view = View()
-        select = Select(placeholder="Select upgrade...", options=options)
+        select = Select(placeholder="📋 Select upgrade option...", options=options)
         
         async def select_cb(sel_interaction):
             value = select.values[0]
@@ -1330,8 +1487,8 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
                 return await sel_interaction.response.send_message(embed=error_embed("Not Enough Invites", f"Need {cost} invites, you have {invites}"), ephemeral=True)
             
             confirm_view = View()
-            confirm_btn = Button(label="✅ Confirm Upgrade", style=discord.ButtonStyle.success)
-            cancel_btn = Button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            confirm_btn = Button(label="✅ CONFIRM UPGRADE", style=discord.ButtonStyle.success)
+            cancel_btn = Button(label="❌ CANCEL", style=discord.ButtonStyle.secondary)
             
             async def confirm_cb(confirm_interaction):
                 await confirm_interaction.response.defer()
@@ -1378,13 +1535,17 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
                     conn = get_db()
                     cur = conn.cursor()
                     cur.execute('UPDATE user_stats SET invites = invites - ?, last_updated = ? WHERE user_id = ?',
-                               (cost, datetime.now().isoformat(), str(self.ctx.author.id)))
+                               (cost, datetime.now().isoformat(), str(self.user.id)))
                     conn.commit()
                     conn.close()
                     
-                    embed = success_embed("Upgraded")
+                    # Get updated stats
+                    new_stats = get_user_stats(str(self.user.id))
+                    new_invites = new_stats.get('invites', 0)
+                    
+                    embed = success_embed("✅ UPGRADE COMPLETE")
                     embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-                    embed.add_field(name="⚙️ Upgrade", value=f"```fix\n+{amount} {resource.upper()}\nCost: {cost} invites\n```", inline=True)
+                    embed.add_field(name="⚙️ Upgrade", value=f"```fix\n+{amount} {resource.upper()}\nCost: {cost} invites\nRemaining: {new_invites}\n```", inline=True)
                     await msg.edit(embed=embed)
                 except Exception as e:
                     await msg.edit(embed=error_embed("Upgrade Failed", f"```diff\n- {str(e)}\n```"))
@@ -1394,22 +1555,23 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
             confirm_view.add_item(confirm_btn)
             confirm_view.add_item(cancel_btn)
             
-            embed = warning_embed("Confirm Upgrade", f"```fix\nContainer: {self.container}\nUpgrade: +{amount} {resource.upper()}\nCost: {cost} invites\nCurrent: {self.data['ram'] if resource=='ram' else self.data['cpu'] if resource=='cpu' else self.data['disk']}\nNew: {self.data[resource] + amount}\n```")
+            embed = warning_embed("⚠️ CONFIRM UPGRADE", f"```fix\nContainer: {self.container}\nUpgrade: +{amount} {resource.upper()}\nCost: {cost} invites\nCurrent: {self.data[resource]}\nNew: {self.data[resource] + amount}\n```")
             await sel_interaction.response.edit_message(embed=embed, view=confirm_view)
         
         select.callback = select_cb
         view.add_item(select)
         
-        embed = info_embed("Upgrade VPS", f"```fix\nContainer: {self.container}\nCurrent RAM: {self.data['ram']}GB\nCurrent CPU: {self.data['cpu']} cores\nCurrent Disk: {self.data['disk']}GB\nYour Invites: {invites}\n```")
+        embed = info_embed("⬆️ UPGRADE VPS", f"```fix\n┌─────────────────────────────────────────────────┐\n│ Container: {self.container}\n│ Current RAM : {self.data['ram']}GB\n│ Current CPU : {self.data['cpu']} cores\n│ Current Disk: {self.data['disk']}GB\n│ Your Invites: {invites}\n└─────────────────────────────────────────────────┘\n```")
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     async def invites_callback(self, interaction):
-        stats = get_user_stats(str(self.ctx.author.id))
+        stats = get_user_stats(str(self.user.id))
         invites = stats.get('invites', 0)
-        vps_count = len(get_user_vps(str(self.ctx.author.id)))
+        vps_count = len(get_user_vps(str(self.user.id)))
         
-        embed = info_embed("Your Invites")
-        embed.add_field(name="📨 Total Invites", value=f"```fix\n{invites}\n```", inline=True)
+        embed = info_embed("📨 YOUR INVITES")
+        embed.add_field(name="📊 Total Invites", value=f"```fix\n{invites}\n```", inline=True)
         embed.add_field(name="🖥️ VPS Count", value=f"```fix\n{vps_count}\n```", inline=True)
         
         next_plan = None
@@ -1419,30 +1581,36 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
                 break
         
         if next_plan:
-            embed.add_field(name="🎯 Next Plan", value=f"```fix\n{next_plan['emoji']} {next_plan['name']}\nNeed {next_plan['invites'] - invites} more invites\nRAM: {next_plan['ram']}GB\n```", inline=False)
+            embed.add_field(name="🎯 NEXT PLAN", value=f"```fix\n{next_plan['emoji']} {next_plan['name']}\nNeed {next_plan['invites'] - invites} more invites\nRAM: {next_plan['ram']}GB | CPU: {next_plan['cpu']} | Disk: {next_plan['disk']}GB\n```", inline=False)
         else:
-            embed.add_field(name="🏆 Status", value="```fix\nYou have reached the maximum plan!\n```", inline=False)
+            embed.add_field(name="🏆 STATUS", value="```fix\nYou have reached the maximum plan!\n```", inline=False)
         
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
     async def panel_callback(self, interaction):
         view = PanelInstallView(self.ctx, self.container)
-        embed = info_embed("Install Panel", "Select panel to install:")
+        embed = info_embed("📦 INSTALL PANEL", "Select panel to install:")
+        embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     async def share_callback(self, interaction):
-        modal = ShareModal(self.container)
+        modal = ShareModal(self.container, self.user)
         await interaction.response.send_modal(modal)
+    
+    # ==========================================================================================
+    # ROW 4 - LIVE MODE & REFRESH
+    # ==========================================================================================
     
     async def live_callback(self, interaction):
         self.live_mode = not self.live_mode
         if self.live_mode:
-            self.live_btn.label = "⏹️ Stop Live"
+            self.live_btn.label = "⏹️ STOP LIVE"
             self.live_btn.style = discord.ButtonStyle.success
             await interaction.response.edit_message(view=self)
             self.live_task = asyncio.create_task(self.live_update_task(interaction))
         else:
-            self.live_btn.label = "🔴 Live Mode"
+            self.live_btn.label = "🔴 LIVE MODE"
             self.live_btn.style = discord.ButtonStyle.danger
             await interaction.response.edit_message(view=self)
             if self.live_task:
@@ -1463,29 +1631,45 @@ self.refresh_btn = Button(label="Refresh", style=discord.ButtonStyle.secondary, 
         await interaction.response.edit_message(embed=embed, view=self)
 
 
-class CommandModal(Modal):
-    def __init__(self, container):
-        super().__init__(title="Run Command")
+class ConsoleModal(Modal):
+    def __init__(self, container, user):
+        super().__init__(title=f"📟 CONSOLE - {container}")
         self.container = container
-        self.add_item(InputText(label="Command", placeholder="e.g., apt update", style=discord.InputTextStyle.paragraph))
+        self.user = user
+        self.add_item(InputText(label="Command", placeholder="e.g., apt update, ls -la, ps aux", style=discord.InputTextStyle.paragraph))
         self.add_item(InputText(label="Timeout (seconds)", placeholder="30", required=False, value="30"))
     
     async def callback(self, interaction):
         cmd = self.children[0].value
         timeout = int(self.children[1].value or "30")
+        
         await interaction.response.defer()
         msg = await interaction.followup.send(embed=info_embed("Executing", f"```fix\n$ {cmd}\n```"), ephemeral=True)
-        out, err, code = await exec_in_container(self.container, cmd, timeout)
-        embed = terminal_embed("Output", f"$ {cmd}\n\n{(out or err)[:1900]}")
-        embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```")
-        await msg.edit(embed=embed)
+        
+        try:
+            out, err, code = await exec_in_container(self.container, cmd, timeout)
+            output = out if out else err
+            
+            embed = discord.Embed(
+                title=f"```glow\n💻 COMMAND OUTPUT\n```",
+                description=f"```bash\n$ {cmd}\n\n{output[:1900]}\n```",
+                color=0x00FF00 if code == 0 else 0xFF0000
+            )
+            embed.add_field(name="Exit Code", value=f"```fix\n{code}\n```", inline=True)
+            embed.set_thumbnail(url=self.user.avatar.url if self.user.avatar else THUMBNAIL_URL)
+            await msg.edit(embed=embed)
+        except asyncio.TimeoutError:
+            await msg.edit(embed=error_embed("Timeout", f"Command timed out after {timeout} seconds"))
+        except Exception as e:
+            await msg.edit(embed=error_embed("Error", f"```diff\n- {str(e)}\n```"))
 
 
 class ShareModal(Modal):
-    def __init__(self, container):
-        super().__init__(title="Share VPS")
+    def __init__(self, container, user):
+        super().__init__(title=f"👥 SHARE VPS - {container}")
         self.container = container
-        self.add_item(InputText(label="User ID or @mention"))
+        self.user = user
+        self.add_item(InputText(label="User ID or @mention", placeholder="e.g., 123456789 or @username"))
         self.add_item(InputText(label="Permissions", placeholder="view, manage, full", required=False, value="view"))
     
     async def callback(self, interaction):
@@ -1499,30 +1683,35 @@ class ShareModal(Modal):
                 user_id = user_id[1:]
         
         try:
-            user = await interaction.client.fetch_user(int(user_id))
-            if share_vps(str(interaction.user.id), str(user.id), self.container):
-                embed = success_embed("VPS Shared")
+            target_user = await interaction.client.fetch_user(int(user_id))
+            if share_vps(str(self.user.id), str(target_user.id), self.container):
+                embed = success_embed("✅ VPS SHARED")
                 embed.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```", inline=True)
-                embed.add_field(name="👤 Shared With", value=user.mention, inline=True)
+                embed.add_field(name="👤 Shared With", value=target_user.mention, inline=True)
                 embed.add_field(name="🔑 Permissions", value=f"```fix\n{perms}\n```", inline=True)
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 
                 try:
-                    dm = info_embed("VPS Shared With You")
-                    dm.add_field(name="📦 Container", value=f"```fix\n{self.container}\n```")
-                    dm.add_field(name="👤 Owner", value=interaction.user.mention)
-                    await user.send(embed=dm)
+                    dm = info_embed("📦 VPS SHARED WITH YOU")
+                    dm.add_field(name="Container", value=f"```fix\n{self.container}\n```")
+                    dm.add_field(name="Owner", value=interaction.user.mention)
+                    dm.add_field(name="Permissions", value=f"```fix\n{perms}\n```")
+                    await target_user.send(embed=dm)
                 except:
                     pass
             else:
-                await interaction.response.send_message(embed=error_embed("Failed"), ephemeral=True)
+                await interaction.response.send_message(embed=error_embed("Failed", "Could not share VPS"), ephemeral=True)
         except:
-            await interaction.response.send_message(embed=error_embed("Invalid User"), ephemeral=True)
+            await interaction.response.send_message(embed=error_embed("Invalid User", "User not found"), ephemeral=True)
 
 
 @bot.command(name="manage")
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def manage(ctx, container_name: str = None):
-    """Interactive VPS manager with all buttons"""
+    """Interactive VPS manager with all working buttons"""
+    if not LICENSE_VERIFIED and not is_admin(str(ctx.author.id)):
+        return await ctx.send(embed=error_embed("License Required", "Please verify license first."))
+    
     user_id = str(ctx.author.id)
     
     if not container_name:
