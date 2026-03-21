@@ -157,10 +157,6 @@ OS_OPTIONS = [
     {"label": "🐧 Ubuntu 14.04 LTS", "value": "ubuntu:14.04", "desc": "Trusty Tahr - Ancient LTS (April 2014)", "category": "Ubuntu", "icon": "🐧"},
     {"label": "🐧 Ubuntu 12.04 LTS", "value": "ubuntu:12.04", "desc": "Precise Pangolin - Very Old LTS", "category": "Ubuntu", "icon": "🐧"},
     {"label": "🐧 Ubuntu 10.04 LTS", "value": "ubuntu:10.04", "desc": "Lucid Lynx - Retro LTS", "category": "Ubuntu", "icon": "🐧"},
-    
-    # ==============================================================================================
-    # 🌀 DEBIAN SERIES (15 versions)
-    # ==============================================================================================
     {"label": "🌀 Debian 13", "value": "images:debian/13", "desc": "Trixie - Testing (Upcoming Stable)", "category": "Debian", "icon": "🌀"},
     {"label": "🌀 Debian 12", "value": "images:debian/12", "desc": "Bookworm - Current Stable (June 2023)", "category": "Debian", "icon": "🌀", "popular": True},
     {"label": "🌀 Debian 11", "value": "images:debian/11", "desc": "Bullseye - Old Stable (Aug 2021)", "category": "Debian", "icon": "🌀", "popular": True},
@@ -175,10 +171,6 @@ OS_OPTIONS = [
     {"label": "🌀 Debian Sid", "value": "images:debian/sid", "desc": "Unstable - Rolling Development", "category": "Debian", "icon": "🌀"},
     {"label": "🌀 Debian Testing", "value": "images:debian/testing", "desc": "Testing - Next Stable", "category": "Debian", "icon": "🌀"},
     {"label": "🌀 Debian Experimental", "value": "images:debian/experimental", "desc": "Experimental - Bleeding Edge", "category": "Debian", "icon": "🌀"},
-    
-    # ==============================================================================================
-    # 🎩 FEDORA SERIES (12 versions)
-    # ==============================================================================================
     {"label": "🎩 Fedora 41", "value": "images:fedora/41", "desc": "Fedora 41 - Latest Development", "category": "Fedora", "icon": "🎩"},
     {"label": "🎩 Fedora 40", "value": "images:fedora/40", "desc": "Fedora 40 - Latest (April 2024)", "category": "Fedora", "icon": "🎩", "popular": True},
     {"label": "🎩 Fedora 39", "value": "images:fedora/39", "desc": "Fedora 39 - Stable (Nov 2023)", "category": "Fedora", "icon": "🎩"},
@@ -190,30 +182,18 @@ OS_OPTIONS = [
     {"label": "🎩 Fedora 33", "value": "images:fedora/33", "desc": "Fedora 33 - EOL Nov 2021", "category": "Fedora", "icon": "🎩"},
     {"label": "🎩 Fedora 32", "value": "images:fedora/32", "desc": "Fedora 32 - EOL May 2021", "category": "Fedora", "icon": "🎩"},
     {"label": "🎩 Fedora Rawhide", "value": "images:fedora/rawhide", "desc": "Rawhide - Rolling Development", "category": "Fedora", "icon": "🎩"},
-    
-    # ==============================================================================================
-    # 🦊 ROCKY & ALMA LINUX (8 versions)
-    # ==============================================================================================
     {"label": "🦊 Rocky Linux 9", "value": "images:rockylinux/9", "desc": "Rocky 9 - Latest (July 2022)", "category": "Rocky", "icon": "🦊", "popular": True},
     {"label": "🦊 Rocky Linux 8", "value": "images:rockylinux/8", "desc": "Rocky 8 - Stable (June 2021)", "category": "Rocky", "icon": "🦊"},
     {"label": "🦊 Rocky Linux 7", "value": "images:rockylinux/7", "desc": "Rocky 7 - Legacy", "category": "Rocky", "icon": "🦊"},
     {"label": "🦊 AlmaLinux 9", "value": "images:almalinux/9", "desc": "Alma 9 - Latest (July 2022)", "category": "AlmaLinux", "icon": "🦊", "popular": True},
     {"label": "🦊 AlmaLinux 8", "value": "images:almalinux/8", "desc": "Alma 8 - Stable (March 2021)", "category": "AlmaLinux", "icon": "🦊"},
     {"label": "🦊 AlmaLinux 7", "value": "images:almalinux/7", "desc": "Alma 7 - Legacy", "category": "AlmaLinux", "icon": "🦊"},
-    
-    # ==============================================================================================
-    # 📦 CENTOS SERIES (8 versions)
-    # ==============================================================================================
     {"label": "📦 CentOS 9 Stream", "value": "images:centos/9-Stream", "desc": "CentOS 9 Stream - Rolling", "category": "CentOS", "icon": "📦"},
     {"label": "📦 CentOS 8 Stream", "value": "images:centos/8-Stream", "desc": "CentOS 8 Stream - EOL May 2024", "category": "CentOS", "icon": "📦"},
     {"label": "📦 CentOS 7", "value": "images:centos/7", "desc": "CentOS 7 - Legacy (June 2024 EOL)", "category": "CentOS", "icon": "📦"},
     {"label": "📦 CentOS 6", "value": "images:centos/6", "desc": "CentOS 6 - Ancient (Nov 2020 EOL)", "category": "CentOS", "icon": "📦"},
     {"label": "📦 CentOS 5", "value": "images:centos/5", "desc": "CentOS 5 - Retro (March 2017 EOL)", "category": "CentOS", "icon": "📦"},
     {"label": "📦 CentOS 4", "value": "images:centos/4", "desc": "CentOS 4 - Museum (Feb 2012 EOL)", "category": "CentOS", "icon": "📦"},
-    
-    # ==============================================================================================
-    # 🐧 ALPINE LINUX (10 versions)
-    # ==============================================================================================
     {"label": "🐧 Alpine 3.20", "value": "images:alpine/3.20", "desc": "Alpine 3.20 - Latest (May 2024)", "category": "Alpine", "icon": "🐧"},
     {"label": "🐧 Alpine 3.19", "value": "images:alpine/3.19", "desc": "Alpine 3.19 - Stable (Dec 2023)", "category": "Alpine", "icon": "🐧", "popular": True},
     {"label": "🐧 Alpine 3.18", "value": "images:alpine/3.18", "desc": "Alpine 3.18 - Older (May 2023)", "category": "Alpine", "icon": "🐧"},
@@ -224,120 +204,56 @@ OS_OPTIONS = [
     {"label": "🐧 Alpine 3.13", "value": "images:alpine/3.13", "desc": "Alpine 3.13 - EOL Nov 2021", "category": "Alpine", "icon": "🐧"},
     {"label": "🐧 Alpine 3.12", "value": "images:alpine/3.12", "desc": "Alpine 3.12 - EOL May 2021", "category": "Alpine", "icon": "🐧"},
     {"label": "🐧 Alpine Edge", "value": "images:alpine/edge", "desc": "Alpine Edge - Rolling Development", "category": "Alpine", "icon": "🐧"},
-    
-    # ==============================================================================================
-    # 📀 ARCH LINUX (5 versions)
-    # ==============================================================================================
     {"label": "📀 Arch Linux", "value": "images:archlinux", "desc": "Arch - Rolling Release", "category": "Arch", "icon": "📀", "popular": True},
     {"label": "📀 Arch Linux (Current)", "value": "images:archlinux/current", "desc": "Arch Current - Rolling", "category": "Arch", "icon": "📀"},
     {"label": "📀 Manjaro", "value": "images:manjaro", "desc": "Manjaro - Arch Based", "category": "Arch", "icon": "📀"},
     {"label": "📀 EndeavourOS", "value": "images:endeavouros", "desc": "EndeavourOS - Arch Based", "category": "Arch", "icon": "📀"},
     {"label": "📀 Artix Linux", "value": "images:artix", "desc": "Artix - Arch Without Systemd", "category": "Arch", "icon": "📀"},
-    
-    # ==============================================================================================
-    # 🟢 OPENSUSE (6 versions)
-    # ==============================================================================================
     {"label": "🟢 OpenSUSE Tumbleweed", "value": "images:opensuse/tumbleweed", "desc": "Rolling Release", "category": "OpenSUSE", "icon": "🟢"},
     {"label": "🟢 OpenSUSE Leap 15.6", "value": "images:opensuse/15.6", "desc": "Leap 15.6 - Latest (June 2024)", "category": "OpenSUSE", "icon": "🟢"},
     {"label": "🟢 OpenSUSE Leap 15.5", "value": "images:opensuse/15.5", "desc": "Leap 15.5 - Stable (June 2023)", "category": "OpenSUSE", "icon": "🟢"},
     {"label": "🟢 OpenSUSE Leap 15.4", "value": "images:opensuse/15.4", "desc": "Leap 15.4 - Older (June 2022)", "category": "OpenSUSE", "icon": "🟢"},
     {"label": "🟢 OpenSUSE Leap 15.3", "value": "images:opensuse/15.3", "desc": "Leap 15.3 - EOL Dec 2022", "category": "OpenSUSE", "icon": "🟢"},
-    
-    # ==============================================================================================
-    # 🔵 FREEBSD (8 versions)
-    # ==============================================================================================
     {"label": "🔵 FreeBSD 14", "value": "images:freebsd/14", "desc": "FreeBSD 14 - Latest (Nov 2023)", "category": "FreeBSD", "icon": "🔵", "popular": True},
     {"label": "🔵 FreeBSD 13", "value": "images:freebsd/13", "desc": "FreeBSD 13 - Stable (April 2021)", "category": "FreeBSD", "icon": "🔵"},
     {"label": "🔵 FreeBSD 12", "value": "images:freebsd/12", "desc": "FreeBSD 12 - EOL Dec 2023", "category": "FreeBSD", "icon": "🔵"},
     {"label": "🔵 FreeBSD 11", "value": "images:freebsd/11", "desc": "FreeBSD 11 - EOL Sept 2021", "category": "FreeBSD", "icon": "🔵"},
     {"label": "🔵 FreeBSD 10", "value": "images:freebsd/10", "desc": "FreeBSD 10 - EOL Oct 2018", "category": "FreeBSD", "icon": "🔵"},
     {"label": "🔵 FreeBSD 9", "value": "images:freebsd/9", "desc": "FreeBSD 9 - Retro", "category": "FreeBSD", "icon": "🔵"},
-    
-    # ==============================================================================================
-    # 🐡 OPENBSD (5 versions)
-    # ==============================================================================================
     {"label": "🐡 OpenBSD 7.5", "value": "images:openbsd/7.5", "desc": "OpenBSD 7.5 - Latest (April 2024)", "category": "OpenBSD", "icon": "🐡"},
     {"label": "🐡 OpenBSD 7.4", "value": "images:openbsd/7.4", "desc": "OpenBSD 7.4 - Stable (Oct 2023)", "category": "OpenBSD", "icon": "🐡"},
     {"label": "🐡 OpenBSD 7.3", "value": "images:openbsd/7.3", "desc": "OpenBSD 7.3 - Older (April 2023)", "category": "OpenBSD", "icon": "🐡"},
     {"label": "🐡 OpenBSD 7.2", "value": "images:openbsd/7.2", "desc": "OpenBSD 7.2 - EOL Oct 2023", "category": "OpenBSD", "icon": "🐡"},
     {"label": "🐡 OpenBSD 7.1", "value": "images:openbsd/7.1", "desc": "OpenBSD 7.1 - EOL Oct 2022", "category": "OpenBSD", "icon": "🐡"},
-    
-    # ==============================================================================================
-    # 🐉 KALI LINUX (3 versions)
-    # ==============================================================================================
     {"label": "🐉 Kali Linux", "value": "images:kali", "desc": "Kali - Security Testing (Rolling)", "category": "Kali", "icon": "🐉", "popular": True},
     {"label": "🐉 Kali Linux Weekly", "value": "images:kali/weekly", "desc": "Kali Weekly - Bleeding Edge", "category": "Kali", "icon": "🐉"},
     {"label": "🐉 Kali Linux Last Release", "value": "images:kali/last", "desc": "Kali Latest Release", "category": "Kali", "icon": "🐉"},
-    
-    # ==============================================================================================
-    # 🦜 PARROT OS (2 versions)
-    # ==============================================================================================
     {"label": "🦜 Parrot OS", "value": "images:parrotos", "desc": "Parrot Security OS", "category": "Parrot", "icon": "🦜"},
     {"label": "🦜 Parrot OS (Latest)", "value": "images:parrotos/latest", "desc": "Parrot Latest Release", "category": "Parrot", "icon": "🦜"},
-    
-    # ==============================================================================================
-    # 💻 GENTOO (4 versions)
-    # ==============================================================================================
     {"label": "💻 Gentoo", "value": "images:gentoo", "desc": "Gentoo - Source Based", "category": "Gentoo", "icon": "💻"},
     {"label": "💻 Gentoo Current", "value": "images:gentoo/current", "desc": "Gentoo Current - Rolling", "category": "Gentoo", "icon": "💻"},
     {"label": "💻 Gentoo OpenRC", "value": "images:gentoo/openrc", "desc": "Gentoo with OpenRC", "category": "Gentoo", "icon": "💻"},
     {"label": "💻 Gentoo Systemd", "value": "images:gentoo/systemd", "desc": "Gentoo with Systemd", "category": "Gentoo", "icon": "💻"},
-    
-    # ==============================================================================================
-    # ⚪ VOID LINUX (3 versions)
-    # ==============================================================================================
     {"label": "⚪ Void Linux", "value": "images:voidlinux", "desc": "Void - Independent", "category": "Void", "icon": "⚪"},
-    {"label": "⚪ Void Linux musl", "value": "images:voidlinux/musl", "desc": "Void with musl libc", "category": "Void", "icon": "⚪"},
+    {"label": "⚪ Void Linux musl", "value": "images:voidlinux/musl", "desc": "Void with musl libc", "category": "Void", "ico: "⚪"},
     {"label": "⚪ Void Linux glibc", "value": "images:voidlinux/glibc", "desc": "Void with glibc", "category": "Void", "icon": "⚪"},
-    
-    # ==============================================================================================
-    # 🔬 SCIENTIFIC LINUX (2 versions)
-    # ==============================================================================================
     {"label": "🔬 Scientific Linux 7", "value": "images:scientific/7", "desc": "Scientific Linux 7", "category": "Scientific", "icon": "🔬"},
     {"label": "🔬 Scientific Linux 6", "value": "images:scientific/6", "desc": "Scientific Linux 6", "category": "Scientific", "icon": "🔬"},
-    
-    # ==============================================================================================
-    # ☁️ AMAZON LINUX (2 versions)
-    # ==============================================================================================
     {"label": "☁️ Amazon Linux 2", "value": "images:amazonlinux/2", "desc": "Amazon Linux 2 - AWS Optimized", "category": "Amazon", "icon": "☁️"},
     {"label": "☁️ Amazon Linux 2023", "value": "images:amazonlinux/2023", "desc": "Amazon Linux 2023 - Latest", "category": "Amazon", "icon": "☁️"},
-    
-    # ==============================================================================================
-    # 🔴 RED HAT ENTERPRISE LINUX (3 versions)
-    # ==============================================================================================
     {"label": "🔴 Red Hat 9", "value": "images:rhel/9", "desc": "RHEL 9 - Enterprise (May 2022)", "category": "RHEL", "icon": "🔴"},
     {"label": "🔴 Red Hat 8", "value": "images:rhel/8", "desc": "RHEL 8 - Stable (May 2019)", "category": "RHEL", "icon": "🔴"},
     {"label": "🔴 Red Hat 7", "value": "images:rhel/7", "desc": "RHEL 7 - Legacy (June 2014)", "category": "RHEL", "icon": "🔴"},
-    
-    # ==============================================================================================
-    # 🐡 NETBSD (2 versions)
-    # ==============================================================================================
     {"label": "🐡 NetBSD 9.3", "value": "images:netbsd/9.3", "desc": "NetBSD 9.3 - Latest", "category": "NetBSD", "icon": "🐡"},
     {"label": "🐡 NetBSD 9.2", "value": "images:netbsd/9.2", "desc": "NetBSD 9.2 - Stable", "category": "NetBSD", "icon": "🐡"},
-    
-    # ==============================================================================================
-    # 🌀 DEVUAN (4 versions)
-    # ==============================================================================================
     {"label": "🌀 Devuan 5", "value": "images:devuan/5", "desc": "Devuan Daedalus - Without Systemd", "category": "Devuan", "icon": "🌀"},
     {"label": "🌀 Devuan 4", "value": "images:devuan/4", "desc": "Devuan Chimaera - Stable", "category": "Devuan", "icon": "🌀"},
     {"label": "🌀 Devuan 3", "value": "images:devuan/3", "desc": "Devuan Beowulf - Legacy", "category": "Devuan", "icon": "🌀"},
     {"label": "🌀 Devuan 2", "value": "images:devuan/2", "desc": "Devuan ASCII - Old", "category": "Devuan", "icon": "🌀"},
-    
-    # ==============================================================================================
-    # 💾 SLACKWARE (3 versions)
-    # ==============================================================================================
     {"label": "💾 Slackware 15", "value": "images:slackware/15", "desc": "Slackware 15 - Latest (Feb 2022)", "category": "Slackware", "icon": "💾"},
     {"label": "💾 Slackware 14.2", "value": "images:slackware/14.2", "desc": "Slackware 14.2 - Stable", "category": "Slackware", "icon": "💾"},
     {"label": "💾 Slackware Current", "value": "images:slackware/current", "desc": "Slackware Current - Rolling", "category": "Slackware", "icon": "💾"},
-    
-    # ==============================================================================================
-    # 🔷 CLEAR LINUX (1 version)
-    # ==============================================================================================
     {"label": "🔷 Clear Linux", "value": "images:clearlinux", "desc": "Clear Linux - Intel Optimized", "category": "Clear", "icon": "🔷"},
-    
-    # ==============================================================================================
-    # 🔴 ORACLE LINUX (2 versions)
-    # ==============================================================================================
     {"label": "🔴 Oracle Linux 9", "value": "images:oracle/9", "desc": "Oracle Linux 9 - Latest", "category": "Oracle", "icon": "🔴"},
     {"label": "🔴 Oracle Linux 8", "value": "images:oracle/8", "desc": "Oracle Linux 8 - Stable", "category": "Oracle", "icon": "🔴"},
 ]
@@ -1060,7 +976,8 @@ class VPSManageView(View):
         self.start_btn = Button(label="▶️ Start", style=discord.ButtonStyle.success, emoji="▶️", row=0)
         self.stop_btn = Button(label="⏹️ Stop", style=discord.ButtonStyle.danger, emoji="⏹️", row=0)
         self.restart_btn = Button(label="🔄 Restart", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
-        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.warning, emoji="⚡", row=0)
+        # CHANGED: .warning -> .secondary (Discord doesn't have yellow)
+        self.reboot_btn = Button(label="⚡ Reboot", style=discord.ButtonStyle.secondary, emoji="⚡", row=0)
         self.shutdown_btn = Button(label="⛔ Shutdown", style=discord.ButtonStyle.danger, emoji="⛔", row=0)
         
         # Row 2 (Info & Access)
@@ -1074,7 +991,8 @@ class VPSManageView(View):
         self.ipv4_btn = Button(label="🌍 IPv4 Check", style=discord.ButtonStyle.secondary, emoji="🌍", row=2)
         self.ports_btn = Button(label="🔌 Ports", style=discord.ButtonStyle.secondary, emoji="🔌", row=2)
         self.backup_btn = Button(label="💾 Backup", style=discord.ButtonStyle.success, emoji="💾", row=2)
-        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.warning, emoji="🔄", row=2)
+        # CHANGED: .warning -> .primary
+        self.restore_btn = Button(label="🔄 Restore", style=discord.ButtonStyle.primary, emoji="🔄", row=2)
         self.snapshot_btn = Button(label="📸 Snapshot", style=discord.ButtonStyle.secondary, emoji="📸", row=2)
         
         # Row 4 (Management)
