@@ -4880,15 +4880,26 @@ async def admin_pending_ipv4(ctx):
 # ==================================================================================================
 
 @bot.command(name="admin-add")
-@commands.check(lambda ctx: str(ctx.author.id) in [str(a) for a in MAIN_ADMIN_IDS])
+@commands.check(lambda ctx: str(ctx.author.id) in map(str, MAIN_ADMIN_IDS))
 async def owner_admin_add(ctx, user: discord.Member):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)', (str(user.id), datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            'INSERT OR IGNORE INTO admins (user_id, added_at) VALUES (?, ?)', 
+            (str(user.id), datetime.now().isoformat())
+        )
+        conn.commit()
+    
     await ctx.send(embed=success_embed("Admin Added", f"{user.mention} is now an admin"))
 
+# --- This part handles the "No Permission" message ---
+@owner_admin_add.error
+async def owner_admin_add_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(f"❌ {ctx.author.mention}, you do not have permission to use this command!")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("❌ Could not find that user. Please mention a valid member.")
+        
 @bot.command(name="admin-remove")
 @commands.check(lambda ctx: str(ctx.author.id) in [str(a) for a in MAIN_ADMIN_IDS])
 async def owner_admin_remove(ctx, user: discord.Member):
