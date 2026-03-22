@@ -1,4 +1,5 @@
 # bot.py
+from __future__ import annotations
 import discord
 from discord.ext import commands
 import asyncio
@@ -9,7 +10,7 @@ import shlex
 import logging
 import shutil
 import os
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import sqlite3
 import random
 import traceback
